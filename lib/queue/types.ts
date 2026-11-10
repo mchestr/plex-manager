@@ -49,6 +49,8 @@ export const JOB_TYPES = {
   PROBLEM_REPORT_FIX: "problem-report:fix",
   // One member's DM when a report they made or follow is fixed or closed (lib/queue/jobs/problem-report-update.ts)
   PROBLEM_REPORT_UPDATE: "problem-report:update",
+  // The admins' DM when fixes that replace files trip the breaker (lib/queue/jobs/problem-breaker-alert.ts)
+  PROBLEM_BREAKER_ALERT: "problem-report:breaker",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -91,6 +93,7 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.PROBLEM_REPORT_NOTIFY]: "Problem report alert",
   [JOB_TYPES.PROBLEM_REPORT_FIX]: "Problem report fix",
   [JOB_TYPES.PROBLEM_REPORT_UPDATE]: "Problem report update",
+  [JOB_TYPES.PROBLEM_BREAKER_ALERT]: "Problem fixes paused",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
   [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
@@ -125,6 +128,7 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.PROBLEM_REPORT_NOTIFY,
   JOB_TYPES.PROBLEM_REPORT_FIX,
   JOB_TYPES.PROBLEM_REPORT_UPDATE,
+  JOB_TYPES.PROBLEM_BREAKER_ALERT,
 ] as const satisfies readonly JobType[]
 
 /** A job's label, or its raw name for a type this build does not know. */
@@ -149,29 +153,50 @@ type JobTrigger = "manual" | "scheduled" | "admin"
  * delays itself between steps, and the step and what it waits for travel in
  * the payload.
  */
-/** What Look for a better copy watches once its search is sent (`lib/problem-reports/steps/better-copy.ts`). */
-export interface BetterCopyWatch {
+/**
+ * What a fix that brings in a new copy watches once it has acted: Look for a
+ * better copy, Swap the copy, and Remove the file and search
+ * (`lib/problem-reports/steps/copy-wait.ts`).
+ */
+export interface CopyWatch {
   service: "radarr" | "sonarr"
   /** The Radarr movie or the Sonarr series. */
   titleId: number
-  /** The file the run started with: a new file is the better copy, imported. */
+  /** The file the run started with: a new file is the new copy, imported. */
   fileId: number
   /** Sonarr: the file's episodes. */
   episodeIds: number[]
-  /** The search command, or null when the step ran again after a crash and didn't send it. */
+  /** The search command, or null for a swap's grab, or when the step ran again after a crash and didn't send it. */
   commandId: number | null
-  /** When the search was sent, in epoch milliseconds; only later history counts. */
+  /** When the run acted, in epoch milliseconds; only later history counts. */
   since: number
+  /** A download whose history doesn't count: the bad copy's, which a removal marks failed. */
+  skipDownloadId?: string | null
   /** Plex's library section and the file's folder, scanned once the new copy is in. */
   sectionId: string | null
   folder: string
+}
+
+/** What Swap the copy and Remove the file and search carry to their end (`lib/problem-reports/steps/replace.ts`). */
+export interface ReplaceWatch {
+  /** The Plex item's guid, to find it again when the new copy comes in as a new item. */
+  guid: string
+  /** The bad copy's grab in the history, which a swap marks failed once the new copy is in; null for a file added by hand. */
+  badGrabId: number | null
+  /** The bad copy's release, looked for on the blocklist at the end. */
+  badRelease: string | null
+  /** The release a swap grabbed; null for a removal, or a swap that ran again after a crash. */
+  release: string | null
+  /** A removal monitors the title again on its first check, once deleting the file can no longer unmonitor it. */
+  monitored?: boolean
 }
 
 export interface ProblemReportFixPayload {
   reportId: string
   /** The report's `runToken` when this run was claimed; a newer run stops this one. */
   runToken: number
-  step: "start" | "wait"
+  /** `search` is Remove the file and search's second step, a minute after the delete. */
+  step: "start" | "search" | "wait"
   trigger: "automatic" | "web" | "mcp"
   /** Who asked: the reporter for an automatic run, else the admin. */
   actorUserId: string | null
@@ -181,8 +206,12 @@ export interface ProblemReportFixPayload {
   deadline?: number
   /** When the run last asked Plex to scan for files Sonarr has, in epoch milliseconds. */
   scannedAt?: number
-  /** Look for a better copy: what it waits on. */
-  watch?: BetterCopyWatch
+  /** A fix that brings in a new copy: what it waits on. */
+  watch?: CopyWatch
+  /** Swap the copy and Remove the file and search: what their end needs. */
+  replace?: ReplaceWatch
+  /** Swap the copy and Remove the file and search: the file seen while they waited to start; another file means the copy changed meanwhile. */
+  seenFileId?: number
 }
 
 export interface WatchlistSyncUserPayload {
@@ -469,6 +498,8 @@ interface JobPayloads {
   [JOB_TYPES.PROBLEM_REPORT_FIX]: ProblemReportFixPayload
   /** The member to tell, and the state the report reached. */
   [JOB_TYPES.PROBLEM_REPORT_UPDATE]: { reportId: string; userId: string; status: "FIXED" | "CLOSED" }
+  /** When the breaker tripped, as ISO; a later trip is a new alert. */
+  [JOB_TYPES.PROBLEM_BREAKER_ALERT]: { trippedAt: string }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
@@ -530,6 +561,7 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   // Job ids, kept while BullMQ keeps the finished job (24 hours): a run, or a member's DM about one state, happens once
   [JOB_TYPES.PROBLEM_REPORT_FIX]: { jobId: (data) => `problem-report:fix:${data.reportId}:${data.runToken}` },
   [JOB_TYPES.PROBLEM_REPORT_UPDATE]: { jobId: (data) => `problem-report:update:${data.reportId}:${data.userId}:${data.status}` },
+  [JOB_TYPES.PROBLEM_BREAKER_ALERT]: { jobId: (data) => `problem-report:breaker:${data.trippedAt}` },
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
   [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },
   [JOB_TYPES.REWIND_GENERATE_USER]: { fromCaller: "the RewindGeneration id" },

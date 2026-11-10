@@ -70,6 +70,12 @@ describe("memberUpdateText", () => {
     expect(memberUpdateText({ ...heat, action: undefined }, BASE)).toBe(`Heat \\(1995\\) is fixed.${link}`)
   })
 
+  it("says a swap or a removal brought in another copy", () => {
+    const heat = { ...update, title: "Heat (1995)" }
+    expect(memberUpdateText({ ...heat, action: "SWAP" }, BASE)).toBe(`A different copy of Heat \\(1995\\) is on the server now.${link}`)
+    expect(memberUpdateText({ ...heat, action: "REMOVE_AND_SEARCH" }, BASE)).toBe(`A new copy of Heat \\(1995\\) is on the server now.${link}`)
+  })
+
   it("says the server admin fixed or closed it, and mentions a note only to the member who reported it", () => {
     expect(memberUpdateText({ ...update, by: "admin", hasNote: true }, BASE)).toBe(`The server admin fixed The Office \\(2005\\). The server admin left you a note.${link}`)
     expect(memberUpdateText({ ...update, status: "CLOSED", by: "admin" }, BASE)).toBe(`The server admin closed your report about The Office \\(2005\\).${link}`)

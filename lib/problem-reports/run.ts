@@ -32,7 +32,9 @@ import { getProblemReportSettings } from "@/lib/problem-reports/settings"
 import { runBetterCopy } from "@/lib/problem-reports/steps/better-copy"
 import { runLookForMissing } from "@/lib/problem-reports/steps/look-for-missing"
 import { runRefresh } from "@/lib/problem-reports/steps/refresh"
-import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
+import { runRemoveAndSearch } from "@/lib/problem-reports/steps/remove-and-search"
+import { runSwap } from "@/lib/problem-reports/steps/swap"
+import type { FixedDetails, StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import { queueAdminAlertFromWorker, queueMemberUpdates } from "@/lib/problem-reports/updates"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { enqueueFromRequest } from "@/lib/queue/request-path"
@@ -85,15 +87,16 @@ async function handBack(run: { id: string; runToken: number }, action: FixAction
   })
 }
 
-/** The report fixed, by this run. */
-async function markFixed(run: { id: string; runToken: number }, action: FixAction, now: Date): Promise<boolean> {
+/** The report fixed, by this run, with what a replacement did and the title's new rating key when it has one. */
+async function markFixed(run: { id: string; runToken: number }, action: FixAction, now: Date, details?: FixedDetails): Promise<boolean> {
+  const { ratingKey, ...shown } = details ?? {}
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.problemReport.updateMany({
       where: { id: run.id, runToken: run.runToken, status: "FIXING" },
-      data: { status: "FIXED", activeKey: null, resolvedAt: now },
+      data: { status: "FIXED", activeKey: null, resolvedAt: now, ...(ratingKey ? { plexRatingKey: ratingKey } : {}) },
     })
     if (count === 0) return false
-    await tx.problemReportEvent.create({ data: { reportId: run.id, kind: "FIXED", data: { reason: "fix", action } } })
+    await tx.problemReportEvent.create({ data: { reportId: run.id, kind: "FIXED", data: { reason: "fix", action, ...shown } } })
     return true
   })
 }
@@ -112,9 +115,11 @@ async function markNoBetterCopy(run: { id: string; runToken: number }, now: Date
 }
 
 const STEPS: Record<FixAction, (report: StepReport, data: ProblemReportFixPayload, now: Date) => Promise<StepOutcome>> = {
+  SWAP: runSwap,
   BETTER_COPY: runBetterCopy,
   LOOK_FOR_MISSING: runLookForMissing,
   REFRESH: runRefresh,
+  REMOVE_AND_SEARCH: runRemoveAndSearch,
 }
 
 /** What the job does next: delay itself until `at` with the new payload, or finish. */
@@ -145,7 +150,7 @@ async function finish(report: StepReport, data: ProblemReportFixPayload, outcome
     return { done: true }
   }
   if ("fixed" in outcome) {
-    if (await markFixed(report, report.action, now)) {
+    if (await markFixed(report, report.action, now, outcome.details)) {
       await endLedgerRow(report.id, report.runToken, "FIXED", now)
       await queueMemberUpdates(report.id, "FIXED", { from: "worker" })
     }

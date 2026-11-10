@@ -8,7 +8,7 @@ import { type ActionResult, ok } from "@/lib/actions/result"
 import type { ReportRefusal } from "@/lib/problem-reports/admit"
 import type { ReportAnswer } from "@/lib/problem-reports/answers"
 import { askServerAdmin as askAdmin } from "@/lib/problem-reports/ask-admin"
-import type { FixAction } from "@/lib/problem-reports/fixes"
+import type { MemberFixAction } from "@/lib/problem-reports/fixes"
 import { cancelProblemReport as cancelReport, followProblemReport as followReport, reportProblem as sendReport } from "@/lib/problem-reports/service"
 import { REFUSALS, refusalCopy } from "@/lib/problem-reports/refusals"
 import { problemReportIdSchema, reportProblemInputSchema } from "@/lib/validations/problem-reports"
@@ -27,7 +27,7 @@ interface ReportSent {
   reportId: string | null
   outcome: "reported" | "joined" | "fixing" | "answered"
   answer: ReportAnswer | null
-  action: FixAction | null
+  action: MemberFixAction | null
 }
 
 /**

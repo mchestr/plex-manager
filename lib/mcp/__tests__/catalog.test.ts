@@ -103,6 +103,13 @@ describe('the catalog', () => {
     expect(byName.get('delete_invite')?.annotations).toEqual({ readOnlyHint: false, destructiveHint: true })
     expect(byName.get('create_invite')?.annotations).toEqual({ readOnlyHint: false, destructiveHint: false })
   })
+
+  it('marks the problem report fixes that replace a file destructive, and the others not', () => {
+    const byName = allTools()
+    expect(byName.get('swap_problem_copy')?.annotations).toEqual({ readOnlyHint: false, destructiveHint: true })
+    expect(byName.get('remove_problem_file')?.annotations).toEqual({ readOnlyHint: false, destructiveHint: true })
+    expect(byName.get('run_problem_fix')?.annotations).toEqual({ readOnlyHint: false, destructiveHint: false })
+  })
 })
 
 describe('toolsFor', () => {

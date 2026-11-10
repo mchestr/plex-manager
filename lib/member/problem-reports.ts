@@ -15,14 +15,15 @@ import { getActivePlexServerConfig, type PlexServerConfig } from "@/lib/connecti
 import { getActiveService } from "@/lib/data/active-service"
 import type { ProblemReportStatus } from "@/lib/generated/prisma/client"
 import { recentlyWatched, watchingNow, type TitleResult } from "@/lib/member/problem-report-titles"
+import { latestWords } from "@/lib/member/report-latest"
 import { prisma } from "@/lib/prisma"
 import { memberLibraryAccess, readMemberItem, type LibraryAccess } from "@/lib/problem-reports/access"
 import { memberLastPlay, type LastPlay } from "@/lib/problem-reports/evidence"
-import { FIX_ACTIONS, FIX_WORDS, type FixAction } from "@/lib/problem-reports/fixes"
+import { FIX_ACTIONS, FIX_WORDS } from "@/lib/problem-reports/fixes"
 import { searchMemberTitles } from "@/lib/problem-reports/search"
 import { problemLabel, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { reportTitle, titleKeyOf } from "@/lib/problem-reports/title"
-import { closedEventDataSchema, fixedEventDataSchema } from "@/lib/validations/problem-reports"
+import { closedEventDataSchema } from "@/lib/validations/problem-reports"
 
 const REPORT_LIMIT = 50
 const RESULT_LIMIT = 20
@@ -72,30 +73,6 @@ export interface ReportPageData {
   recent: TitleResult[] | null
   search: { results: TitleResult[]; error: string | null } | null
   selected: SelectedTitle | { error: string } | null
-}
-
-/** What a fix that worked did, in the member's words. */
-const FIXED_WORDS: Record<FixAction, string> = {
-  BETTER_COPY: "A better copy is on the server now",
-  LOOK_FOR_MISSING: "The missing episodes are on the server now",
-  REFRESH: "The details are refreshed",
-}
-
-/** The latest step in the member's words, and why a closed report closed. */
-function latestWords(event: { kind: string; data: unknown } | undefined, own: boolean): { words: string; statusSub: string | null } {
-  if (event?.kind === "FIXED") {
-    const fixed = fixedEventDataSchema.safeParse(event.data).data
-    return { words: fixed?.reason === "fix" && fixed.action ? FIXED_WORDS[fixed.action] : "The server admin fixed it", statusSub: null }
-  }
-  if (event?.kind === "REOPENED") return { words: own ? "You sent it to the server admin" : "It's with the server admin now", statusSub: null }
-  const closed = event?.kind === "CLOSED" ? closedEventDataSchema.safeParse(event.data) : null
-  if (closed?.success && closed.data.reason === "admin") return { words: "The server admin closed it", statusSub: "By the server admin" }
-  if (closed?.success && closed.data.reason === "no_better_copy") return { words: "We looked, but there's no better copy right now", statusSub: "No better copy right now" }
-  if (closed?.success) {
-    // A follower didn't cancel it, so say who did without naming them
-    return own ? { words: "You cancelled it", statusSub: "Cancelled" } : { words: "The member who reported it cancelled it", statusSub: "By the member who reported it" }
-  }
-  return { words: own ? "You sent it" : "You're following it", statusSub: null }
 }
 
 /** The member's reports and the ones they follow, newest first: what the list on `/report` and its switched-off view show. */

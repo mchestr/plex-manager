@@ -35,17 +35,20 @@ describe("the fixes for a report", () => {
     expect(suggestedFix("missing_episodes")).toBe("LOOK_FOR_MISSING")
     expect(suggestedFix("wrong_details")).toBe("REFRESH")
     expect(suggestedFix("blurry")).toBe("BETTER_COPY")
-    expect(suggestedFix("wont_start")).toBeNull()
+    expect(suggestedFix("wont_start")).toBe("SWAP")
+    expect(suggestedFix("buffers")).toBeNull()
     expect(suggestedFix("retired_code")).toBeNull()
   })
 
-  it("offers Look for the episodes only for shows and episodes, and Look for a better copy only for a title with a file", () => {
-    expect(fixesFor("movie")).toEqual(["BETTER_COPY", "REFRESH"])
+  it("offers Look for the episodes only for shows and episodes, and the fixes that need a file only for a title with one", () => {
+    expect(fixesFor("movie")).toEqual(["SWAP", "BETTER_COPY", "REFRESH", "REMOVE_AND_SEARCH"])
     expect(fixesFor("show")).toEqual(["LOOK_FOR_MISSING", "REFRESH"])
-    expect(fixesFor("episode")).toEqual(["BETTER_COPY", "LOOK_FOR_MISSING", "REFRESH"])
+    expect(fixesFor("episode")).toEqual(["SWAP", "BETTER_COPY", "LOOK_FOR_MISSING", "REFRESH", "REMOVE_AND_SEARCH"])
   })
 
-  it("counts Look for a better copy as a search, not as a file replacement", () => {
+  it("counts Look for a better copy as a search, and a swap or a removal as a search that replaces the file", () => {
     expect(fixTraits("BETTER_COPY")).toEqual({ searches: true, replacesFile: false })
+    expect(fixTraits("SWAP")).toEqual({ searches: true, replacesFile: true })
+    expect(fixTraits("REMOVE_AND_SEARCH")).toEqual({ searches: true, replacesFile: true })
   })
 })

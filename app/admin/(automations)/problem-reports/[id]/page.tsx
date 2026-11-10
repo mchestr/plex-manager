@@ -1,12 +1,15 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
 
 import { FixActions } from "@/components/admin/problem-reports/fix-actions"
+import { RemovalFacts } from "@/components/admin/problem-reports/removal-facts"
 import { ReportTimeline } from "@/components/admin/problem-reports/report-timeline"
 import { ResolveActions } from "@/components/admin/problem-reports/resolve-actions"
 import { DetailItem } from "@/components/admin/users/detail/detail-item"
 import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/ui/page-header"
+import { Skeleton } from "@/components/ui/skeleton"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { assertAdmin } from "@/lib/admin"
 import { problemReports, userDetail } from "@/lib/admin/routes"
@@ -32,8 +35,10 @@ function Note({ label, text, testId }: { label: string; text: string; testId: st
  * who reported it, then the timeline with each member's words and the
  * evidence. While it is open, the header offers the fixes (the problem's
  * own first, the rest under Other fixes), Close with a note and Mark fixed;
- * while a fix runs, the report says what it is doing. Members' words show as
- * plain text, never as Markdown.
+ * while a fix runs, the report says what it is doing. Where Remove the file
+ * and search applies, its confirm says what it will do, read from Radarr or
+ * Sonarr and Plex as the page streams. Members' words show as plain text,
+ * never as Markdown.
  */
 export default async function ProblemReportPage({ params }: { params: Promise<{ id: string }> }) {
   await assertAdmin()
@@ -51,7 +56,20 @@ export default async function ProblemReportPage({ params }: { params: Promise<{ 
         actions={
           report.open && (
             <>
-              {report.fixes && <FixActions reportId={report.id} suggested={report.fixes.suggested} others={report.fixes.others} />}
+              {report.fixes && (
+                <FixActions
+                  reportId={report.id}
+                  suggested={report.fixes.suggested}
+                  others={report.fixes.others}
+                  removal={
+                    report.fixes.others.includes("REMOVE_AND_SEARCH") && (
+                      <Suspense fallback={<Skeleton className="h-16 w-full" data-testid="admin-problem-report-removal-facts-loading" />}>
+                        <RemovalFacts reportId={report.id} />
+                      </Suspense>
+                    )
+                  }
+                />
+              )}
               <ResolveActions reportId={report.id} />
             </>
           )

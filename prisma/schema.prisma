@@ -1373,9 +1373,12 @@ model ProblemFixLedger {
   report      ProblemReport? @relation(fields: [reportId], references: [id], onDelete: SetNull)
   outcome     String? // FIXED, NOT_FOUND, TO_ADMIN, ...
   startedAt   DateTime       @default(now())
+  /// When the run began replacing the file: a swap's grab, or a removal's delete. The breaker counts these.
+  replacedAt  DateTime?
   endedAt     DateTime?
 
   @@index([target, startedAt])
   @@index([reporterId, startedAt])
   @@index([startedAt])
+  @@index([replacedAt])
 }
