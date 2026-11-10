@@ -136,6 +136,9 @@ describe("the Why Sheet rows", () => {
     expect(await readArrBase("radarr")).toBe("https://radarr.example.com")
     prismaMock.sonarr.findFirst.mockResolvedValueOnce(null)
     expect(await readArrBase("sonarr")).toBeNull()
+    const active = { where: { isActive: true }, orderBy: { updatedAt: "desc" }, select: { publicUrl: true } }
+    expect(prismaMock.radarr.findFirst).toHaveBeenCalledWith(active)
+    expect(prismaMock.sonarr.findFirst).toHaveBeenCalledWith(active)
     prismaMock.user.findMany.mockResolvedValueOnce([{ id: "u-1", name: "Avery Example" }] as never)
     const words = await readMemberWords(["u-1"])
     expect(words.memberName("u-1")).toBe("Avery Example")

@@ -43,9 +43,13 @@ export async function readShowFloor(titleKey: string, showLeaveOn: string | null
   return seasons === null ? null : showLeaveFloor(showLeaveOn, [seasons])
 }
 
-/** The public URL of the active Radarr or Sonarr, or null: the "Open in" button then hides (TS 13.4). */
+/**
+ * The public URL of the active Radarr or Sonarr, or null: the "Open in" button
+ * then hides (TS 13.4). Ordered as every active row read is (P11.31), so two
+ * active rows never leave the pick to Postgres.
+ */
 export async function readArrBase(service: "radarr" | "sonarr"): Promise<string | null> {
-  const select = { where: { isActive: true }, select: { publicUrl: true } } as const
+  const select = { where: { isActive: true }, orderBy: { updatedAt: "desc" }, select: { publicUrl: true } } as const
   const row = service === "radarr" ? await prisma.radarr.findFirst(select) : await prisma.sonarr.findFirst(select)
   return row?.publicUrl ?? null
 }
