@@ -34,8 +34,8 @@ const conditions: WhySheetCondition[] = [
     threshold: "at least 1 of 2",
     sources: [],
     members: [
-      { id: "c3", verdict: "fail", value: [{ text: "Requested by a member." }] },
-      { id: "c4", verdict: "pass", value: [{ text: "Requested only by a former member since Jul 12, 2025." }] },
+      { id: "c3", verdict: "fail", label: "Requested by", threshold: "former members", value: [{ text: "Requested by a member." }] },
+      { id: "c4", verdict: "pass", label: "Size", threshold: "more than 10 GB", value: [{ text: "Requested only by a former member since Jul 12, 2025." }] },
     ],
   },
   {
@@ -85,8 +85,10 @@ describe("WhyConditions", () => {
     expect(group).toHaveTextContent("Needs at least 1 of 2.")
     const members = within(group).getAllByRole("listitem")
     expect(members).toHaveLength(2)
-    expect(members[0]).toHaveTextContent("FailsRequested by a member.")
-    expect(members[1]).toHaveTextContent("PassesRequested only by a former member since Jul 12, 2025.")
+    // Each member names its condition and threshold before the real value (UX review UX-05)
+    expect(members[0]).toHaveTextContent("FailsRequested by former members: Requested by a member.")
+    expect(members[1]).toHaveTextContent("PassesSize more than 10 GB: Requested only by a former member since Jul 12, 2025.")
+    expect(within(members[1]).getByText("Size more than 10 GB:").tagName).toBe("STRONG")
   })
 
   it("adds no line without a threshold or a source", () => {

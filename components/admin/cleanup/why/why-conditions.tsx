@@ -41,6 +41,10 @@ function sourcesLine(sources: readonly SourceStatus[]): string | null {
   return read.length > 0 ? `From ${joinAnd(read)}.` : null
 }
 
+/** "Size more than 10 GB:", the condition of a group member before its real value. */
+const memberCondition = ({ label, threshold }: { label: string; threshold: string }) => `${[label, threshold.trim()].filter(Boolean).join(" ")}:`
+
+/** The members of an any-of group: each with its verdict, its condition and threshold, and the real value (UX 4.5). */
 function Members({ members }: { members: NonNullable<WhySheetCondition["members"]> }) {
   return (
     <ul className="mt-2 flex flex-col gap-2 border-l pl-3">
@@ -49,7 +53,7 @@ function Members({ members }: { members: NonNullable<WhySheetCondition["members"
         return (
           <li key={member.id} className="flex items-start gap-2">
             <VerdictBadge label={verdict.label} tint={verdict.tint} />
-            <WhyText parts={member.value} className="text-ui" />
+            <WhyText parts={[{ text: memberCondition(member), strong: true }, { text: " " }, ...member.value]} className="text-ui" />
           </li>
         )
       })}

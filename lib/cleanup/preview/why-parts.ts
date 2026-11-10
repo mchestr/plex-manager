@@ -55,7 +55,8 @@ export function whyConditions(
       value: [],
       threshold: `at least 1 of ${clause.conditions.length}`,
       sources: [...used],
-      members: clause.conditions.map((c) => ({ id: c.id, verdict: memberVerdicts.get(c.id) ?? "unknown", value: sheetFact(c, result.item, ctx) })),
+      members: clause.conditions.map((c) => ({ id: c.id, verdict: memberVerdicts.get(c.id) ?? "unknown", label: anyFieldMeta(c.field).label(level),
+        threshold: thresholdText(c, words), value: sheetFact(c, result.item, ctx) })),
     }
   })
 }

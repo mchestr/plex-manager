@@ -68,7 +68,8 @@ describe("liveWhy", () => {
     const data = liveWhy(input(fresh, group, { ctx }))
     expect(data.forecast).toBeUndefined()
     expect(data.conditions[0]).toMatchObject({ id: "a1", label: "Any of these is true", verdict: "fail", threshold: "at least 1 of 2",
-      members: [{ id: "c1", verdict: "fail" }, { id: "c2", verdict: "fail", value: [{ text: "12 GB." }] }] })
+      members: [{ id: "c1", verdict: "fail", label: "Added" }, { id: "c2", verdict: "fail", label: "Size on disk", threshold: expect.stringMatching(/^more than/),
+        value: [{ text: "12 GB." }] }] })
   })
 
   it("explains a Leaving soon title with its own action, its status and the other rules", () => {

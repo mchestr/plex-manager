@@ -161,8 +161,8 @@ export interface WhySheetCondition {
   value: WhyPart[]
   threshold: string
   sources: SourceStatus[]
-  /** Group members. */
-  members?: { id: string; verdict: Verdict; value: WhyPart[] }[]
+  /** Group members, each with its field label and threshold, so a line names what failed (UX 4.5 Conditions). */
+  members?: { id: string; verdict: Verdict; label: string; threshold: string; value: WhyPart[] }[]
 }
 
 /** The Why Sheet (UX 4.5, TS 10.5). From History it is built from the stored Why of the outcome (`fromRun`). */
