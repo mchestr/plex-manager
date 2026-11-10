@@ -97,7 +97,7 @@ describe("FieldPicker", () => {
     const { user } = await openEditor({ focusPart: "fieldSearch" })
     await user.type(screen.getByTestId(id("field-search")), "overseerr")
     await user.keyboard("{Enter}")
-    await waitFor(() => expect(screen.getByTestId(id("choice-no"))).toHaveFocus())
+    await waitFor(() => expect(screen.getByTestId(id("choice-false"))).toHaveFocus())
   })
 
   it("opens and closes from the trigger, and the same field keeps the value", async () => {

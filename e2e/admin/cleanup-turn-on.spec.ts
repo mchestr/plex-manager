@@ -106,10 +106,10 @@ test.describe('Admin media cleanup: turn on a rule', () => {
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Turn on ${DRY.name}`);
     await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText(`Media cleanup/Rules/${DRY.name}/Turn on`);
-    await expect(page.getByTestId('admin-cleanup-turn-on-check-featureOn')).toHaveText('Media cleanup is on.');
-    await expect(page.getByTestId('admin-cleanup-turn-on-check-libraryData')).toContainText('answered at');
-    await expect(page.getByTestId('admin-cleanup-turn-on-check-historyCovers')).toContainText(/That covers the \d+-day window\.$/);
-    await expect(page.getByTestId('admin-cleanup-turn-on-check-dryRuns')).toHaveText('3 dry runs, with steady matches.');
+    await expect(page.getByTestId('admin-cleanup-turn-on-check-feature-on')).toHaveText('Media cleanup is on.');
+    await expect(page.getByTestId('admin-cleanup-turn-on-check-library-data')).toContainText('answered at');
+    await expect(page.getByTestId('admin-cleanup-turn-on-check-history-covers')).toContainText(/That covers the \d+-day window\.$/);
+    await expect(page.getByTestId('admin-cleanup-turn-on-check-dry-runs')).toHaveText('3 dry runs, with steady matches.');
     await expect(page.getByTestId('admin-cleanup-turn-on-headline')).toHaveText(/^\d+ movies go into Leaving soon\.$/);
     await expect(confirm(page)).toHaveAccessibleName(/^Put \d+ movies in Leaving soon$/);
     await expect(page.getByTestId('admin-cleanup-turn-on-confirm-note')).toHaveText('At the leave date: Review first. Nothing is deleted until you approve.');
@@ -161,7 +161,7 @@ test.describe('Admin media cleanup: turn on a rule', () => {
     await openTurnOn(page, REVIEW.id);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Change the mode of ${REVIEW.name}`);
     await expect(radio(page, /^Automatic$/)).toHaveAccessibleDescription('Needs one finished dry run.');
-    await expect(page.getByTestId('admin-cleanup-turn-on-check-dryRuns')).toHaveText('No finished dry run yet. Automatic needs one.');
+    await expect(page.getByTestId('admin-cleanup-turn-on-check-dry-runs')).toHaveText('No finished dry run yet. Automatic needs one.');
     await expect(page.getByTestId('admin-cleanup-turn-on-headline')).toHaveText(/^\d+ movies are in Leaving soon\. Their leave dates do not change\.$/);
     await expect(confirm(page)).toHaveAccessibleName('Switch to Review first');
     await expect(confirm(page)).toHaveAttribute('aria-disabled', 'true');
@@ -192,24 +192,24 @@ test.describe('Admin media cleanup: turn on a rule', () => {
     await setFeature(false);
     try {
       await openTurnOn(page, DRY.id);
-      const check = page.getByTestId('admin-cleanup-turn-on-check-featureOn');
+      const check = page.getByTestId('admin-cleanup-turn-on-check-feature-on');
       await expect(check).toHaveAttribute('data-state', 'failed');
       await expect(check).toContainText('Media cleanup is off. Turn it on in Settings first.');
       await expect(confirm(page)).toHaveAttribute('aria-disabled', 'true');
       if (process.env.REDIS_URL) await expect(confirm(page)).toHaveAccessibleDescription(/^Media cleanup is off\. Turn it on in Settings first\./);
-      await expect(page.getByTestId('admin-cleanup-turn-on-top-check-featureOn')).toBeHidden();
+      await expect(page.getByTestId('admin-cleanup-turn-on-top-check-feature-on')).toBeHidden();
 
       await page.setViewportSize({ width: 390, height: 844 });
-      await expect(page.getByTestId('admin-cleanup-turn-on-top-check-featureOn')).toBeVisible();
-      await expect(page.getByTestId('admin-cleanup-turn-on-top-check-featureOn-fix')).toHaveText('Open settings');
+      await expect(page.getByTestId('admin-cleanup-turn-on-top-check-feature-on')).toBeVisible();
+      await expect(page.getByTestId('admin-cleanup-turn-on-top-check-feature-on-fix')).toHaveText('Open settings');
 
       await page.setViewportSize({ width: 1440, height: 900 });
       const returnTo = encodeURIComponent(turnOnPath(DRY.id));
-      await expect(page.getByTestId('admin-cleanup-turn-on-check-featureOn-fix')).toHaveAttribute(
+      await expect(page.getByTestId('admin-cleanup-turn-on-settings-link')).toHaveAttribute(
         'href',
         `/admin/cleanup?tab=settings&section=cleanup-feature&returnTo=${returnTo}`
       );
-      await page.getByTestId('admin-cleanup-turn-on-check-featureOn-fix').click();
+      await page.getByTestId('admin-cleanup-turn-on-settings-link').click();
       await expect(page).toHaveURL((url) => url.pathname === '/admin/cleanup' && url.searchParams.get('tab') === 'settings' &&
         url.searchParams.get('section') === 'cleanup-feature' && url.searchParams.get('returnTo') === turnOnPath(DRY.id));
     } finally {
@@ -228,7 +228,7 @@ test.describe('Admin media cleanup: turn on a rule', () => {
       await expect(back).toHaveText(`Back to Turn on ${DRY.name}`);
       await back.click();
       await expect(page).toHaveURL(new RegExp(`${turnOnPath(DRY.id)}$`));
-      await expect(page.getByTestId('admin-cleanup-turn-on-check-featureOn')).toHaveText('Media cleanup is on.');
+      await expect(page.getByTestId('admin-cleanup-turn-on-check-feature-on')).toHaveText('Media cleanup is on.');
     } finally {
       await setFeature(true);
     }

@@ -191,7 +191,7 @@ describe("ConditionBox on a phone", () => {
     const user = userEvent.setup()
     render(<Phone />)
     await user.click(tid("admin-cleanup-condition-c3-box"))
-    await waitFor(() => expect(tid("admin-cleanup-condition-editor-choice-no")).toHaveFocus())
+    await waitFor(() => expect(tid("admin-cleanup-condition-editor-choice-false")).toHaveFocus())
     await user.click(tid("admin-cleanup-condition-editor-close"))
     await waitFor(() => expect(sheet()).toBeNull())
 

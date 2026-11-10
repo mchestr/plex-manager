@@ -7,12 +7,15 @@ import { isRecord } from "@/lib/cleanup/fields/values"
 
 import { editorId, kebab, type ValueEditorProps } from "./editor-parts"
 
+/** A choice's value as a key, in kebab case: `neverPlayed` gives `never-played`, `false` gives `false`. */
+const choiceKey = (value: unknown) => kebab(String(value)).toLowerCase()
+
 /**
  * The value of a field with a few named values (UX 6): Requested in
  * Overseerr (Yes, No), The requesters (never played it, all finished it) and
  * Show status (Ended, Continuing), as a `RadioGroup` named by the Value
  * heading. A choice sends the change at once. Each radio's test id is its
- * label in kebab case (`-choice-never-played-it`).
+ * value in kebab case (`-choice-never-played`, `-choice-false`, UX 10.2).
  */
 export function ChoiceValue({ condition, level, onChange, labelId }: ValueEditorProps) {
   const meta = anyFieldMeta(condition.field)
@@ -25,9 +28,9 @@ export function ChoiceValue({ condition, level, onChange, labelId }: ValueEditor
   return (
     <RadioGroup<string>
       aria-labelledby={labelId}
-      value={checked ? kebab(checked.label) : null}
+      value={checked ? choiceKey(checked.value) : null}
       onValueChange={(next) => {
-        const choice = choices.find((c) => kebab(c.label) === next)
+        const choice = choices.find((c) => choiceKey(c.value) === next)
         if (choice) onChange({ ...condition, value: { [key]: choice.value } }, "now")
       }}
       data-testid={editorId("choices")}
@@ -36,8 +39,8 @@ export function ChoiceValue({ condition, level, onChange, labelId }: ValueEditor
       {choices.map((choice) => (
         <RadioCard
           key={choice.label}
-          value={kebab(choice.label)}
-          data-testid={editorId(`choice-${kebab(choice.label)}`)}
+          value={choiceKey(choice.value)}
+          data-testid={editorId(`choice-${choiceKey(choice.value)}`)}
           className="items-center rounded-md border-transparent bg-transparent px-2 py-1.5 hover:border-transparent hover:bg-accent data-checked:border-transparent"
         >
           <span className="text-ui text-foreground">{choice.label}</span>

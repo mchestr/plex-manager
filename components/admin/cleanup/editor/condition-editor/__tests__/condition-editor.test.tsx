@@ -178,7 +178,7 @@ describe("ConditionEditor focus", () => {
     ["operator", LAST_PLAYED, () => screen.getByTestId(id("operator-more-than"))],
     ["field", LAST_PLAYED, () => screen.getByTestId(id("field"))],
     ["fieldSearch", LAST_PLAYED, () => screen.getByTestId(id("field-search"))],
-    ["radio", { id: "c2", field: "request.exists", op: "is", value: { exists: false } }, () => screen.getByTestId(id("choice-no"))],
+    ["radio", { id: "c2", field: "request.exists", op: "is", value: { exists: false } }, () => screen.getByTestId(id("choice-false"))],
     ["combobox", { id: "c2", field: "request.by", op: "only", value: { requesters: [{ kind: "former" }] } }, () => screen.getByTestId(id("list"))],
     // A value focus falls back to the operator when the operator has no value (UX 4.3.8 item 2.2).
     ["value", { ...LAST_PLAYED, op: "never" }, () => screen.getByTestId(id("operator-never"))],

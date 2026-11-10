@@ -82,9 +82,9 @@ describe("the button", () => {
     expect(button()).toHaveAccessibleDescription(
       "Media cleanup is off. Turn it on in Settings first. At the leave date: Review first. Nothing is deleted until you approve."
     )
-    expect(screen.getByTestId("admin-cleanup-turn-on-check-featureOn")).toBeInTheDocument()
-    expect(screen.getByTestId("admin-cleanup-turn-on-top-check-featureOn")).toBeInTheDocument()
-    expect(screen.getByTestId("admin-cleanup-turn-on-top-check-featureOn-fix")).toHaveAttribute("href", expect.stringContaining("returnTo="))
+    expect(screen.getByTestId("admin-cleanup-turn-on-check-feature-on")).toBeInTheDocument()
+    expect(screen.getByTestId("admin-cleanup-turn-on-top-check-feature-on")).toBeInTheDocument()
+    expect(screen.getByTestId("admin-cleanup-turn-on-top-check-feature-on-fix")).toHaveAttribute("href", expect.stringContaining("returnTo="))
     const ids = [...document.querySelectorAll("[data-testid]")].map((el) => el.getAttribute("data-testid"))
     expect(new Set(ids).size).toBe(ids.length)
   })

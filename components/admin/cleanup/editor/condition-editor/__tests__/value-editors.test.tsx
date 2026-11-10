@@ -214,8 +214,8 @@ describe("RequesterPicker", () => {
 
 describe("ChoiceValue", () => {
   it.each([
-    [{ id: "c1", field: "request.exists", op: "is", value: { exists: false } }, "movie", "choice-yes", { exists: true }],
-    [{ id: "c1", field: "request.requesters", op: "is", value: { did: "neverPlayed" } }, "movie", "choice-all-finished-it", { did: "allFinished" }],
+    [{ id: "c1", field: "request.exists", op: "is", value: { exists: false } }, "movie", "choice-true", { exists: true }],
+    [{ id: "c1", field: "request.requesters", op: "is", value: { did: "neverPlayed" } }, "movie", "choice-all-finished", { did: "allFinished" }],
     [{ id: "c1", field: "show.status", op: "is", value: { status: "ended" } }, "show", "choice-continuing", { status: "continuing" }],
   ] as const)("is a radio group with no operator: %o", async (condition, level, choice, value) => {
     const { user } = await openEditor({ condition, level, focus: { matches: 58 } })
