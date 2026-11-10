@@ -14,7 +14,8 @@
  * Either way the report reopens (`REOPENED`), with the title checked against
  * their libraries again, and the admins are alerted. When another report of
  * the title opened in the meantime, their problem joins that one instead
- * (`joinOpenReport`).
+ * (`joinOpenReport`); a still broken answer is then marked on the member's
+ * fixed report, so they're asked once.
  *
  * @module lib/problem-reports/ask-admin
  */
@@ -62,7 +63,10 @@ async function reopen(
   // Another report of the title opened since: the member's problem goes on that one
   const problem = isProblemCode(report.problem) ? report.problem : undefined
   const joined = await joinOpenReport({ activeKey: report.titleKey }, userId, { problem, note: data ? data.note : report.note })
-  return joined ? { ok: true, reportId: joined } : refuse("UNAVAILABLE")
+  if (!joined) return refuse("UNAVAILABLE")
+  // A fixed report stays fixed, so "Does it play now?" is answered once; a closed one keeps its reason (the join adds nothing twice)
+  if (data) await prisma.problemReportEvent.create({ data: { reportId: report.id, kind: "REOPENED", actorUserId: userId, data } })
+  return { ok: true, reportId: joined }
 }
 
 /** "Ask the server admin" about the member's report that found no better copy: back with the admins, once. */

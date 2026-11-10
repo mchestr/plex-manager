@@ -155,7 +155,7 @@ describe('answerDoesItPlay', () => {
     expect(queueReportAlert).toHaveBeenCalledWith('report-1')
   })
 
-  it("joins the title's newer open report when one opened since", async () => {
+  it("joins the title's newer open report when one opened since, and marks the answer on the member's report so it's asked once", async () => {
     prismaMock.problemReport.updateMany.mockRejectedValue(conflict())
     prismaMock.problemReport.findFirst
       .mockResolvedValueOnce(fixed(2) as never)
@@ -164,6 +164,9 @@ describe('answerDoesItPlay', () => {
     expect(await answer(false, 'Still no sound')).toEqual({ ok: true, reportId: 'report-2' })
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
       data: { reportId: 'report-2', kind: 'ALSO_REPORTED', actorUserId: 'member-1', data: { problem: 'wont_start', note: 'Still no sound' } },
+    })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
+      data: { reportId: 'report-1', kind: 'REOPENED', actorUserId: 'member-1', data: { reason: 'still_broken', note: 'Still no sound' } },
     })
   })
 
