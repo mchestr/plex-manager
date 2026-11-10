@@ -15,9 +15,19 @@ const mockShowSuccess = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: mockShowSuccess, showError: jest.fn() }) }))
 
 const ROWS: ReportRow[] = [
-  { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: '2026-11-09T15:00:00.000Z' }, canCancel: true },
-  { id: 'followed', title: 'Up (2009)', problem: 'Buffers a lot', status: 'WITH_ADMIN', latest: { words: "You're following it", at: '2026-11-08T15:00:00.000Z' }, canCancel: false },
-  { id: 'closed', title: 'Alien (1979)', problem: 'Blurry or low quality', status: 'CLOSED', latest: { words: 'You cancelled it', at: '2026-11-07T15:00:00.000Z' }, canCancel: false },
+  { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: '2026-11-09T15:00:00.000Z' }, canCancel: true, statusSub: null, note: null },
+  { id: 'followed', title: 'Up (2009)', problem: 'Buffers a lot', status: 'WITH_ADMIN', latest: { words: "You're following it", at: '2026-11-08T15:00:00.000Z' }, canCancel: false, statusSub: null, note: null },
+  { id: 'closed', title: 'Alien (1979)', problem: 'Blurry or low quality', status: 'CLOSED', latest: { words: 'You cancelled it', at: '2026-11-07T15:00:00.000Z' }, canCancel: false, statusSub: 'Cancelled', note: null },
+  {
+    id: 'answered',
+    title: 'Dune (2021)',
+    problem: 'Looks filmed off a screen',
+    status: 'CLOSED',
+    latest: { words: 'The server admin closed it', at: '2026-11-06T15:00:00.000Z' },
+    canCancel: false,
+    statusSub: 'By the server admin',
+    note: 'This is the only copy.\nA better one comes out in March.',
+  },
 ]
 
 beforeEach(() => jest.clearAllMocks())
@@ -32,6 +42,16 @@ describe('ReportList', () => {
     expect(screen.getByTestId('report-row-status-closed')).toHaveTextContent('Cancelled')
     expect(screen.queryByTestId('report-cancel-followed')).not.toBeInTheDocument()
     expect(screen.queryByTestId('report-cancel-closed')).not.toBeInTheDocument()
+  })
+
+  it("shows the server admin's note as plain text, with why it closed", () => {
+    render(<ReportList rows={ROWS} />)
+
+    const note = screen.getByTestId('report-row-note-answered')
+    expect(note).toHaveTextContent(/^Note from the server admin/)
+    expect(note).toHaveTextContent('This is the only copy. A better one comes out in March.')
+    expect(screen.getByTestId('report-row-status-answered')).toHaveTextContent('By the server admin')
+    expect(screen.queryByTestId('report-row-note-own')).not.toBeInTheDocument()
   })
 
   it('cancels an own report after a confirm', async () => {

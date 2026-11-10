@@ -241,6 +241,17 @@ export enum AuditEventType {
   // An admin or a Support user opened the audit log: one row per viewer per
   // hour. Details carry the filters (category, type and ids), never names.
   AUDIT_LOG_VIEWED = "AUDIT_LOG_VIEWED",
+  // An admin marked a problem report fixed or closed it (docs/problem-reports.md).
+  // The target is the reporter. Details carry the report id, the outcome
+  // (fixed or closed) and whether they left a note for the member, never a
+  // title or a note.
+  PROBLEM_REPORT_CLOSED = "PROBLEM_REPORT_CLOSED",
+  // An admin turned problem reports on or off. Details carry the changed
+  // field names and the values before and after.
+  PROBLEM_REPORT_SETTINGS_CHANGED = "PROBLEM_REPORT_SETTINGS_CHANGED",
+  // An admin set whether a member's swaps need their approval. Details carry
+  // the target user and the new value (needsApproval).
+  PROBLEM_SWAP_APPROVAL_CHANGED = "PROBLEM_SWAP_APPROVAL_CHANGED",
 }
 
 type AuditDetails = {
@@ -325,9 +336,10 @@ export type MemberReadSurface =
   | "rewind-history"
   | "chatbot-tautulli"
   | "conversation-review"
+  | "problem-reports"
 
 /** The admin pages that list many members' content. */
-export type MemberListSurface = "discord-activity" | "watchlist-history" | "affiliates" | "conversation-findings"
+export type MemberListSurface = "discord-activity" | "watchlist-history" | "affiliates" | "conversation-findings" | "problem-reports"
 
 /** True the first time `key` is seen in the hour; a limiter failure counts as first, so a read is never lost. */
 async function firstThisHour(key: string): Promise<boolean> {

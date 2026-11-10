@@ -89,6 +89,12 @@ describe("typesIn", () => {
     ])
   })
 
+  it("lists the problem report events together, with the switch under settings", () => {
+    expect(typesIn("problems")).toEqual(["PROBLEM_REPORT_CLOSED", "PROBLEM_SWAP_APPROVAL_CHANGED"])
+    expect(eventCategory(AuditEventType.PROBLEM_REPORT_SETTINGS_CHANGED)).toBe("settings")
+    expect(CATEGORY_LABELS.problems).toBe("Problem reports")
+  })
+
   it("lists the admin reads", () => {
     expect(typesIn("reads")).toEqual([
       "MEMBER_CONTENT_VIEWED",

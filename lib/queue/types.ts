@@ -43,6 +43,8 @@ export const JOB_TYPES = {
   EMAIL_TEST: "email:test",
   // One warning email before the inactivity sweep removes a member (lib/queue/jobs/inactivity-notice.ts)
   INACTIVITY_NOTICE: "members:notice",
+  // The admins' Discord alert about a member's new problem reports (lib/queue/jobs/problem-report-notify.ts)
+  PROBLEM_REPORT_NOTIFY: "problem-report:notify",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -82,6 +84,7 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.CONVERSATION_REVIEW_SWEEP]: "Conversation review sweep",
   [JOB_TYPES.EMAIL_TEST]: "Test email",
   [JOB_TYPES.INACTIVITY_NOTICE]: "Inactivity email",
+  [JOB_TYPES.PROBLEM_REPORT_NOTIFY]: "Problem report alert",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
   [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
@@ -113,6 +116,7 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.CONVERSATION_REVIEW_SWEEP,
   JOB_TYPES.EMAIL_TEST,
   JOB_TYPES.INACTIVITY_NOTICE,
+  JOB_TYPES.PROBLEM_REPORT_NOTIFY,
 ] as const satisfies readonly JobType[]
 
 /** A job's label, or its raw name for a type this build does not know. */
@@ -410,6 +414,8 @@ interface JobPayloads {
   [JOB_TYPES.EMAIL_TEST]: { userId: string }
   /** The notice row (`InactivityNotice`) to send; the job reads everything else when it runs. */
   [JOB_TYPES.INACTIVITY_NOTICE]: { noticeId: string }
+  /** A new report; the job alerts about every report of that member still waiting for an alert. */
+  [JOB_TYPES.PROBLEM_REPORT_NOTIFY]: { reportId: string }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
@@ -466,6 +472,8 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   [JOB_TYPES.CONVERSATION_REVIEW_SWEEP]: { fromCaller: "the judge-review-sweep scheduler" },
   [JOB_TYPES.EMAIL_TEST]: { deduplication: (data) => `email:test:${data.userId}` },
   [JOB_TYPES.INACTIVITY_NOTICE]: { deduplication: (data) => `members:notice:${data.noticeId}` },
+  // Deduplication, not a job id: a report sent back to the admins later can be alerted again
+  [JOB_TYPES.PROBLEM_REPORT_NOTIFY]: { deduplication: (data) => `problem-report:notify:${data.reportId}` },
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
   [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },
   [JOB_TYPES.REWIND_GENERATE_USER]: { fromCaller: "the RewindGeneration id" },

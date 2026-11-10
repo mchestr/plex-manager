@@ -21,6 +21,9 @@
  * | `ASSISTANT_SOURCE_CHANGED`     | `kind`, `action`                               | "Skill source refreshed", "MCP server removed"                                   |
  * | `EMAIL_TEST_SENT`              | `status`, `smtpCode`                           | "Sent", "Not sent, the mail server did not take it (554)"                        |
  * | `EMAIL_PREFERENCE_CHANGED`     | `enabled`, `via`                               | "Access reminders turned off, with the link in an email"                         |
+ * | `PROBLEM_REPORT_CLOSED`        | `outcome`, `memberNote`                        | "Marked fixed, with a note for the member", "Closed"                             |
+ * | `PROBLEM_REPORT_SETTINGS_CHANGED` | `changedFields`, `after`                    | "Turned on"                                                                      |
+ * | `PROBLEM_SWAP_APPROVAL_CHANGED` | `needsApproval`                               | "Swaps need approval"                                                            |
  *
  * A section or field name shows only when it looks like code (`setup.plex`,
  * `apiKey`), a block code only when `lib/inactivity/blocks.ts` knows it, and a
@@ -173,6 +176,7 @@ const SURFACES: Record<MemberReadSurface | MemberListSurface, string> = {
   "watchlist-history": "Watchlist sync page",
   affiliates: "Affiliates page",
   "conversation-findings": "Conversation findings",
+  "problem-reports": "Problem reports",
 }
 
 function surface(details: Details): string | null {
@@ -219,6 +223,20 @@ const PREFERENCE_VIA = { account: "on Account", link: "with the link in an email
 const emailPreference: Summarize = ({ enabled, via }) =>
   typeof enabled === "boolean" && isKeyOf(PREFERENCE_VIA, via) ? `Access reminders turned ${enabled ? "on" : "off"}, ${PREFERENCE_VIA[via]}` : null
 
+const REPORT_OUTCOMES = { fixed: "Marked fixed", closed: "Closed" }
+
+/** "Marked fixed, with a note for the member": the outcome, and whether the member got a note, never the note. */
+const reportClosed: Summarize = ({ outcome, memberNote }) =>
+  isKeyOf(REPORT_OUTCOMES, outcome) ? `${REPORT_OUTCOMES[outcome]}${memberNote === true ? ", with a note for the member" : ""}` : null
+
+const reportSettings: Summarize = ({ changedFields, after }) =>
+  Array.isArray(changedFields) && changedFields.includes("enabled") && isRecord(after) && typeof after.enabled === "boolean"
+    ? `Turned ${after.enabled ? "on" : "off"}`
+    : null
+
+const swapApproval: Summarize = ({ needsApproval }) =>
+  typeof needsApproval === "boolean" ? (needsApproval ? "Swaps need approval" : "Swaps no longer need approval") : null
+
 const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   MEMBER_UNSHARED: memberUnshared,
   INACTIVITY_SWEEP_RUN: sweepRun,
@@ -234,6 +252,9 @@ const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   ASSISTANT_SOURCE_CHANGED: sourceChanged,
   EMAIL_TEST_SENT: emailTest,
   EMAIL_PREFERENCE_CHANGED: emailPreference,
+  PROBLEM_REPORT_CLOSED: reportClosed,
+  PROBLEM_REPORT_SETTINGS_CHANGED: reportSettings,
+  PROBLEM_SWAP_APPROVAL_CHANGED: swapApproval,
 }
 
 /** The event's one-line summary, or null when its type has none or its details do not fit. */

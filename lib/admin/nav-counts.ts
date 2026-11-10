@@ -58,17 +58,19 @@ async function failedJobs(): Promise<number | null> {
 
 /**
  * The admin sidebar's badges: members, affiliate applications waiting for a
- * decision, and failed jobs. Cached for 30 seconds under `admin-nav-counts`,
- * so every admin page render does not count again.
+ * decision, failed jobs, and problem reports with the server admin. Cached
+ * for 30 seconds under `admin-nav-counts`, so every admin page render does
+ * not count again.
  */
 export const getAdminNavCounts = unstable_cache(
   async (): Promise<NavCounts> => {
-    const [users, pendingAffiliates, failed] = await Promise.all([
+    const [users, pendingAffiliates, failed, reportsToReview] = await Promise.all([
       prisma.user.count(),
       prisma.affiliateApplication.count({ where: { status: "PENDING" } }),
       failedJobs(),
+      prisma.problemReport.count({ where: { status: "WITH_ADMIN" } }),
     ])
-    return { users, pendingAffiliates, failedJobs: failed }
+    return { users, pendingAffiliates, failedJobs: failed, reportsToReview }
   },
   [ADMIN_NAV_COUNTS_TAG],
   { tags: [ADMIN_NAV_COUNTS_TAG], revalidate: 30 }

@@ -77,13 +77,19 @@ describe("ADMIN_NAV", () => {
     expect(new Set(childIds).size).toBe(childIds.length)
   })
 
-  it("badges pending applications, else the member count, on Members, and failed jobs on Automations", () => {
-    const counts = { users: 7, pendingAffiliates: 2, failedJobs: 2 }
+  it("badges pending applications, else the member count, on Members, and failed jobs, else reports to review, on Automations", () => {
+    const counts = { users: 7, pendingAffiliates: 2, failedJobs: 2, reportsToReview: 3 }
     expect(byId("members").badge?.(counts)).toEqual({ text: "2 to review" })
     expect(byId("members").badge?.({ ...counts, pendingAffiliates: 0 })).toEqual({ text: "7" })
     expect(byId("automations").badge?.(counts)).toEqual({ text: "2 failed", tone: "destructive" })
-    expect(byId("automations").badge?.({ ...counts, failedJobs: 0 })).toBeNull()
-    expect(byId("automations").badge?.({ ...counts, failedJobs: null })).toBeNull()
+    expect(byId("automations").badge?.({ ...counts, failedJobs: 0 })).toEqual({ text: "3 to review" })
+    expect(byId("automations").badge?.({ ...counts, failedJobs: null })).toEqual({ text: "3 to review" })
+    expect(byId("automations").badge?.({ ...counts, failedJobs: null, reportsToReview: 0 })).toBeNull()
+  })
+
+  it("opens Automations on Problem reports", () => {
+    expect(byId("automations").href).toBe("/admin/problem-reports")
+    expect(byId("automations").children?.map((child) => child.id)).toEqual(["problem-reports", "watchlist", "inactivity", "request-limits", "queues"])
   })
 })
 
@@ -103,6 +109,8 @@ describe("isActive", () => {
     ["rewind", "/admin/sharesheet", false],
     ["rewind", "/admin/users", false],
     ["discord", "/admin/discord/settings", true],
+    ["automations", "/admin/problem-reports", true],
+    ["automations", "/admin/problem-reports/r1", true],
     ["automations", "/admin/watchlist", true],
     ["automations", "/admin/inactivity", true],
     ["automations", "/admin/request-limits", true],
@@ -324,15 +332,16 @@ describe("Rewind", () => {
 describe("Automations", () => {
   const automations = byId("automations")
 
-  it("is one item with the Watchlist sync, Inactive members, Request limits and Queues tabs, opening on Watchlist sync", () => {
+  it("is one item with the Problem reports, Watchlist sync, Inactive members, Request limits and Queues tabs, opening on Problem reports", () => {
     expect(automations).toMatchObject({
       label: "Automations",
-      href: "/admin/watchlist",
+      href: "/admin/problem-reports",
       match: "prefix",
       mobile: "tab",
-      also: ["/admin/inactivity", "/admin/request-limits", "/admin/queues"],
+      also: ["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues"],
     })
     expect(automations.children).toEqual([
+      { id: "problem-reports", label: "Problem reports", href: "/admin/problem-reports" },
       { id: "watchlist", label: "Watchlist sync", href: "/admin/watchlist" },
       { id: "inactivity", label: "Inactive members", href: "/admin/inactivity" },
       { id: "request-limits", label: "Request limits", href: "/admin/request-limits" },
@@ -340,7 +349,7 @@ describe("Automations", () => {
     ])
   })
 
-  it.each(["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues", "/admin/queues/job-1"])(
+  it.each(["/admin/problem-reports", "/admin/problem-reports/r1", "/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues", "/admin/queues/job-1"])(
     "lights on %s, under the title Automations",
     (pathname) => {
       expect(activeItem(pathname)?.id).toBe("automations")
@@ -349,7 +358,7 @@ describe("Automations", () => {
   )
 
   it("offers every tab to an admin and none to a role", () => {
-    expect(childrenOf("automations", { isAdmin: true }).map((tab) => tab.id)).toEqual(["watchlist", "inactivity", "request-limits", "queues"])
+    expect(childrenOf("automations", { isAdmin: true }).map((tab) => tab.id)).toEqual(["problem-reports", "watchlist", "inactivity", "request-limits", "queues"])
     expect(childrenOf("automations", { isAdmin: false, role: "support" })).toEqual([])
     expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).not.toContain("automations")
   })
@@ -359,8 +368,8 @@ describe("Automations", () => {
     expect(ids).toContain("automations")
     expect(ids.indexOf("automations")).toBeGreaterThan(ids.indexOf("rewind"))
     const tab = mobileTabs().find((t) => t.id === "automations") as MobileLinkTab
-    expect(tab.href).toBe("/admin/watchlist")
-    for (const pathname of ["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues"]) {
+    expect(tab.href).toBe("/admin/problem-reports")
+    for (const pathname of ["/admin/problem-reports", "/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues"]) {
       expect(isTabActive(tab, pathname)).toBe(true)
     }
     expect(isTabActive(tab, "/admin/settings")).toBe(false)

@@ -17,7 +17,8 @@
  * | `discord`       | Discord links, refused commands and the bot settings                          |
  * | `announcements` | Announcements                                                                 |
  * | `jobs`          | The job queues                                                                |
- * | `settings`      | Settings, the time zone, LLM providers, the inactivity settings, test emails  |
+ * | `problems`      | Problem reports closed by an admin, and whose swaps need approval             |
+ * | `settings`      | Settings, the time zone, LLM providers, the inactivity and problem report settings, test emails |
  * | `setup`         | First-run setup                                                               |
  * | `reads`         | Reads of member content and Rewinds, the assistant's app data reads, this log |
  *
@@ -44,6 +45,7 @@ export const AUDIT_CATEGORIES = [
   "discord",
   "announcements",
   "jobs",
+  "problems",
   "settings",
   "setup",
   "reads",
@@ -67,6 +69,7 @@ export const CATEGORY_LABELS: Record<AuditCategory, string> = {
   discord: "Discord",
   announcements: "Announcements",
   jobs: "Job queues",
+  problems: "Problem reports",
   settings: "Settings",
   setup: "First-run setup",
   reads: "Admin reads",
@@ -164,11 +167,15 @@ const AUDIT_EVENTS: Record<AuditEventName, EventWords> = {
   QUEUE_JOB_RETRIED: { label: "Job retried", category: "jobs" },
   QUEUE_SYNC_TRIGGERED: { label: "Sync started by hand", category: "jobs" },
 
+  PROBLEM_REPORT_CLOSED: { label: "Problem report closed", category: "problems" },
+  PROBLEM_SWAP_APPROVAL_CHANGED: { label: "Swap approval changed", category: "problems" },
+
   CONFIG_CHANGED: { label: "Settings changed", category: "settings" },
   SERVER_TIMEZONE_CHANGED: { label: "Server time zone changed", category: "settings" },
   LLM_PROVIDER_CHANGED: { label: "LLM provider changed", category: "settings" },
   SERVICE_ROWS_DEDUPED: { label: "Duplicate services turned off", category: "settings" },
   INACTIVITY_SETTINGS_CHANGED: { label: "Inactivity settings changed", category: "settings" },
+  PROBLEM_REPORT_SETTINGS_CHANGED: { label: "Problem report settings changed", category: "settings" },
   EMAIL_TEST_SENT: { label: "Test email sent", category: "settings" },
 
   SETUP_CLAIMED: { label: "Setup claimed", category: "setup" },

@@ -290,10 +290,43 @@ describe("auditSummary", () => {
     ["AUDIT_LOG_VIEWED", { filters: { member: NAME, category: EMAIL, type: NOTE } }],
     ["ASSISTANT_SOURCE_CHANGED", { kind: "skill", action: "saved", id: NAME, name: EMAIL, repo: NOTE }],
     ["SUBSCRIPTION_EXEMPT_CHANGED", { isExempt: true, exemptNote: NOTE }],
+    ["PROBLEM_REPORT_CLOSED", { reportId: NAME, outcome: "fixed", memberNote: EMAIL, adminNote: NOTE }],
+    ["PROBLEM_REPORT_SETTINGS_CHANGED", { changedFields: [NAME], after: { enabled: true, note: NOTE } }],
+    ["PROBLEM_SWAP_APPROVAL_CHANGED", { needsApproval: true, name: NAME }],
   ])("never echoes a name, an email or a note from %s details", (type, details) => {
     const line = summary(type, details) ?? ""
 
     for (const text of [NAME, EMAIL, NOTE]) expect(line).not.toContain(text)
+  })
+})
+
+describe("the problem report events", () => {
+  it.each([
+    [{ reportId: "r1", outcome: "fixed", memberNote: true }, "Marked fixed, with a note for the member"],
+    [{ reportId: "r1", outcome: "closed", memberNote: false }, "Closed"],
+    [{ reportId: "r1", outcome: "closed" }, "Closed"],
+    [{ reportId: "r1", outcome: "reopened" }, null],
+  ])("summarises a closed report, %o", (details, expected) => {
+    expect(summary("PROBLEM_REPORT_CLOSED", details)).toBe(expected)
+  })
+
+  it.each([
+    [{ changedFields: ["enabled"], after: { enabled: true } }, "Turned on"],
+    [{ changedFields: ["enabled"], after: { enabled: false } }, "Turned off"],
+    [{ changedFields: ["enabled"], after: { enabled: "yes" } }, null],
+  ])("summarises the switch, %o", (details, expected) => {
+    expect(summary("PROBLEM_REPORT_SETTINGS_CHANGED", details)).toBe(expected)
+  })
+
+  it("says whether the member's swaps need approval", () => {
+    expect(summary("PROBLEM_SWAP_APPROVAL_CHANGED", { needsApproval: true })).toBe("Swaps need approval")
+    expect(summary("PROBLEM_SWAP_APPROVAL_CHANGED", { needsApproval: false })).toBe("Swaps no longer need approval")
+    expect(summary("PROBLEM_SWAP_APPROVAL_CHANGED", { needsApproval: 1 })).toBeNull()
+  })
+
+  it("names the problem reports surface", () => {
+    expect(summary("MEMBER_CONTENT_VIEWED", { surface: "problem-reports" })).toBe("Problem reports")
+    expect(summary("MEMBER_CONTENT_LISTED", { surface: "problem-reports", filters: { status: "needs-you" } })).toBe("Problem reports")
   })
 })
 

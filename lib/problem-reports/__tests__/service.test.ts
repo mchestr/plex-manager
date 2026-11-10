@@ -11,6 +11,7 @@ import type { PlexItemMetadata } from '@/lib/connections/plex'
 import { hasEntitlement } from '@/lib/actions/entitlement'
 import { Prisma } from '@/lib/generated/prisma/client'
 import { readMemberItem } from '@/lib/problem-reports/access'
+import { queueReportAlert } from '@/lib/problem-reports/alerts'
 import { readEvidence } from '@/lib/problem-reports/evidence'
 import { cancelProblemReport, followProblemReport, reportProblem } from '@/lib/problem-reports/service'
 import { consume } from '@/lib/security/rate-limit'
@@ -18,6 +19,7 @@ import { consume } from '@/lib/security/rate-limit'
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/problem-reports/access', () => ({ readMemberItem: jest.fn() }))
 jest.mock('@/lib/problem-reports/evidence', () => ({ readEvidence: jest.fn() }))
+jest.mock('@/lib/problem-reports/alerts', () => ({ queueReportAlert: jest.fn() }))
 jest.mock('@/lib/actions/entitlement', () => ({ hasEntitlement: jest.fn() }))
 jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn() }))
 jest.mock('@/lib/db/serializable', () => ({
@@ -89,6 +91,7 @@ describe('reportProblem', () => {
     })
     expect(consume).toHaveBeenCalledWith('problem-report:create', 'member-1')
     expect(consume).toHaveBeenCalledWith('problem-report:create:day', 'member-1')
+    expect(queueReportAlert).toHaveBeenCalledWith('report-1')
   })
 
   it("keeps the player answer only for a problem that asks it", async () => {
@@ -141,6 +144,7 @@ describe('reportProblem', () => {
     })
 
     expect(prismaMock.problemReport.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { activeKey: 'plex://episode/pilot' } }))
+    expect(queueReportAlert).not.toHaveBeenCalled()
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledTimes(1)
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
       data: {

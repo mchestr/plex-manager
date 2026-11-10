@@ -140,6 +140,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   // The section strip (Users, Invites, Affiliates) above the page's own tabs: two tablists on one page
   { path: '/admin/affiliates', as: 'admin', ready: 'admin-affiliates-header' },
   { path: '/admin/announcements', as: 'admin', ready: 'admin-announcements-header' },
+  { path: '/admin/problem-reports', as: 'admin', ready: 'admin-problem-reports-header' },
   { path: '/admin/watchlist', as: 'admin', ready: 'admin-watchlist-header' },
   { path: '/admin/inactivity', as: 'admin', ready: 'admin-inactivity-header' },
   { path: '/admin/request-limits', as: 'admin', ready: 'admin-request-limits-header' },

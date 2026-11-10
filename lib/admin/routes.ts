@@ -91,6 +91,19 @@ export function affiliates({ tab }: { tab?: AffiliateTab } = {}): Route {
   return (tab && tab !== "applications" ? `/admin/affiliates?tab=${tab}` : "/admin/affiliates") as Route
 }
 
+/** The Problem reports list's filters, by status; `needs-you` is the default and leaves the URL bare. */
+export const PROBLEM_REPORT_FILTERS = ["needs-you", "fixing", "fixed", "closed"] as const
+export type ProblemReportFilter = (typeof PROBLEM_REPORT_FILTERS)[number]
+
+export function problemReports({ status }: { status?: ProblemReportFilter } = {}): Route {
+  return (status && status !== "needs-you" ? `/admin/problem-reports?status=${status}` : "/admin/problem-reports") as Route
+}
+
+/** One problem report, with its timeline and evidence. */
+export function problemReport(id: string): Route {
+  return `/admin/problem-reports/${seg(id)}` as Route
+}
+
 export function invite(id: string): Route {
   return `/admin/invites/${seg(id)}` as Route
 }
