@@ -186,7 +186,8 @@ async function approveHeld(rows: readonly CleanupItem[], rule: LiveRule, ctx: Re
 /**
  * Joins items with no entry check (TS 10.3): the matches of a rule that the
  * turn-on page turned on, or the held rows of an approved entry batch. A
- * protection made after the review keeps its title out. Returns the keys that
+ * protection made after the review keeps its title out. A turn-on never
+ * joins a `held` row of another rule: that row waits for its own batch. Returns the keys that
  * joined Leaving soon and the count of rows that an action changed meanwhile.
  */
 export async function joinItems(ctx: ReconcileContext, input: JoinInput): Promise<{ joined: string[]; skipped: number }> {
@@ -203,7 +204,8 @@ export async function joinItems(ctx: ReconcileContext, input: JoinInput): Promis
   let skipped = 0
   for (const result of results) {
     const row = byKey.get(result.item.key)
-    if (isProtected(result.item) || row?.state === "deleting" || row?.ruleIds.includes(input.rule.id)) continue
+    // A held row waits for its own rules' entry batch: joining it would give this rule a waiting batch (C-07)
+    if (isProtected(result.item) || row?.state === "deleting" || row?.state === "held" || row?.ruleIds.includes(input.rule.id)) continue
     if (!row) {
       const holders = [{ rule: input.rule, result }, ...matchingRules(result.item, ctx, [input.rule.id])]
       const fresh = newRow(result.item, holders, holders.map((h) => h.rule), ctx)

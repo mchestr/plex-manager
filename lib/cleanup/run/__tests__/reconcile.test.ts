@@ -334,11 +334,11 @@ describe("reconcile: step 4, other rules join", () => {
     expect(updates()[0].data).toEqual(expect.objectContaining({ ruleIds: ["rule-a"] }))
   })
 
-  it("keeps a held item held when another rule joins it, with no leave date", async () => {
+  it("keeps a held item held with only the rules that held it: another matching rule does not join it (correctness review C-07)", async () => {
     prismaMock.cleanupItem.findMany.mockResolvedValue([row({ state: "held", leaveOn: null, enteredAt: null, heldAt: new Date(NOW) })])
     await reconcile({ ctx: contextOf({ rules: [rule("rule-a"), rule("rule-b", {}, { createdAt: "2026-05-01T00:00:00Z" })] }) })
     const [update] = updates()
-    expect(update.data).toEqual(expect.objectContaining({ ruleIds: ["rule-a", "rule-b"], leaveOn: null }))
+    expect(update.data).toEqual(expect.objectContaining({ ruleIds: ["rule-a"], leaveOn: null }))
     expect(update.data).not.toHaveProperty("state")
   })
 })

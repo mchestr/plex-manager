@@ -12,7 +12,11 @@
  *    (`notInLibrary`). Else each holding rule keeps or drops by
  *    `ruleVerdict()`. A blocked rule stays unchanged (E14).
  * 3. Every other live rule without blocks that covers the item and matches
- *    it joins. A `held` item stays `held`.
+ *    it joins a `leaving` or `approved` item. A `held` item stays `held`,
+ *    and no rule joins it: its `ruleIds` are the rules whose entry check
+ *    held it, so another rule never gets a waiting entry batch that stops
+ *    its new matches (correctness review C-07). The other rules join once
+ *    the batch is approved.
  * 4. No rule left: the item exits (`exitItem()`). Else one optimistic write:
  *    the merge, a later `leaveOn` for joined rules (with the season's show
  *    raise, E21), the hold code, the Why, the snapshot facts, and the E31
@@ -133,7 +137,7 @@ function check(row: CleanupItem, ctx: ReconcileContext): Checked {
     if (verdict.keep) holdCode ??= verdict.holdCode ?? null
     return verdict.keep || drop(rule, verdict.reason, verdict.detail)
   })
-  const joined = item ? matchingRules(item, ctx, row.ruleIds) : []
+  const joined = item && row.state !== "held" ? matchingRules(item, ctx, row.ruleIds) : []
   for (const { rule, result } of joined) results.set(rule.id, result)
   return { item, dropped, holding: [...holding, ...joined.map((j) => j.rule)], joined: joined.map((j) => j.rule), holdCode, results }
 }

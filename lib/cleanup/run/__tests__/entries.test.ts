@@ -178,6 +178,15 @@ describe("addNewMatches: the entry check", () => {
   })
 })
 
+describe("addNewMatches: a held row of another rule (correctness review C-07)", () => {
+  it("never gives a rule a waiting entry batch for a held row that another rule's entry check held", async () => {
+    database({ existing: [{ itemKey: "movie:tmdb:1", state: "held", ruleIds: ["rule-a"] }] })
+    const result = await addNewMatches(contextOf([rule("rule-a"), rule("rule-b")], [movie(1), movie(2)]))
+    expect(result.rules.map((r) => [r.ruleId, r.waitingBatch])).toEqual([["rule-a", true], ["rule-b", false]])
+    expect(created().map((r) => [r.itemKey, r.state])).toEqual([["movie:tmdb:2", "leaving"]])
+  })
+})
+
 describe("addNewMatches: titles that left after the snapshot (correctness review C-03)", () => {
   it("never adds back a title deleted or rescued after the snapshot was taken, and adds one that left before it", async () => {
     database({})
@@ -278,7 +287,7 @@ describe("joinItems: turn-on (no entry check)", () => {
     return evaluateItem(r.compiled, item, ctx.evaluation)
   }
 
-  it("creates leaving rows for new keys, joins existing rows through reconcile rules, keeps held rows held, and skips the rest", async () => {
+  it("creates leaving rows for new keys, joins existing rows through reconcile rules, leaves held rows of other rules alone, and skips the rest", async () => {
     const turned = rule("rule-t", { then: { graceDays: 60, action: "movie.delete", importListExclusion: false } }, { createdAt: "2026-06-01T00:00:00Z" })
     const items = [movie(1), movie(2), movie(3), movie(4), movie(5), movie(6)]
     const ctx = contextOf([rule("rule-a")], items, { entryCheck: { count: 1, percent: 1 } })
@@ -297,9 +306,8 @@ describe("joinItems: turn-on (no entry check)", () => {
     expect(result).toEqual({ joined: ["movie:tmdb:2", "movie:tmdb:1"], skipped: 0 })
     expect(created()).toEqual([expect.objectContaining({ itemKey: "movie:tmdb:1", state: "leaving", ruleIds: ["rule-t", "rule-a"], leaveOn: "2027-01-07" })])
     const writes = prismaMock.cleanupItem.updateMany.mock.calls.map(([args]) => args)
-    expect(writes.map((w) => w.where)).toEqual([{ id: "two", updatedAt: rows[0].updatedAt }, { id: "three", updatedAt: rows[1].updatedAt }])
+    expect(writes.map((w) => w.where)).toEqual([{ id: "two", updatedAt: rows[0].updatedAt }])
     expect(writes[0].data).toEqual(expect.objectContaining({ ruleIds: ["rule-a", "rule-t"], leaveOn: "2026-12-31", holdCode: null }))
-    expect(writes[1].data).toEqual(expect.objectContaining({ ruleIds: ["rule-a", "rule-t"], leaveOn: null }))
   })
 
   it("counts a joined row that an action changed meanwhile as skipped, and joins nothing for no matches", async () => {
