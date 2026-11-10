@@ -39,7 +39,7 @@ describe("copies", () => {
   it("reads an episode row with its files and size", () => {
     const store = fixtureStore()
     expect(store.episodes.get("401")).toEqual({
-      ratingKey: "401", sectionId: "2", seasonRatingKey: "301", showRatingKey: "201", parentIndex: 1,
+      ratingKey: "401", sectionId: "2", seasonRatingKey: "301", showRatingKey: "201", parentIndex: 1, index: 1,
       guid: "plex://episode/5d9c1276e9d5a1001f4e0401", addedAt: 1690000000,
       files: ["/data/tv/Paper Moon Station/Season 01/Paper Moon Station - S01E01.mkv"], size: 1073741824,
     })

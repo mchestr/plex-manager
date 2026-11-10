@@ -104,8 +104,8 @@ describe("assembleShows from the fixtures", () => {
       show: { status: "ended", seasonsOnDisk: 1, newestSeasonOnDisk: 1, lastEpisodeAddedAt: 1710000100 },
     })
     expect(find(seasons, "season:tvdb:770202:1")).toMatchObject({ position: 1, episodeCount: 1, arr: { fileCount: 1 } })
-    expect(onDisk.get("show:tvdb:770202")).toEqual(new Set(["405"]))
-    expect(onDisk.get("season:tvdb:770201:1")).toEqual(new Set(["401", "402"]))
+    expect(onDisk.get("show:tvdb:770202")).toEqual(new Set(["s1e1"]))
+    expect(onDisk.get("season:tvdb:770201:1")).toEqual(new Set(["s1e1", "s1e2"]))
   })
 })
 

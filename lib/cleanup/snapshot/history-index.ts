@@ -37,7 +37,7 @@
  */
 
 import { type TitleCopy, titleKeysOf, wholeOrNull } from "@/lib/cleanup/identity/copies"
-import { seasonNumberOf, type ShowStore } from "@/lib/cleanup/identity/episodes"
+import { episodeIdentity, seasonNumberOf, type ShowStore } from "@/lib/cleanup/identity/episodes"
 import { stripLang } from "@/lib/cleanup/identity/guids"
 import { itemKey, seasonItemKey } from "@/lib/cleanup/identity/keys"
 import { isCountedPlay, isFinished } from "@/lib/cleanup/engine/plays"
@@ -69,7 +69,7 @@ interface Target { key: string; episodeKey: string | null; movie: boolean }
 export interface HistoryIndex {
   /** Stream one page of rows into the index. */
   add(rows: readonly HistoryRow[]): void
-  /** The plays of one item. `onDisk`: the item's episode keys with a file (shows: specials left out). */
+  /** The plays of one item. `onDisk`: the identities of the item's episodes with a file (shows: specials left out). */
   playsOf(item: Pick<SnapshotItem, "key" | "level" | "episodeCount">, onDisk?: ReadonlySet<string>): Plays
   /** Every plex.tv id seen in the history, with its newest counted play. */
   lastPlays(): ReadonlyMap<string, number | null>
@@ -110,7 +110,8 @@ export function buildHistoryMaps(movies: Iterable<TitleCopy>, store: ShowStore):
   for (const episode of store.episodes.values()) {
     const found = ref(episode.showRatingKey, seasonNumberOf(store, episode))
     if (!found) continue
-    const full = { ...found, episodeKey: episode.ratingKey }
+    // The episode's identity across the show's copies, as the assembly's `onDisk` holds it
+    const full = { ...found, episodeKey: episodeIdentity(store, episode) }
     maps.episodeByKey.set(episode.ratingKey, full)
     addGuid(maps.episodeByGuid, episode.guid, full)
   }

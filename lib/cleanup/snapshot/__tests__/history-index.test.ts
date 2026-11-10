@@ -7,8 +7,10 @@
 
 import { toTitleCopy } from "@/lib/cleanup/identity/copies"
 import { type ShowStore, toEpisodeCopy, toSeasonCopy } from "@/lib/cleanup/identity/episodes"
-import { type HistoryRow, historyRowSchema, plexEpisodeRow, plexMovieRow, plexSeasonRow, plexShowRow } from "@/lib/cleanup/schema/upstream"
+import { type HistoryRow, historyRowSchema, plexEpisodeRow, plexMovieRow, plexSeasonRow, plexShowRow, sonarrSeriesSchema } from "@/lib/cleanup/schema/upstream"
 import { toMovieCopy } from "@/lib/cleanup/snapshot/assemble-movies"
+import { assembleShows } from "@/lib/cleanup/snapshot/assemble-shows"
+import { sonarrView } from "@/lib/cleanup/identity/arr"
 import { buildHistoryMaps, createHistoryIndex } from "@/lib/cleanup/snapshot/history-index"
 
 const MOVIE = "movie:tmdb:1"
@@ -29,15 +31,15 @@ function library() {
   for (const [ratingKey, index] of [["300", 0], ["301", 1], ["302", undefined]] as const) {
     store.seasons.set(ratingKey, toSeasonCopy("2", plexSeasonRow.parse({ ratingKey, parentRatingKey: "201", index })))
   }
-  const episode = (ratingKey: string, season: string, guid: string, withFile = true) => {
-    const copy = toEpisodeCopy("2", plexEpisodeRow.parse({ ratingKey, parentRatingKey: season, grandparentRatingKey: "201", guid,
-      Media: withFile ? file(`/data/tv/S/${ratingKey}.mkv`) : [] }))
+  const episode = (ratingKey: string, season: string, guid: string, index?: number) => {
+    const copy = toEpisodeCopy("2", plexEpisodeRow.parse({ ratingKey, parentRatingKey: season, grandparentRatingKey: "201", guid, index,
+      Media: file(`/data/tv/S/${ratingKey}.mkv`) }))
     store.episodes.set(ratingKey, copy)
   }
-  episode("400", "300", "plex://episode/special")
-  episode("401", "301", "com.plexapp.agents.thetvdb://7/1/1?lang=en")
-  episode("402", "301", "plex://episode/402")
-  episode("403", "302", "plex://episode/403")
+  episode("400", "300", "plex://episode/special", 1)
+  episode("401", "301", "com.plexapp.agents.thetvdb://7/1/1?lang=en", 1)
+  episode("402", "301", "plex://episode/402", 2)
+  episode("403", "302", "plex://episode/403", 1)
   episode("499", "999", "plex://episode/orphan-season")
   return { movies, store }
 }
@@ -62,6 +64,10 @@ function indexOf(rows: HistoryRow[]) {
 const movieItem = { key: MOVIE, level: "movie" as const, episodeCount: null }
 const showItem = (episodeCount: number) => ({ key: SHOW, level: "show" as const, episodeCount })
 const seasonItem = (episodeCount: number) => ({ key: S1, level: "season" as const, episodeCount })
+/** The episode identities of the fixture (`episodeIdentity`): 403's season row has no index, so its guid names it. */
+const E401 = "s1e1"
+const E402 = "s1e2"
+const E403 = "guid:plex://episode/403"
 
 describe("buildHistoryMaps", () => {
   it("maps copies, guids without ?lang=, seasons and episodes", () => {
@@ -72,8 +78,8 @@ describe("buildHistoryMaps", () => {
     expect(maps.showByKey.get("201")).toBe(SHOW)
     expect(maps.seasonByKey.get("300")).toEqual({ showKey: SHOW, seasonKey: null, episodeKey: null, special: true })
     expect(maps.seasonByKey.get("302")).toEqual({ showKey: SHOW, seasonKey: null, episodeKey: null, special: false })
-    expect(maps.episodeByKey.get("401")).toEqual({ showKey: SHOW, seasonKey: S1, episodeKey: "401", special: false })
-    expect(maps.episodeByGuid.get("com.plexapp.agents.thetvdb://7/1/1")).toMatchObject({ episodeKey: "401" })
+    expect(maps.episodeByKey.get("401")).toEqual({ showKey: SHOW, seasonKey: S1, episodeKey: E401, special: false })
+    expect(maps.episodeByGuid.get("com.plexapp.agents.thetvdb://7/1/1")).toMatchObject({ episodeKey: E401 })
     expect(maps.episodeByKey.has("499")).toBe(true)
   })
 
@@ -119,14 +125,14 @@ describe("createHistoryIndex", () => {
     ])
     expect(index.playsOf(showItem(3)).countedAt).toHaveLength(4)
     expect(index.playsOf(seasonItem(2)).countedAt).toHaveLength(3)
-    expect(index.playsOf(seasonItem(2), new Set(["401", "402"])).viewers[0]).toEqual({
+    expect(index.playsOf(seasonItem(2), new Set([E401, E402])).viewers[0]).toEqual({
       user: "100", lastCountedAt: expect.any(Number), lastCountedFinished: true, counted: 3, finished: true, finishedEpisodes: 2,
     })
   })
 
   it("counts a special for the show's plays, never for a season or its finished set", () => {
     const index = indexOf([row({ media_type: "episode", rating_key: 400 })])
-    const show = index.playsOf(showItem(3), new Set(["401", "402", "403"]))
+    const show = index.playsOf(showItem(3), new Set([E401, E402, E403]))
     expect(show.countedAt).toHaveLength(1)
     expect(show.viewers[0]).toMatchObject({ counted: 1, finishedEpisodes: 0, finished: false })
     expect(index.playsOf(seasonItem(2)).countedAt).toEqual([])
@@ -138,9 +144,9 @@ describe("createHistoryIndex", () => {
       row({ media_type: "episode", rating_key: 402, percent_complete: 50, watched_status: 0.5 }),
       row({ media_type: "episode", rating_key: 403 }),
     ])
-    expect(index.playsOf(seasonItem(2), new Set(["401", "402"])).viewers[0]).toMatchObject({ finishedEpisodes: 1, finished: false })
-    expect(index.playsOf(seasonItem(1), new Set(["401"])).viewers[0]).toMatchObject({ finishedEpisodes: 1, finished: true })
-    expect(index.playsOf(showItem(3), new Set(["401", "403"])).viewers[0]).toMatchObject({ finishedEpisodes: 2 })
+    expect(index.playsOf(seasonItem(2), new Set([E401, E402])).viewers[0]).toMatchObject({ finishedEpisodes: 1, finished: false })
+    expect(index.playsOf(seasonItem(1), new Set([E401])).viewers[0]).toMatchObject({ finishedEpisodes: 1, finished: true })
+    expect(index.playsOf(showItem(3), new Set([E401, E403])).viewers[0]).toMatchObject({ finishedEpisodes: 2 })
     expect(index.playsOf(seasonItem(0), new Set()).viewers[0]).toMatchObject({ finished: false })
   })
 
@@ -202,5 +208,45 @@ describe("createHistoryIndex", () => {
 
   it("starts empty", () => {
     expect(indexOf([]).stats()).toEqual({ startAt: null, newestAt: null, rows: 0, orphans: 0, usersWithPlay: 0 })
+  })
+})
+
+describe("a show with two Plex copies (correctness review C-05)", () => {
+  /** One copy of a show with 2 episodes in season 1, in `sectionId`. */
+  function addCopy(store: ShowStore, sectionId: string, showKey: string, folder: string): void {
+    store.shows.set(showKey, toTitleCopy(sectionId, plexShowRow.parse({ ratingKey: showKey, title: "Two Copies", Guid: [{ id: "tvdb://9" }] }), "show"))
+    store.seasons.set(`${showKey}1`, toSeasonCopy(sectionId, plexSeasonRow.parse({ ratingKey: `${showKey}1`, parentRatingKey: showKey, index: 1 })))
+    for (const index of [1, 2]) {
+      store.episodes.set(`${showKey}10${index}`, toEpisodeCopy(sectionId, plexEpisodeRow.parse({ ratingKey: `${showKey}10${index}`, parentRatingKey: `${showKey}1`,
+        grandparentRatingKey: showKey, index, parentIndex: 1, Media: [{ Part: [{ file: `${folder}/S1/E${index}.mkv`, size: 100 }] }] })))
+    }
+  }
+
+  function setUp(rows: [ratingKey: string, show: string][]) {
+    const store: ShowStore = { shows: new Map(), seasons: new Map(), episodes: new Map() }
+    addCopy(store, "2", "801", "/data/tv/Two Copies")
+    addCopy(store, "5", "901", "/data/tv4k/Two Copies")
+    const series = sonarrSeriesSchema.parse({ id: 90, title: "Two Copies", titleSlug: "two-copies", tvdbId: 9, path: "/data/tv/Two Copies", status: "ended",
+      monitored: false, added: "2024-01-01T00:00:00Z", tags: [], seasons: [{ seasonNumber: 1, monitored: false, statistics: { episodeFileCount: 2, sizeOnDisk: 200 } }],
+      statistics: { episodeFileCount: 2, sizeOnDisk: 200 } })
+    const assembly = assembleShows(store, sonarrView("ok", { records: [series], rootFolders: [{ path: "/data/tv" }], tags: [], importLists: [], disk: [] }))
+    const index = createHistoryIndex(buildHistoryMaps([], store))
+    index.add(rows.map(([ratingKey, show]) => row({ media_type: "episode", rating_key: ratingKey, parent_rating_key: `${show}1`, grandparent_rating_key: show })))
+    const viewer = (item: (typeof assembly.shows)[number]) => index.playsOf(item, assembly.onDisk.get(item.key)).viewers[0]
+    return { show: assembly.shows[0], season: assembly.seasons[0], viewer }
+  }
+
+  it("counts each episode once and finishes a viewer who watched every episode of one copy", () => {
+    const { show, season, viewer } = setUp([["801101", "801"], ["801102", "801"]])
+    expect([show.episodeCount, season.episodeCount]).toEqual([2, 2])
+    expect([viewer(show), viewer(season)]).toEqual([expect.objectContaining({ finished: true, finishedEpisodes: 2 }),
+      expect.objectContaining({ finished: true, finishedEpisodes: 2 })])
+  })
+
+  it("finishes a viewer who watched the episodes across both copies, and never one who watched one episode twice", () => {
+    const across = setUp([["801101", "801"], ["901102", "901"]])
+    expect(across.viewer(across.show)).toMatchObject({ finished: true, finishedEpisodes: 2 })
+    const twice = setUp([["801101", "801"], ["901101", "901"]])
+    expect(twice.viewer(twice.show)).toMatchObject({ finished: false, finishedEpisodes: 1 })
   })
 })

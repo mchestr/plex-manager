@@ -13,6 +13,7 @@
  */
 
 import { sumSizes, type TitleCopy, wholeOrNull } from "@/lib/cleanup/identity/copies"
+import { stripLang } from "@/lib/cleanup/identity/guids"
 import { plexPartFiles, type PlexEpisodeRow, type PlexSeasonRow } from "@/lib/cleanup/schema/upstream"
 
 export interface SeasonCopy {
@@ -31,6 +32,8 @@ export interface EpisodeCopy {
   showRatingKey: string
   /** The episode's own `parentIndex`, used when its season row is missing or has no index. */
   parentIndex: number | null
+  /** The episode number (`index`), or null. */
+  index: number | null
   guid: string | null
   addedAt: number | null
   files: string[]
@@ -59,6 +62,7 @@ export function toEpisodeCopy(sectionId: string, row: PlexEpisodeRow): EpisodeCo
     seasonRatingKey: row.parentRatingKey,
     showRatingKey: row.grandparentRatingKey,
     parentIndex: seasonIndex(row.parentIndex),
+    index: seasonIndex(row.index),
     guid: row.guid ?? null,
     addedAt: wholeOrNull(row.addedAt),
     files: plexPartFiles(row),
@@ -69,6 +73,19 @@ export function toEpisodeCopy(sectionId: string, row: PlexEpisodeRow): EpisodeCo
 /** The season number of an episode: its season row's index, else its `parentIndex`, else null. */
 export function seasonNumberOf(store: ShowStore, episode: EpisodeCopy): number | null {
   return store.seasons.get(episode.seasonRatingKey)?.index ?? episode.parentIndex
+}
+
+/**
+ * One episode across the Plex copies of its show: `s{season}e{number}`, else
+ * its guid without `?lang=`, else `rk:{ratingKey}`. Two copies of a show
+ * hold the same episode twice, so the episode counts and "finished" count
+ * each identity once (correctness review C-05). An episode with no numbers
+ * and no guid counts once per copy, which only makes "finished" later.
+ */
+export function episodeIdentity(store: ShowStore, episode: EpisodeCopy): string {
+  const season = seasonNumberOf(store, episode)
+  if (season !== null && episode.index !== null) return `s${season}e${episode.index}`
+  return episode.guid ? `guid:${stripLang(episode.guid)}` : `rk:${episode.ratingKey}`
 }
 
 /** Per show rating key, its season rows and its episode rows. Built once per store. */

@@ -28,7 +28,7 @@
 
 import { arrRoot, type ArrView, isImportListed, tagLabelsOf } from "@/lib/cleanup/identity/arr"
 import { epochOf, groupCopies, mergeIds, newest, sumSizes, type TitleCopy, unionLabels, wholeOrNull } from "@/lib/cleanup/identity/copies"
-import { type EpisodeCopy, indexShows, type SeasonCopy, type ShowIndex, showParts, type ShowStore } from "@/lib/cleanup/identity/episodes"
+import { type EpisodeCopy, episodeIdentity, indexShows, type SeasonCopy, type ShowIndex, showParts, type ShowStore } from "@/lib/cleanup/identity/episodes"
 import { itemKey, seasonItemKey } from "@/lib/cleanup/identity/keys"
 import { matchToArr, withArrIds } from "@/lib/cleanup/identity/match"
 import { bySection, type CopyChoice, fenceFiles, pickManagedCopy, rootOf } from "@/lib/cleanup/identity/path-fence"
@@ -38,7 +38,11 @@ import { plexSeasonFiles, seasonNumberingMatches, seasonPosition, sonarrSeasonsO
 
 type Match = SnapshotItem["match"]
 
-/** The show and season items, and per item key the episodes on disk that "finished" counts (specials left out). */
+/**
+ * The show and season items, and per item key the episodes on disk that
+ * "finished" counts (specials left out), as episode identities
+ * (`episodeIdentity`): an episode that two copies hold counts once.
+ */
 export interface ShowAssembly {
   shows: SnapshotItem[]
   seasons: SnapshotItem[]
@@ -109,12 +113,13 @@ function showAssembly(titleKey: string, copies: readonly TitleCopy[], store: Sho
     titleKey, title: choice.chosen.title, year: choice.chosen.year, ids, collections: [], plays: null, requests: null,
     added: { plex: newest(copies.map((c) => c.addedAt)), arr: record ? epochOf(record.added) : null },
   }
-  const countable = withFiles(parts.episodes).filter((e) => parts.seasonOf(e) !== 0)
-  out.onDisk.set(showKey, new Set(countable.map((e) => e.ratingKey)))
+  const identities = (episodes: readonly EpisodeCopy[]) => new Set(withFiles(episodes).map((e) => episodeIdentity(store, e)))
+  const countable = identities(parts.episodes.filter((e) => parts.seasonOf(e) !== 0))
+  out.onDisk.set(showKey, countable)
   out.shows.push({
     ...base, key: showKey, level: "show", seasonNumber: null, showKey: null, sectionId: choice.chosen.sectionId, ratingKey: choice.chosen.ratingKey,
     copies: [...copies].sort(bySection).map((c) => ({ ratingKey: c.ratingKey, sectionId: c.sectionId })),
-    episodeKeys: keysOf(parts.episodes), episodeCount: countable.length, match: shown.match, arr: record ? arrOf(record, sonarr) : null,
+    episodeKeys: keysOf(parts.episodes), episodeCount: countable.size, match: shown.match, arr: record ? arrOf(record, sonarr) : null,
     sizeBytes: wholeOrNull(record?.statistics?.sizeOnDisk) ?? sumSizes(managedEpisodes.map((e) => e.size)),
     show: facts(newest(parts.episodes.map((e) => e.addedAt))), position: null, labels: unionLabels(copies),
   })
@@ -126,12 +131,13 @@ function showAssembly(titleKey: string, copies: readonly TitleCopy[], store: Sho
     const chosen = managedSeason ?? [...seasonCopies].sort(bySection)[0]
     const chosenEpisodes = parts.episodesOfSeasons([chosen])
     const key = seasonItemKey(titleKey, n)
-    out.onDisk.set(key, new Set(withFiles(episodes).map((e) => e.ratingKey)))
+    const onDisk = identities(episodes)
+    out.onDisk.set(key, onDisk)
     out.seasons.push({
       ...base, key, level: "season", seasonNumber: n, showKey, sectionId: chosen.sectionId, ratingKey: chosen.ratingKey,
       added: { ...base.added, plex: newest(seasonCopies.map((s) => s.addedAt)) },
       copies: [...seasonCopies].sort(bySection).map((s) => ({ ratingKey: s.ratingKey, sectionId: s.sectionId })),
-      episodeKeys: keysOf(episodes), episodeCount: withFiles(episodes).length,
+      episodeKeys: keysOf(episodes), episodeCount: onDisk.size,
       match: seasonMatch(shown, n, numberingOk, managedSeason, chosenEpisodes.flatMap((e) => e.files)),
       arr: record ? arrOf(record, sonarr, n) : null,
       sizeBytes: wholeOrNull(record?.seasons.find((s) => s.seasonNumber === n)?.statistics?.sizeOnDisk) ?? sumSizes(chosenEpisodes.map((e) => e.size)),
