@@ -48,8 +48,16 @@ export async function startMockPlexTv(port = plexTvMockPort()): Promise<Server> 
       res.end();
       return;
     }
+    let machineIdentifier: string;
+    try {
+      machineIdentifier = decodeURIComponent(match[1]);
+    } catch {
+      res.writeHead(400);
+      res.end();
+      return;
+    }
     res.writeHead(200, { 'Content-Type': 'application/xml' });
-    res.end(sharedServersXml(decodeURIComponent(match[1])));
+    res.end(sharedServersXml(machineIdentifier));
   });
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
