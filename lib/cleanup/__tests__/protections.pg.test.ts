@@ -183,6 +183,7 @@ describePg("media cleanup protections on PostgreSQL", (databaseUrl) => {
     await expect(mockDb.cleanupProtection.findUniqueOrThrow({ where: { id: second.id } })).resolves.toMatchObject({
       status: "ended",
       endedBy: "expired",
+      endedAt: second.expiresAt,
       activeKey: null,
     })
   })

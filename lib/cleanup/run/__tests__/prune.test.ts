@@ -59,13 +59,19 @@ describe("pruneCleanup", () => {
   it("ends each Keep and exclusion whose end has passed, with endedAt = its own end, then deletes ended rows after 30 days", async () => {
     const keepEnd = new Date("2026-11-07T00:00:00.000Z")
     const exclusionEnd = new Date("2026-11-08T03:30:00.000Z")
-    prismaMock.cleanupProtection.findMany.mockResolvedValue([{ id: "keep-1", expiresAt: keepEnd }, { id: "exclude-1", expiresAt: exclusionEnd }] as never)
+    prismaMock.cleanupProtection.findMany.mockResolvedValue([
+      { id: "keep-1", kind: "memberKeep", expiresAt: keepEnd },
+      { id: "exclude-1", kind: "adminExclude", expiresAt: exclusionEnd },
+    ] as never)
     prismaMock.cleanupProtection.updateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 })
     prismaMock.cleanupProtection.deleteMany.mockResolvedValue({ count: 3 })
 
     await expect(pruneCleanup(now)).resolves.toEqual({ runs: 0, outcomes: 0, protections: 3, expired: 1 })
 
-    expect(prismaMock.cleanupProtection.findMany).toHaveBeenCalledWith({ where: { status: "active", expiresAt: { lte: now } }, select: { id: true, expiresAt: true } })
+    expect(prismaMock.cleanupProtection.findMany).toHaveBeenCalledWith({
+      where: { kind: { in: ["memberKeep", "adminExclude"] }, status: "active", expiresAt: { lte: now } },
+      select: { id: true, kind: true, expiresAt: true },
+    })
     expect(prismaMock.cleanupProtection.updateMany.mock.calls.map(([args]) => args)).toEqual([
       { where: { id: "keep-1", status: "active" }, data: { status: "ended", endedBy: "expired", endedAt: keepEnd, endedByUserId: null, activeKey: null } },
       { where: { id: "exclude-1", status: "active" }, data: { status: "ended", endedBy: "expired", endedAt: exclusionEnd, endedByUserId: null, activeKey: null } },

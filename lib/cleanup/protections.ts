@@ -168,12 +168,26 @@ export async function setExclusionEnd(
   return count > 0
 }
 
-/** Ends every active Keep and exclusion whose end has passed at `now` (`expired`). The counts of each kind. */
+/**
+ * Ends every active Keep and exclusion whose end has passed at `now`
+ * (`endedBy: "expired"`, TS 8.3 step 11), with `endedAt` = its own
+ * `expiresAt`, so the member page names the day the Keep really ended.
+ * Prisma cannot copy a column in `data`, so each row gets its own write. A
+ * row that another writer ended first counts nowhere. The counts of each kind.
+ */
 export async function expireProtections(now: Date, db: PrismaTransactionClient = prisma): Promise<{ keeps: number; exclusions: number }> {
-  const expire = (kind: ProtectionKind) =>
-    db.cleanupProtection.updateMany({ where: { kind, status: "active", expiresAt: { lte: now } }, data: ended("expired", null, now) })
-  const [keeps, exclusions] = await Promise.all([expire("memberKeep"), expire("adminExclude")])
-  return { keeps: keeps.count, exclusions: exclusions.count }
+  const kinds: ProtectionKind[] = ["memberKeep", "adminExclude"]
+  const rows = await db.cleanupProtection.findMany({
+    where: { kind: { in: kinds }, status: "active", expiresAt: { lte: now } },
+    select: { id: true, kind: true, expiresAt: true },
+  })
+  const counts = { keeps: 0, exclusions: 0 }
+  for (const row of rows) {
+    const { count } = await db.cleanupProtection.updateMany({ where: { id: row.id, status: "active" }, data: ended("expired", null, row.expiresAt ?? now) })
+    if (row.kind === "memberKeep") counts.keeps += count
+    else counts.exclusions += count
+  }
+  return counts
 }
 
 /** The member's Keeps that protect at `now`: the count the Keep limit compares (13.2). */

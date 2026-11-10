@@ -245,19 +245,35 @@ describe("ending and changing rows", () => {
     ])
   })
 
-  it("ends the Keeps and exclusions whose end has passed, with the counts of each", async () => {
-    prismaMock.cleanupProtection.updateMany.mockResolvedValueOnce({ count: 3 }).mockResolvedValueOnce({ count: 1 })
+  it("ends each Keep and exclusion whose end has passed, with endedAt = its own end, and the counts of each", async () => {
+    const keepEnd = new Date("2026-11-07T00:00:00.000Z")
+    const exclusionEnd = new Date("2026-11-08T12:00:00.000Z")
+    prismaMock.cleanupProtection.findMany.mockResolvedValueOnce([
+      { id: "k1", kind: "memberKeep", expiresAt: keepEnd },
+      { id: "k2", kind: "memberKeep", expiresAt: keepEnd },
+      { id: "x1", kind: "adminExclude", expiresAt: exclusionEnd },
+    ] as never)
+    // k2 was ended by another writer first: zero rows, counted nowhere
+    prismaMock.cleanupProtection.updateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 })
 
-    await expect(expireProtections(now)).resolves.toEqual({ keeps: 3, exclusions: 1 })
+    await expect(expireProtections(now)).resolves.toEqual({ keeps: 1, exclusions: 1 })
+    expect(prismaMock.cleanupProtection.findMany).toHaveBeenCalledWith({
+      where: { kind: { in: ["memberKeep", "adminExclude"] }, status: "active", expiresAt: { lte: now } },
+      select: { id: true, kind: true, expiresAt: true },
+    })
+    const endedAt = (at: Date) => ({ ...ENDED("expired", null), endedAt: at })
     expect(prismaMock.cleanupProtection.updateMany.mock.calls.map(([args]) => args)).toEqual([
-      { where: { kind: "memberKeep", status: "active", expiresAt: { lte: now } }, data: ENDED("expired", null) },
-      { where: { kind: "adminExclude", status: "active", expiresAt: { lte: now } }, data: ENDED("expired", null) },
+      { where: { id: "k1", status: "active" }, data: endedAt(keepEnd) },
+      { where: { id: "k2", status: "active" }, data: endedAt(keepEnd) },
+      { where: { id: "x1", status: "active" }, data: endedAt(exclusionEnd) },
     ])
   })
 
-  it("expires through the transaction client it is given", async () => {
-    await expireProtections(now, db)
-    expect(prismaMock.cleanupProtection.updateMany).toHaveBeenCalledTimes(2)
+  it("expires through the transaction client it is given, and writes nothing when no end has passed", async () => {
+    prismaMock.cleanupProtection.findMany.mockResolvedValueOnce([])
+    await expect(expireProtections(now, db)).resolves.toEqual({ keeps: 0, exclusions: 0 })
+    expect(prismaMock.cleanupProtection.findMany).toHaveBeenCalledTimes(1)
+    expect(prismaMock.cleanupProtection.updateMany).not.toHaveBeenCalled()
   })
 
   it("counts the member's Keeps that protect now", async () => {
