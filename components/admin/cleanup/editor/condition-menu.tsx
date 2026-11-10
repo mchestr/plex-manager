@@ -1,6 +1,5 @@
 "use client"
 
-import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { Copy, ListChecks, Ungroup } from "lucide-react"
 import type { FocusEventHandler, Ref } from "react"
 
@@ -12,6 +11,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuGroup,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Icon } from "@/components/ui/icon"
@@ -89,26 +90,13 @@ export function ConditionMenu({ id, kind, targets, variant, canRemove, onAction,
           Duplicate
         </DropdownMenuItem>
         {kind === "condition" && (
-          <MenuPrimitive.SubmenuRoot>
-            <MenuPrimitive.SubmenuTrigger
-              disabled={others.length === 0}
-              data-slot="dropdown-menu-item"
-              className={cn(
-                "flex cursor-default items-center gap-2 rounded-sm px-2 text-ui outline-none select-none",
-                "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
-                "data-highlighted:bg-accent data-highlighted:text-accent-foreground data-popup-open:bg-accent",
-                "data-disabled:pointer-events-none data-disabled:text-muted-foreground",
-                item
-              )}
-              data-testid={`${base}-group`}
-            >
-              <Icon icon={icons.group} />
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger disabled={others.length === 0} icon={<Icon icon={icons.group} />} className={item} data-testid={`${base}-group`}>
               <span className={cn("flex min-w-0 flex-1", twoLines)}>
                 <span>Move into an any-of group with...</span>
                 {!sheet && <span className="text-label text-muted-foreground">Choose another condition. Both go into a new group.</span>}
               </span>
-              <Icon icon={icons.chevronRight} />
-            </MenuPrimitive.SubmenuTrigger>
+            </DropdownMenuSubTrigger>
             <DropdownMenuContent side="inline-end" align="start" sideOffset={-4} className="w-72 max-w-[calc(100vw-2rem)]">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Group with</DropdownMenuLabel>
@@ -124,7 +112,7 @@ export function ConditionMenu({ id, kind, targets, variant, canRemove, onAction,
                 ))}
               </DropdownMenuGroup>
             </DropdownMenuContent>
-          </MenuPrimitive.SubmenuRoot>
+          </DropdownMenuSub>
         )}
         {kind === "member" && (
           <DropdownMenuItem icon={<Icon icon={Ungroup} />} onClick={() => onAction({ type: "moveOut", id })} data-testid={`${base}-ungroup`}>

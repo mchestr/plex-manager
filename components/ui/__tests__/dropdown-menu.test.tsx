@@ -11,6 +11,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
@@ -94,5 +96,38 @@ describe("DropdownMenu", () => {
 
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument())
     expect(screen.getByRole("button", { name: "Actions for Sam Rivera" })).toHaveFocus()
+  })
+
+  it("opens a submenu from its trigger with the keyboard, and runs one of its items", async () => {
+    const user = userEvent.setup()
+    const onMove = jest.fn()
+    render(
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button variant="ghost" aria-label="Actions for Sam Rivera" />} />
+        <DropdownMenuContent>
+          <DropdownMenuItem>View profile</DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger icon={<Copy />} data-testid="sub-trigger">Move to</DropdownMenuSubTrigger>
+            <DropdownMenuContent side="inline-end">
+              <DropdownMenuItem onClick={onMove}>Group one</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenuSub>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+    await openMenu(user)
+    const trigger = screen.getByRole("menuitem", { name: "Move to" })
+    expect(trigger).toHaveAttribute("aria-haspopup", "menu")
+    expect(trigger).toHaveAttribute("data-slot", "dropdown-menu-sub-trigger")
+
+    await user.keyboard("{ArrowDown}{ArrowDown}")
+    await waitFor(() => expect(trigger).toHaveFocus())
+    await user.keyboard("{ArrowRight}")
+    const item = await screen.findByRole("menuitem", { name: "Group one" })
+    await waitFor(() => expect(item).toHaveFocus())
+    expect(trigger).toHaveAttribute("data-popup-open")
+    await user.keyboard("{Enter}")
+
+    expect(onMove).toHaveBeenCalledTimes(1)
   })
 })
