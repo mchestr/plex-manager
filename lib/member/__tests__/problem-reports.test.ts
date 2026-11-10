@@ -108,7 +108,7 @@ describe('getReportPageData', () => {
       openReport: { id: 'open', problem: 'Episodes are missing', status: 'WITH_ADMIN', since: AT.toISOString(), yours: false },
       lastPlay: null,
     })
-    expect(memberLastPlay).toHaveBeenCalledWith('member-1', '6999')
+    expect(memberLastPlay).toHaveBeenCalledWith('member-plex', expect.objectContaining({ ratingKey: '6999', type: 'show' }))
     expect(prismaMock.problemReport.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { activeKey: 'plex://show/office' } }))
   })
 
@@ -122,6 +122,7 @@ describe('getReportPageData', () => {
     expect(data.recent).toEqual([])
     expect(memberLibraryAccess).toHaveBeenCalledTimes(1)
     expect(watchingNow).toHaveBeenCalledWith(SERVER, { plexUserId: 'member-plex', isOwner: false }, { all: false, sections: new Set(['1']) })
+    expect(recentlyWatched).toHaveBeenCalledWith('member-plex', { all: false, sections: new Set(['1']) })
   })
 
   it('loads the rest of the page while Plex is down', async () => {

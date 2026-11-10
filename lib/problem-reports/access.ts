@@ -18,8 +18,6 @@ import { getSharedSectionKeys, rememberItemSectionKey } from "@/lib/connections/
 import { prisma } from "@/lib/prisma"
 import { REPORTABLE_MEDIA_TYPES } from "@/lib/problem-reports/taxonomy"
 
-
-
 /** Which sections a member may browse: all of them, or a set of section keys. */
 export type LibraryAccess = { all: true } | { all: false; sections: ReadonlySet<string> }
 

@@ -51,6 +51,16 @@ describe('readHistory', () => {
     expect(row).toMatchObject({ ratingKey: '555', mediaType: 'movie', grandparentRatingKey: undefined, showTitle: undefined, transcoded: false, watched: false })
   })
 
+  it("reads a show's plays by its key, and tries once when asked to", async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 500, headers: new Headers(), json: async () => ({}) })
+
+    expect(await readHistory(CONFIG, { user_id: 42, grandparent_rating_key: '6999', length: 1 }, { attempts: 1 })).toBeNull()
+
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+    const url = new URL(String((global.fetch as jest.Mock).mock.calls[0][0]))
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({ grandparent_rating_key: '6999', user_id: '42', length: '1' })
+  })
+
   it('reports a failed read as null', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 500, headers: new Headers(), json: async () => ({}) })
 

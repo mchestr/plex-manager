@@ -109,7 +109,7 @@ async function searchTitles(server: PlexServerConfig | null, access: LibraryAcce
   return { results: results.slice(0, RESULT_LIMIT), error: null }
 }
 
-async function selectTitle(userId: string, ratingKey: string): Promise<NonNullable<ReportPageData["selected"]>> {
+async function selectTitle(userId: string, plexUserId: string | null, ratingKey: string): Promise<NonNullable<ReportPageData["selected"]>> {
   const member = await readMemberItem(userId, ratingKey)
   if (!member.ok) return { error: member.reason === "UNAVAILABLE" ? UNAVAILABLE : NOT_IN_LIBRARIES }
   const { item, server } = member
@@ -119,7 +119,7 @@ async function selectTitle(userId: string, ratingKey: string): Promise<NonNullab
       where: { activeKey: titleKeyOf(item) },
       select: { id: true, reporterId: true, problem: true, status: true, updatedAt: true, events: { where: { kind: "ALSO_REPORTED", actorUserId: userId }, select: { id: true }, take: 1 } },
     }),
-    memberLastPlay(userId, item.ratingKey),
+    memberLastPlay(plexUserId, item),
   ])
   return {
     ratingKey: item.ratingKey,
@@ -148,13 +148,14 @@ export async function getReportPageData(userId: string, params: { q?: string; it
     prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } }),
   ])
   const access = server ? await memberLibraryAccess(userId, server) : null
-  const member = { plexUserId: user?.plexUserId ?? null, isOwner: !!server && user?.plexUserId === server.adminPlexUserId }
+  const plexUserId = user?.plexUserId ?? null
+  const member = { plexUserId, isOwner: !!server && plexUserId === server.adminPlexUserId }
   const [reports, watching, recent, search, selected] = await Promise.all([
     listReports(userId),
     server && access ? watchingNow(server, member, access) : null,
-    access ? recentlyWatched(userId, access) : null,
+    access ? recentlyWatched(plexUserId, access) : null,
     query ? searchTitles(server, access, query) : null,
-    params.item ? selectTitle(userId, params.item) : null,
+    params.item ? selectTitle(userId, plexUserId, params.item) : null,
   ])
   return { reports, watching, recent, search, selected }
 }
