@@ -45,7 +45,9 @@ function factsOf(card: RuleCardData, f: BoundFormat, today: string): Fact[] {
 
   if (card.mode === "dryRun") {
     const since = dryRuns.sinceDay ? ` since ${dayWords(f, dryRuns.sinceDay, today)}` : ""
-    const range = dryRuns.min !== null && dryRuns.max !== null ? `Between ${f.number(dryRuns.min)} and ${f.number(dryRuns.max)} matches` : null
+    // One value when every dry run found the same count, as the turn-on page says it (UX review UX-09)
+    const range = dryRuns.min === null || dryRuns.max === null ? null
+      : dryRuns.min === dryRuns.max ? `Matches stayed at ${f.number(dryRuns.min)}` : `Between ${f.number(dryRuns.min)} and ${f.number(dryRuns.max)} matches`
     return [
       matchesFact(growth),
       { id: "dry-runs", label: "Dry runs", value: dryRuns.count > 0 ? `${f.number(dryRuns.count)}${since}` : "Nothing yet", sub: range },

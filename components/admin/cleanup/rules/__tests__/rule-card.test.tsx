@@ -120,6 +120,11 @@ describe("RuleCard facts by mode", () => {
     expect(fact("rule-dry", "members")).toHaveTextContent("Members seeNothing yetA dry run changes nothing")
   })
 
+  it("names one count when every dry run found the same number, never 'Between 21 and 21'", () => {
+    renderCard(card({ facts: { ...FACTS, dryRuns: { ...FACTS.dryRuns, min: 21, max: 21 } } }))
+    expect(fact("rule-dry", "dry-runs")).toHaveTextContent("Dry runs12 since Oct 27Matches stayed at 21")
+  })
+
   it("says Nothing yet before the first dry run of this version, and leaves out an unknown growth", () => {
     renderCard(card({ facts: { ...FACTS, matches: { ...FACTS.matches, count: 1, bytes: bytes(2), growthWeeks: null }, dryRuns: { count: 0, sinceDay: null, min: null, max: null, steady: false } } }))
 
