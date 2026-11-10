@@ -14,6 +14,7 @@ import { FilterBar } from "@/components/ui/filter-bar"
 import { Poster } from "@/components/ui/poster"
 import { useReplaceParams } from "@/hooks/use-replace-params"
 import { lastDay, titleName, typeLine } from "@/lib/cleanup/actions/keeps/words"
+import { LIST_PAGE_SIZES } from "@/lib/cleanup/screens/leaving/params"
 import type { ProtectionRow } from "@/lib/cleanup/types/list-parts"
 import type { CleanupProtectionsData } from "@/lib/cleanup/types/screens"
 import { useFormat } from "@/lib/format-context"
@@ -22,6 +23,8 @@ import { posterPalette } from "@/lib/ui/poster-palette"
 import type { BoundFormat } from "@/lib/utils/format"
 
 const BASE = "admin-cleanup-kept"
+/** The sizes that the loader accepts, smallest first in the select. */
+const PAGE_SIZES = [...LIST_PAGE_SIZES].sort((a, b) => a - b)
 
 const FILTERS = [
   {
@@ -173,8 +176,7 @@ export function KeptTable({ data, all, successFocus }: KeptTableProps) {
           />
         }
         pagination={{ page: data.page, pageSize: data.size, total: data.total }}
-        // The tab reads its page size from `size`, so the table offers no other size
-        pageSizes={[data.size]}
+        pageSizes={PAGE_SIZES}
         empty={empty}
         data-testid={BASE}
       />

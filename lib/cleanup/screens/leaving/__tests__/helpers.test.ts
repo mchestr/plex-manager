@@ -37,6 +37,12 @@ describe("params", () => {
     expect(parseListParams({})).toEqual({ q: "", page: 1, size: 50 })
   })
 
+  it("reads the page size that the DataTable select writes, before size", () => {
+    expect(parseListParams(new URLSearchParams("pageSize=25"))).toEqual({ q: "", page: 1, size: 25 })
+    expect(parseListParams(new URLSearchParams("pageSize=100&size=25"))).toEqual({ q: "", page: 1, size: 100 })
+    expect(parseListParams({ pageSize: "7" })).toEqual({ q: "", page: 1, size: 50 })
+  })
+
   it("parses the Leaving soon filters and drops values that do not parse", () => {
     expect(parseLeavingParams({ rule: "rule-1", status: "onHold", library: "2", batch: "deletion-rule-1", batchPage: "3" })).toMatchObject({
       rule: "rule-1", status: "onHold", library: "2", batch: "deletion-rule-1", batchPage: 3,

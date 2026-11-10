@@ -1,9 +1,10 @@
 /**
  * The URL params of the Leaving soon, Kept and excluded and History tabs
- * (TS 10.4). `q`, `page` and `size` go through `parseTableParams()`
- * (`lib/ui/table-params.ts`), where `size` is its `pageSize`. The filters go
- * through Zod. A value that does not parse falls back to its default, so a
- * hand-edited URL never throws. Client-safe.
+ * (TS 10.4). `q`, `page` and the page size go through `parseTableParams()`
+ * (`lib/ui/table-params.ts`). The page size is `pageSize`, which the
+ * `DataTable` size select writes, else `size` (the TS 10.4 name). The
+ * filters go through Zod. A value that does not parse falls back to its
+ * default, so a hand-edited URL never throws. Client-safe.
  *
  * | Tab | Params |
  * |---|---|
@@ -49,10 +50,10 @@ export interface ListParams {
   size: number
 }
 
-/** `q`, `page` and `size` of a list tab. */
+/** `q`, `page` and the page size of a list tab: `pageSize` (the `DataTable` select), else `size`. */
 export function parseListParams(input: SearchParamsInput): ListParams {
   const table = parseTableParams(
-    { q: first(input, "q"), page: first(input, "page"), pageSize: first(input, "size") },
+    { q: first(input, "q"), page: first(input, "page"), pageSize: first(input, "pageSize") ?? first(input, "size") },
     { sortable: [], defaultSort: NO_SORT, pageSizes: LIST_PAGE_SIZES }
   )
   return { q: table.q, page: table.page, size: table.pageSize }

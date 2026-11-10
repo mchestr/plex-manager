@@ -111,6 +111,15 @@ describe("KeptTab", () => {
     await waitFor(() => expect(currentHref()).toContain("kind=exclude"))
   })
 
+  it("offers 25, 50 and 100 rows a page, and writes the choice to the URL that the loader reads", async () => {
+    const user = userEvent.setup()
+    render(<KeptTab data={data({ total: 120 })} />)
+    await user.click(screen.getByRole("combobox", { name: "Rows per page" }))
+    expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual(["25", "50", "100"])
+    await user.click(screen.getByRole("option", { name: "100" }))
+    await waitFor(() => expect(currentHref()).toContain("pageSize=100"))
+  })
+
   it("shows the first-use empty state with no protection at all", () => {
     const none = { keeps: { count: 0, members: 0, keepDays: 90 }, excludes: { count: 0, withEnd: 0 }, keepForever: { count: 0 }, endingSoon: { count: 0 } }
     render(<KeptTab data={data({ tiles: none, rows: [], total: 0 })} />)
