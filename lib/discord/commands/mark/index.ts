@@ -5,9 +5,10 @@
  *
  * Replaces the legacy `!`-prefixed media-marking flow
  * (`lib/discord/commands/media-marking.ts`) with a single slash command that
- * carries five subcommands — `finished`, `keep`, `notinterested`, `rewatch`,
- * `badquality` — each taking a required `title` option. The old "reply with a
- * number 1-5" disambiguation is replaced by a discord.js string select menu.
+ * carries four subcommands — `finished`, `keep`, `notinterested`, `rewatch` —
+ * each taking a required `title` option. The old "reply with a number 1-5"
+ * disambiguation is replaced by a discord.js string select menu. `/report`
+ * replaced `badquality`; its `POOR_QUALITY` marks stay as history.
  *
  * ## Flow
  *
@@ -89,7 +90,6 @@ export const MARK_SUBCOMMANDS: Record<string, MarkType> = {
   keep: MarkType.KEEP_FOREVER,
   notinterested: MarkType.NOT_INTERESTED,
   rewatch: MarkType.REWATCH_CANDIDATE,
-  badquality: MarkType.POOR_QUALITY,
 }
 
 /**

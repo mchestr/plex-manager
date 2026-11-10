@@ -4,31 +4,21 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 import { memberAction } from "@/lib/actions/define-action"
-import { type ActionErrorCode, type ActionResult, ok } from "@/lib/actions/result"
+import { type ActionResult, ok } from "@/lib/actions/result"
 import {
   cancelProblemReport as cancelReport,
   followProblemReport as followReport,
   reportProblem as sendReport,
   type ReportRefusal,
 } from "@/lib/problem-reports/service"
-import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
+import { REFUSALS, refusalCopy } from "@/lib/problem-reports/refusals"
 import { problemReportIdSchema, reportProblemInputSchema } from "@/lib/validations/problem-reports"
-
-const REFUSALS = {
-  OFF: ["NOT_FOUND", "Problem reports are off."],
-  NOT_ENTITLED: ["NOT_ENTITLED", "This needs an active membership."],
-  RATE_LIMITED: ["RATE_LIMITED", "You've sent a lot of reports."],
-  NOT_FOUND: ["NOT_FOUND", "We couldn't find that title in your libraries."],
-  UNAVAILABLE: ["UPSTREAM_UNAVAILABLE", "We can't reach the server right now. Try again in a few minutes."],
-  NOTE_REQUIRED: ["VALIDATION", "Add a note that says what's wrong."],
-  WRONG_KIND: ["VALIDATION", "That problem is for shows."],
-} as const satisfies Record<ReportRefusal, readonly [ActionErrorCode, string]>
 
 /** The refusal as a failure; `notFound` replaces the copy for a report that can't be found or changed. */
 function refused(refusal: ReportRefusal, retryAfterSec?: number, notFound?: string): ActionResult<never> {
-  const [code, error] = REFUSALS[refusal]
+  const code = REFUSALS[refusal][0]
   if (refusal === "NOT_FOUND" && notFound) return { success: false, code, error: notFound }
-  return { success: false, code, error: retryAfterSec ? `${error} Try again ${retryAfterCopy(retryAfterSec)}.` : error }
+  return { success: false, code, error: refusalCopy(refusal, retryAfterSec) }
 }
 
 const refresh = () => revalidatePath("/report")

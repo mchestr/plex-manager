@@ -38,6 +38,7 @@ jest.mock("discord.js", () => {
     EmbedBuilder,
     // Every definition is built on import, so one shared stub covers them all.
     SlashCommandBuilder: jest.requireActual("./helpers/slash-command-builder-stub").SlashCommandBuilder,
+    ...jest.requireActual("./helpers/component-builder-stub"),
   }
 })
 
@@ -56,6 +57,8 @@ jest.mock("@/lib/utils/logger", () => ({
 jest.mock("@/lib/discord/config", () => ({
   getDiscordPortalUrl: () => "https://example.com/discord/link",
 }))
+jest.mock("@/lib/problem-reports/settings", () => ({ getProblemReportSettings: jest.fn() }))
+jest.mock("@/lib/env", () => ({ getBaseUrl: () => "https://plex.example.com" }))
 
 import { readFileSync } from "fs"
 import path from "path"
@@ -63,6 +66,7 @@ import path from "path"
 import { watchingCommand } from "../watching"
 import { getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
+import { getProblemReportSettings } from "@/lib/problem-reports/settings"
 import type { InteractionContext } from "../registry"
 import type { VerifyDiscordUserResult } from "@/lib/discord/services"
 
@@ -97,6 +101,7 @@ const activeConfig = {
 
 /** A session belonging to the caller (an episode, transcoding). */
 const myEpisodeSession = {
+  ratingKey: "7001",
   type: "episode",
   title: "Pilot",
   grandparentTitle: "The Office",
@@ -158,6 +163,7 @@ function createMockContext(
 
 beforeEach(() => {
   jest.clearAllMocks()
+  jest.mocked(getProblemReportSettings).mockResolvedValue({ enabled: false })
   mockGetConfig.mockResolvedValue(activeConfig)
   mockGetSessions.mockResolvedValue({
     success: true,
@@ -332,5 +338,38 @@ describe("watchingCommand.handle", () => {
     }
     expect(embed.data.fields).toHaveLength(1)
     expect(JSON.stringify(embed.data)).toContain("The Office")
+  })
+})
+
+describe("watchingCommand.handle, Report a problem", () => {
+  it("adds a button per stream for the member who ran it, while problem reports are on", async () => {
+    jest.mocked(getProblemReportSettings).mockResolvedValue({ enabled: true })
+    const { ctx, editReply } = createMockContext()
+
+    await watchingCommand.handle(ctx)
+
+    const { components } = editReply.mock.calls[0][0] as { components: { components: { data: { customId: string; label: string } }[] }[] }
+    expect(components).toHaveLength(1)
+    expect(components[0].components.map((button) => button.data)).toEqual([
+      expect.objectContaining({ customId: "report:watching:discord-user-1:7001", label: "Report a problem with The Office S1E1: Pilot" }),
+    ])
+  })
+
+  it("adds none while problem reports are off", async () => {
+    const { ctx, editReply } = createMockContext()
+
+    await watchingCommand.handle(ctx)
+
+    expect(editReply.mock.calls[0][0]).toMatchObject({ components: [] })
+  })
+
+  it("adds none for a stream without a rating key", async () => {
+    jest.mocked(getProblemReportSettings).mockResolvedValue({ enabled: true })
+    mockGetSessions.mockResolvedValue({ success: true, data: { MediaContainer: { size: 1, Metadata: [{ ...myEpisodeSession, ratingKey: undefined }] } } })
+    const { ctx, editReply } = createMockContext()
+
+    await watchingCommand.handle(ctx)
+
+    expect(editReply.mock.calls[0][0]).toMatchObject({ components: [] })
   })
 })

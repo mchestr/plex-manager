@@ -1026,6 +1026,7 @@ enum DiscordCommandType {
   SELECTION // Numeric selection responses (1-5)
   LINK_REQUEST // User not linked, requested to link account
   HELP // Help/command discovery (!help, !commands)
+  PROBLEM_REPORT // /report and its steps, and the Report a problem button on /watching
 }
 
 enum DiscordCommandStatus {

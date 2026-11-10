@@ -17,6 +17,16 @@ The feature is off until the switch is on (`ProblemReportSettings.enabled`, off 
 - **Already reported:** a title has at most one open report. The sheet then says "This title already has an open report: Sound is out of sync. With the server admin since Nov 6." with **Same problem, tell me when it's fixed** (follow it) and **It's something else** (report another problem, which is added to the open report for the server admin).
 - **Your reports:** the member's reports and the ones they follow, with the status, the latest step and **Cancel report** while nothing has run on it. Once the server admin marks a report fixed or closes it, the member who reported it sees the admin's note there, as plain text. Followers see the status only, since the note is written to the reporter.
 
+## In Discord
+
+`/report title:<name>` reports a problem from Discord (`lib/discord/commands/report/`). Every reply is ephemeral.
+
+- The member must be linked and have an active membership, and the switch must be on. The search shows only movies, shows and episodes in the member's libraries (`lib/problem-reports/search.ts`, shared with the web's Find a title). There is no autocomplete: the router checks no user for one, and the library check would not fit in its 3 seconds.
+- The steps match the web sheet: which title, what kind, which problem, then the confirm with **Send to the server admin**, which goes through the same service as the web. A show hands off to `/report?item=<ratingKey>` to choose the episode, and "Something else" hands off to the web for its note. Discord doesn't ask the device question.
+- Each control's `custom_id` carries what the next step needs (`lib/discord/commands/report/ids.ts`), so nothing is stored between steps. Every step checks the member again and reads the title from Plex again, against their libraries.
+- `/watching` puts a **Report a problem** button on each movie or episode stream while the switch is on. The button carries the member's Discord id and the stream's rating key, and anyone else who presses it is told it belongs to someone else.
+- `/report` replaced `/mark badquality`. Earlier poor-quality marks stay, and `/mymarks type:badquality` still lists them.
+
 ## For the server admin
 
 - **Automations > Problem reports** is the first Automations tab, so the item and the phone tab bar open on it. The Automations badge says "N to review" for reports with the server admin; failed jobs keep priority.

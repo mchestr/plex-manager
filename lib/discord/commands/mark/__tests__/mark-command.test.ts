@@ -188,7 +188,7 @@ describe("markCommand.data", () => {
     }
     expect(data.name).toBe("mark")
     expect(data.subcommands.map((s) => s.name).sort()).toEqual(
-      ["badquality", "finished", "keep", "notinterested", "rewatch"].sort()
+      ["finished", "keep", "notinterested", "rewatch"].sort()
     )
     for (const sub of data.subcommands) {
       expect(sub.options).toHaveLength(1)
@@ -201,7 +201,10 @@ describe("markCommand.data", () => {
     expect(MARK_SUBCOMMANDS.keep).toBe(MarkType.KEEP_FOREVER)
     expect(MARK_SUBCOMMANDS.notinterested).toBe(MarkType.NOT_INTERESTED)
     expect(MARK_SUBCOMMANDS.rewatch).toBe(MarkType.REWATCH_CANDIDATE)
-    expect(MARK_SUBCOMMANDS.badquality).toBe(MarkType.POOR_QUALITY)
+  })
+
+  it("no longer offers badquality, which /report replaced", () => {
+    expect(MARK_SUBCOMMANDS).not.toHaveProperty("badquality")
   })
 
   it("declares a select-menu component handler under the SELECTION audit type", () => {

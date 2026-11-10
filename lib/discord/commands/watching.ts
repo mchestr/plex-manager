@@ -21,8 +21,14 @@
  *   ├─ no active Plex server ──► ephemeral error
  *   ├─ fetch failure ──────────► ephemeral error
  *   ├─ no own sessions ────────► "You're not watching anything right now."
- *   └─ own sessions ───────────► ephemeral embed, one field per stream
+ *   └─ own sessions ───────────► ephemeral embed, one field per stream, and
+ *                                 while problem reports are on, a Report a
+ *                                 problem button per movie or episode
  * ```
+ *
+ * The button carries the member's Discord id and the stream's rating key
+ * (`/report` owns it, `lib/discord/commands/report/ids.ts`), so only they
+ * can use it, and `/report` checks the title against their libraries again.
  *
  * Plex sessions scoped to the user are sufficient for this step; Tautulli
  * enrichment is intentionally omitted. All free text is passed through
@@ -35,10 +41,13 @@ import { getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { matchesSessionUser } from "@/lib/connections/plex-sessions"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
+import { getProblemReportSettings } from "@/lib/problem-reports/settings"
+import { reportTitle } from "@/lib/problem-reports/title"
 import { formatResolution } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import { COMMAND_DEFINITIONS } from "./definitions"
 import type { InteractionContext, SlashCommand } from "./registry"
+import { watchingReportRows } from "./report/messages"
 import { requireLinkedUser } from "./require-linked-user"
 
 const logger = createLogger("DISCORD_WATCHING_COMMAND")
@@ -56,6 +65,7 @@ const MAX_STREAM_FIELDS = 25
  * @internal
  */
 interface PlexSession {
+  ratingKey?: string | number
   type?: string
   title?: string
   grandparentTitle?: string
@@ -262,7 +272,24 @@ async function handleWatching(ctx: InteractionContext): Promise<void> {
     return
   }
 
-  await interaction.editReply({ embeds: [buildWatchingEmbed(mySessions)] })
+  const reportRows = (await getProblemReportSettings()).enabled ? watchingReportRows(ctx.discordUserId, reportableStreams(mySessions)) : []
+  await interaction.editReply({ embeds: [buildWatchingEmbed(mySessions)], components: reportRows })
+}
+
+/** The streams a member can report from `/watching`: movies and episodes with a rating key. @internal */
+function reportableStreams(sessions: PlexSession[]): { ratingKey: string; title: string }[] {
+  return sessions.flatMap((session) => {
+    const ratingKey = normalizeString(session.ratingKey)
+    if ((session.type !== "movie" && session.type !== "episode") || !ratingKey || !/^\d{1,12}$/.test(ratingKey)) return []
+    const title = reportTitle({
+      title: session.title?.trim() || "Unknown",
+      year: normalizeNumber(session.year),
+      showTitle: session.grandparentTitle,
+      seasonNumber: normalizeNumber(session.parentIndex),
+      episodeNumber: normalizeNumber(session.index),
+    })
+    return [{ ratingKey, title }]
+  })
 }
 
 /** @internal */
