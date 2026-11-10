@@ -13,13 +13,19 @@ import { Prisma } from '@/lib/generated/prisma/client'
 import { readMemberItem } from '@/lib/problem-reports/access'
 import { queueReportAlert } from '@/lib/problem-reports/alerts'
 import { readEvidence } from '@/lib/problem-reports/evidence'
+import { decideMissingForMember } from '@/lib/problem-reports/report-missing'
+import { startFix } from '@/lib/problem-reports/run'
 import { cancelProblemReport, followProblemReport, reportProblem } from '@/lib/problem-reports/service'
+import { queueMemberUpdates } from '@/lib/problem-reports/updates'
 import { consume } from '@/lib/security/rate-limit'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/problem-reports/access', () => ({ readMemberItem: jest.fn() }))
 jest.mock('@/lib/problem-reports/evidence', () => ({ readEvidence: jest.fn() }))
 jest.mock('@/lib/problem-reports/alerts', () => ({ queueReportAlert: jest.fn() }))
+jest.mock('@/lib/problem-reports/report-missing', () => ({ decideMissingForMember: jest.fn() }))
+jest.mock('@/lib/problem-reports/run', () => ({ startFix: jest.fn() }))
+jest.mock('@/lib/problem-reports/updates', () => ({ queueMemberUpdates: jest.fn() }))
 jest.mock('@/lib/actions/entitlement', () => ({ hasEntitlement: jest.fn() }))
 jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn() }))
 jest.mock('@/lib/db/serializable', () => ({
@@ -53,7 +59,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockReset(prismaMock)
   prismaMock.$transaction.mockImplementation((async (fn: (tx: unknown) => Promise<unknown>) => fn(asTransactionClient(prismaMock))) as never)
-  prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: 'problem-reports', enabled: true, updatedAt: new Date(), updatedBy: null })
+  prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: 'problem-reports', breakerTrippedAt: null, enabled: true, updatedAt: new Date(), updatedBy: null })
   jest.mocked(hasEntitlement).mockResolvedValue(true)
   jest.mocked(consume).mockResolvedValue({ ok: true })
   jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: EPISODE, server: SERVER })
@@ -278,11 +284,65 @@ describe('followProblemReport', () => {
   })
 })
 
+describe('reportProblem for missing episodes', () => {
+  const SHOW: PlexItemMetadata = { ...EPISODE, ratingKey: '6999', type: 'show', title: 'The Office', guid: 'plex://show/office', grandparentRatingKey: undefined, showTitle: undefined, seasonNumber: undefined, episodeNumber: undefined }
+  const missing = () => reportProblem({ userId: 'member-1', ratingKey: '7001', problem: 'missing_episodes', note: null })
+
+  beforeEach(() => {
+    jest.mocked(readMemberItem).mockImplementation(async (_userId, ratingKey) => ({ ok: true, item: ratingKey === '6999' ? SHOW : EPISODE, server: SERVER }))
+    jest.mocked(startFix).mockResolvedValue({ ok: true, runToken: 1 })
+  })
+
+  it("answers instead of filing a report when the episodes haven't aired", async () => {
+    const answer = { kind: 'NOT_AIRED' as const, season: 1, episode: 6, airsAt: '2026-11-14T02:00:00Z' }
+    jest.mocked(decideMissingForMember).mockResolvedValue({ answer })
+
+    expect(await missing()).toEqual({ ok: true, outcome: 'answered', reportId: null, answer })
+    expect(prismaMock.problemReport.create).not.toHaveBeenCalled()
+    expect(consume).toHaveBeenCalledTimes(2)
+  })
+
+  it("files an episode's report on its show and starts Look for the episodes instead of alerting the admins", async () => {
+    jest.mocked(decideMissingForMember).mockResolvedValue({ startsFix: true })
+
+    expect(await missing()).toEqual({ ok: true, outcome: 'fixing', reportId: 'report-1' })
+    expect(readMemberItem).toHaveBeenLastCalledWith('member-1', '6999')
+    expect(decideMissingForMember).toHaveBeenCalledWith(SERVER, SHOW, expect.any(Date))
+    expect(prismaMock.problemReport.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ plexRatingKey: '6999', titleKey: 'plex://show/office' }) }))
+    expect(startFix).toHaveBeenCalledWith({ reportId: 'report-1', action: 'LOOK_FOR_MISSING', trigger: 'automatic', actorUserId: 'member-1' })
+    expect(queueReportAlert).not.toHaveBeenCalled()
+  })
+
+  it("alerts the admins when the fix couldn't start", async () => {
+    jest.mocked(decideMissingForMember).mockResolvedValue({ startsFix: true })
+    jest.mocked(startFix).mockResolvedValue({ ok: false, reason: 'QUEUE_DOWN' })
+
+    expect(await missing()).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
+    expect(queueReportAlert).toHaveBeenCalledWith('report-1')
+  })
+
+  it("sends the report to the admins with why, when nothing can look for the episodes", async () => {
+    jest.mocked(decideMissingForMember).mockResolvedValue({ startsFix: false, reason: 'NOT_IN_SONARR' })
+
+    expect(await missing()).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({ data: { reportId: 'report-1', kind: 'TO_ADMIN', data: { reason: 'NOT_IN_SONARR' } } })
+    expect(startFix).not.toHaveBeenCalled()
+  })
+
+  it("refuses an episode whose show it can't find", async () => {
+    jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: { ...EPISODE, grandparentRatingKey: undefined }, server: SERVER })
+
+    expect(await missing()).toEqual({ ok: false, refusal: 'NOT_FOUND' })
+    expect(decideMissingForMember).not.toHaveBeenCalled()
+  })
+})
+
 describe('cancelProblemReport', () => {
-  it("closes the member's own untouched report and frees the title", async () => {
+  it("closes the member's own untouched report, frees the title, and tells the members who follow it", async () => {
     prismaMock.problemReport.updateMany.mockResolvedValue({ count: 1 })
 
     expect(await cancelProblemReport({ userId: 'member-1', reportId: 'report-1' })).toEqual({ ok: true })
+    expect(queueMemberUpdates).toHaveBeenCalledWith('report-1', 'CLOSED', { except: 'member-1', from: 'request' })
 
     expect(prismaMock.problemReport.updateMany).toHaveBeenCalledWith({
       where: { id: 'report-1', reporterId: 'member-1', status: { in: ['SENT', 'WITH_ADMIN'] } },

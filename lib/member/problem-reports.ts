@@ -12,15 +12,17 @@ import "server-only"
 
 import { getPlexShowEpisodes } from "@/lib/connections/plex"
 import { getActivePlexServerConfig, type PlexServerConfig } from "@/lib/connections/plex-config"
+import { getActiveService } from "@/lib/data/active-service"
 import type { ProblemReportStatus } from "@/lib/generated/prisma/client"
 import { recentlyWatched, watchingNow, type TitleResult } from "@/lib/member/problem-report-titles"
 import { prisma } from "@/lib/prisma"
 import { memberLibraryAccess, readMemberItem, type LibraryAccess } from "@/lib/problem-reports/access"
 import { memberLastPlay, type LastPlay } from "@/lib/problem-reports/evidence"
+import { FIX_ACTIONS, FIX_WORDS } from "@/lib/problem-reports/fixes"
 import { searchMemberTitles } from "@/lib/problem-reports/search"
 import { problemLabel, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { reportTitle, titleKeyOf } from "@/lib/problem-reports/title"
-import { closedEventDataSchema } from "@/lib/validations/problem-reports"
+import { closedEventDataSchema, fixedEventDataSchema } from "@/lib/validations/problem-reports"
 
 const REPORT_LIMIT = 50
 const RESULT_LIMIT = 20
@@ -56,6 +58,8 @@ export interface SelectedTitle {
   openReport: { id: string; problem: string; status: ProblemReportStatus; since: string; yours: boolean } | null
   /** The member's last play of it, which names the player the sheet asks about. */
   lastPlay: LastPlay | null
+  /** Whether "Episodes are missing" reads Sonarr and looks for them: a show or episode, with Sonarr set up. */
+  looksForMissing: boolean
 }
 
 export interface ReportPageData {
@@ -70,7 +74,10 @@ export interface ReportPageData {
 
 /** The latest step in the member's words, and why a closed report closed. */
 function latestWords(event: { kind: string; data: unknown } | undefined, own: boolean): { words: string; statusSub: string | null } {
-  if (event?.kind === "FIXED") return { words: "The server admin fixed it", statusSub: null }
+  if (event?.kind === "FIXED") {
+    const byFix = fixedEventDataSchema.safeParse(event.data).data?.reason === "fix"
+    return { words: byFix ? "The missing episodes are on the server now" : "The server admin fixed it", statusSub: null }
+  }
   const closed = event?.kind === "CLOSED" ? closedEventDataSchema.safeParse(event.data) : null
   if (closed?.success && closed.data.reason === "admin") return { words: "The server admin closed it", statusSub: "By the server admin" }
   if (closed?.success) {
@@ -88,7 +95,7 @@ export async function listMemberReports(userId: string): Promise<ReportRow[]> {
     take: REPORT_LIMIT,
     select: {
       id: true, reporterId: true, problem: true, status: true, title: true, year: true, showTitle: true, seasonNumber: true,
-      episodeNumber: true, createdAt: true, memberNote: true,
+      episodeNumber: true, createdAt: true, memberNote: true, action: true,
       events: {
         where: { OR: [{ kind: { in: ["CLOSED", "FIXED"] } }, { kind: "ALSO_REPORTED", actorUserId: userId }] },
         orderBy: { createdAt: "desc" },
@@ -101,6 +108,7 @@ export async function listMemberReports(userId: string): Promise<ReportRow[]> {
     const own = row.reporterId === userId
     const event = row.events[0]
     const { words, statusSub } = latestWords(event, own)
+    const fixing = row.status === "FIXING" ? FIX_ACTIONS.find((action) => action === row.action) : undefined
     return {
       id: row.id,
       title: reportTitle(row),
@@ -108,7 +116,7 @@ export async function listMemberReports(userId: string): Promise<ReportRow[]> {
       status: row.status,
       latest: { words, at: (event?.createdAt ?? row.createdAt).toISOString() },
       canCancel: own && CANCELLABLE.has(row.status),
-      statusSub,
+      statusSub: fixing ? FIX_WORDS[fixing].running : statusSub,
       // Written for the member who reported it; followers see the status only
       note: own ? row.memberNote : null,
     }
@@ -124,13 +132,14 @@ async function selectTitle(userId: string, plexUserId: string | null, ratingKey:
   const member = await readMemberItem(userId, ratingKey)
   if (!member.ok) return { error: member.reason === "UNAVAILABLE" ? UNAVAILABLE : NOT_IN_LIBRARIES }
   const { item, server } = member
-  const [episodes, open, lastPlay] = await Promise.all([
+  const [episodes, open, lastPlay, sonarr] = await Promise.all([
     item.type === "show" ? getPlexShowEpisodes(server, item.ratingKey) : null,
     prisma.problemReport.findUnique({
       where: { activeKey: titleKeyOf(item) },
       select: { id: true, reporterId: true, problem: true, status: true, updatedAt: true, events: { where: { kind: "ALSO_REPORTED", actorUserId: userId }, select: { id: true }, take: 1 } },
     }),
     memberLastPlay(plexUserId, item),
+    getActiveService("sonarr"),
   ])
   return {
     ratingKey: item.ratingKey,
@@ -143,6 +152,7 @@ async function selectTitle(userId: string, plexUserId: string | null, ratingKey:
       ? { id: open.id, problem: problemLabel(open.problem), status: open.status, since: open.updatedAt.toISOString(), yours: open.reporterId === userId || open.events.length > 0 }
       : null,
     lastPlay,
+    looksForMissing: item.type !== "movie" && sonarr !== null,
   }
 }
 

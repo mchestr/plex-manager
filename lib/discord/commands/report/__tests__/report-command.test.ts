@@ -25,6 +25,7 @@ jest.mock("@/lib/problem-reports/settings", () => ({ getProblemReportSettings: j
 jest.mock("@/lib/discord/services", () => ({ verifyDiscordUser: jest.fn() }))
 jest.mock("@/lib/discord/config", () => ({ getDiscordPortalUrl: () => "https://plex.example.com/discord/link" }))
 jest.mock("@/lib/env", () => ({ getBaseUrl: () => "https://plex.example.com" }))
+jest.mock("@/lib/utils/server-zone", () => ({ serverZone: async () => "America/Chicago" }))
 jest.mock("@/lib/utils/logger", () => ({ createLogger: () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }) }))
 
 import type { MessageComponentInteraction } from "discord.js"
@@ -233,6 +234,20 @@ describe("the steps", () => {
 
     expect(reportProblem).toHaveBeenCalledWith({ userId: "member-1", ratingKey: "555", problem: "no_sound", note: null })
     expect(edited(send)).toEqual({ content: "Sent to the server admin. Follow it on the web: https://plex.example.com/report", components: [] })
+  })
+
+  it("says when Look for the episodes started, or answers instead of a report", async () => {
+    jest.mocked(reportProblem)
+      .mockResolvedValueOnce({ ok: true, outcome: "fixing", reportId: "r1" })
+      .mockResolvedValueOnce({ ok: true, outcome: "answered", reportId: null, answer: { kind: "NOT_AIRED", season: 2, episode: 6, airsAt: "2026-11-14T20:00:00Z" } })
+
+    const fixing = component("report:send:7001:missing_episodes")
+    await handleStep(fixing)
+    expect(edited(fixing).content).toBe("We'll look for the missing episodes now. Nothing is removed. Follow it on the web: https://plex.example.com/report")
+
+    const answered = component("report:send:7001:missing_episodes")
+    await handleStep(answered)
+    expect(edited(answered).content).toBe("Season 2, episode 6 comes out Nov 14.")
   })
 
   it("says when the report joined the title's open one, or was refused", async () => {

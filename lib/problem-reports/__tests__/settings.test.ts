@@ -10,7 +10,7 @@ import { getProblemReportSettings, hasReportPage } from '@/lib/problem-reports/s
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
-const settings = (enabled: boolean) => ({ id: 'problem-reports', enabled, updatedAt: new Date(), updatedBy: null })
+const settings = (enabled: boolean) => ({ id: 'problem-reports', enabled, breakerTrippedAt: null, updatedAt: new Date(), updatedBy: null })
 
 beforeEach(() => mockReset(prismaMock))
 

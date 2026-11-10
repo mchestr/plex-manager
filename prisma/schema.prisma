@@ -63,6 +63,8 @@ model User {
   inactivityNotices     InactivityNotice[]
   problemReports        ProblemReport[]
   problemReportEvents   ProblemReportEvent[]   @relation("ProblemReportEventActor")
+  problemFixesReported  ProblemFixLedger[]     @relation("ProblemFixReporter")
+  problemFixesRun       ProblemFixLedger[]     @relation("ProblemFixActor")
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
 
@@ -1321,9 +1323,12 @@ model ProblemReport {
   adminNote     String?              @db.VarChar(2000) // Internal
   resolvedAt    DateTime?
   alertedAt     DateTime? // When the admins' Discord alert claimed this report (lib/queue/jobs/problem-report-notify.ts)
+  action        String? // The fix running or last run (lib/problem-reports/fixes.ts)
+  runToken      Int                  @default(0) // Fencing token: each run of a fix bumps it, and every step checks it
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
   events        ProblemReportEvent[]
+  fixes         ProblemFixLedger[]
 
   @@index([status, createdAt])
   @@index([reporterId, createdAt])
@@ -1347,8 +1352,30 @@ model ProblemReportEvent {
 
 /// Problem reports settings (lib/problem-reports/settings.ts): one row, id "problem-reports". Without a row the feature is off.
 model ProblemReportSettings {
-  id        String   @id @default("problem-reports")
-  enabled   Boolean  @default(false) // Members can report problems on /report
-  updatedAt DateTime @updatedAt
-  updatedBy String?
+  id               String    @id @default("problem-reports")
+  enabled          Boolean   @default(false) // Members can report problems on /report
+  breakerTrippedAt DateTime? // Set when file replacements pass the breaker's limits; fixes that replace files wait until an admin resumes them
+  updatedAt        DateTime  @updatedAt
+  updatedBy        String?
+}
+
+/// Every fix run, kept for the limits, which read only this table. Members can't delete it, and member removal only sets its person ids to null.
+model ProblemFixLedger {
+  id          String         @id @default(cuid())
+  target      String // "sonarr:series:<id>", "plex:<guid>", ...
+  action      String // A FixAction (lib/problem-reports/fixes.ts)
+  trigger     String // automatic, web or mcp
+  reporterId  String?
+  reporter    User?          @relation("ProblemFixReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  actorUserId String?
+  actor       User?          @relation("ProblemFixActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  reportId    String?
+  report      ProblemReport? @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  outcome     String? // FIXED, NOT_FOUND, TO_ADMIN, ...
+  startedAt   DateTime       @default(now())
+  endedAt     DateTime?
+
+  @@index([target, startedAt])
+  @@index([reporterId, startedAt])
+  @@index([startedAt])
 }

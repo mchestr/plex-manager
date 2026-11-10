@@ -47,9 +47,19 @@ describe('reportProblem', () => {
 
     await expect(reportProblem({ ratingKey: '555', problem: 'wont_start' })).resolves.toEqual({
       success: true,
-      data: { reportId: REPORT_ID, joined: true },
+      data: { reportId: REPORT_ID, outcome: 'joined', answer: null },
     })
     expect(service.reportProblem).toHaveBeenCalledWith(expect.objectContaining({ userId: 'member-1', ratingKey: '555', problem: 'wont_start', note: null }))
+  })
+
+  it('answers missing episodes that have not aired without a report', async () => {
+    const answer = { kind: 'NOT_AIRED' as const, season: 2, episode: 6, airsAt: '2026-11-14T02:00:00Z' }
+    jest.mocked(service.reportProblem).mockResolvedValue({ ok: true, outcome: 'answered', reportId: null, answer })
+
+    await expect(reportProblem({ ratingKey: '6999', problem: 'missing_episodes' })).resolves.toEqual({
+      success: true,
+      data: { reportId: null, outcome: 'answered', answer },
+    })
   })
 
   it('says when the member can report again after a rate limit', async () => {

@@ -41,6 +41,11 @@ export const REPORTABLE_MEDIA_TYPES = { movie: "MOVIE", show: "TV_SERIES", episo
 /** The type of title a report is about, as Plex names it. */
 export type ReportableType = keyof typeof REPORTABLE_MEDIA_TYPES
 
+/** The Plex type a stored `MediaType` stands for, or null for one a report can't be about. */
+export function reportableTypeOf(mediaType: string): ReportableType | null {
+  return (Object.keys(REPORTABLE_MEDIA_TYPES) as ReportableType[]).find((type) => REPORTABLE_MEDIA_TYPES[type] === mediaType) ?? null
+}
+
 interface Problem {
   kind: ProblemKind
   label: string

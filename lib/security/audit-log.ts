@@ -252,6 +252,14 @@ export enum AuditEventType {
   // An admin set whether a member's swaps need their approval. Details carry
   // the target user and the new value (needsApproval).
   PROBLEM_SWAP_APPROVAL_CHANGED = "PROBLEM_SWAP_APPROVAL_CHANGED",
+  // A problem report's fix ran (docs/problem-reports.md, "Fixes"), written
+  // before the change. The actor is who asked (the reporter for an automatic
+  // run) and the target the reporter. Details carry the report id, the fix,
+  // the trigger (automatic, web or mcp), who asked and who approved, and the
+  // dry-run flag; never a title or a note.
+  PROBLEM_FIX_RUN = "PROBLEM_FIX_RUN",
+  // An admin resumed the fixes that replace files after the breaker tripped.
+  PROBLEM_BREAKER_RESUMED = "PROBLEM_BREAKER_RESUMED",
 }
 
 type AuditDetails = {

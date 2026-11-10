@@ -1,6 +1,7 @@
 /**
  * Tests for getPlexShowEpisodes: a show's episodes from
- * `GET /library/metadata/{ratingKey}/allLeaves`, in season and episode order.
+ * `GET /library/metadata/{ratingKey}/allLeaves`, in season and episode order,
+ * with every version's files.
  */
 
 import { getPlexShowEpisodes } from '@/lib/connections/plex-episodes'
@@ -18,7 +19,14 @@ const ALL_LEAVES = {
     librarySectionID: 2,
     Metadata: [
       { ratingKey: '7012', type: 'episode', title: 'Diversity Day', parentIndex: 1, index: 2 },
-      { ratingKey: '7001', type: 'episode', title: 'Pilot', parentIndex: 1, index: 1 },
+      {
+        ratingKey: '7001',
+        type: 'episode',
+        title: 'Pilot',
+        parentIndex: 1,
+        index: 1,
+        Media: [{ Part: [{ file: '/tv/The Office/Season 1/S01E01.mkv' }] }, { Part: [{ file: '/tv/The Office/Season 1/S01E01.720p.mkv' }] }],
+      },
       { ratingKey: '7101', type: 'episode', title: 'The Dundies', parentIndex: 2, index: 1 },
       { ratingKey: '7999', type: 'episode', title: 'Special' },
     ],
@@ -38,9 +46,9 @@ describe('getPlexShowEpisodes', () => {
     expect(result).toEqual({
       ok: true,
       episodes: [
-        { ratingKey: '7001', title: 'Pilot', seasonNumber: 1, episodeNumber: 1 },
-        { ratingKey: '7012', title: 'Diversity Day', seasonNumber: 1, episodeNumber: 2 },
-        { ratingKey: '7101', title: 'The Dundies', seasonNumber: 2, episodeNumber: 1 },
+        { ratingKey: '7001', title: 'Pilot', seasonNumber: 1, episodeNumber: 1, files: ['/tv/The Office/Season 1/S01E01.mkv', '/tv/The Office/Season 1/S01E01.720p.mkv'] },
+        { ratingKey: '7012', title: 'Diversity Day', seasonNumber: 1, episodeNumber: 2, files: [] },
+        { ratingKey: '7101', title: 'The Dundies', seasonNumber: 2, episodeNumber: 1, files: [] },
       ],
     })
     const [url, init] = (global.fetch as jest.Mock).mock.calls[0]

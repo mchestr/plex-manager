@@ -46,6 +46,8 @@ export const LIMITS = {
   // Problem reports a member sends or follows, per member: 10 an hour and 20 a day
   "problem-report:create": { points: 10, duration: HOUR },
   "problem-report:create:day": { points: 20, duration: DAY },
+  // Problem report fixes an admin runs (Look for the episodes, Refresh the details), per admin
+  "admin:problem-fix": { points: 30, duration: 10 * MINUTE },
   // Member removals per admin (P11.13)
   "admin:remove-member": { points: 10, duration: HOUR },
   // Deleting a mark or a watchlist item from /account, per member (P11.15)

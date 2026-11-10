@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { FIX_ACTIONS } from "@/lib/problem-reports/fixes"
 import { PROBLEM_CODES } from "@/lib/problem-reports/taxonomy"
 import { ratingKeySchema } from "@/lib/validations/params"
 
@@ -52,6 +53,40 @@ export const alsoReportedDataSchema = z.looseObject({ problem: z.string().option
 
 /** A `CLOSED` event's data: why the report closed. */
 export const closedEventDataSchema = z.object({ reason: z.enum(["cancelled", "admin"]) })
+
+const fixActionSchema = z.enum(FIX_ACTIONS)
+
+/** A `FIXED` event's data: the server admin marked it fixed, or a fix found it fixed. */
+export const fixedEventDataSchema = z.object({ reason: z.enum(["admin", "fix"]), action: fixActionSchema.optional() })
+
+/** A `FIX_STARTED` event's data: the fix and who started it. */
+export const fixStartedDataSchema = z.object({ action: fixActionSchema, trigger: z.enum(["automatic", "web", "mcp"]) })
+
+/** Why a fix handed a report back to the server admin (`lib/problem-reports/run.ts`). */
+const TO_ADMIN_REASONS = [
+  "OFF",
+  "QUEUE_DOWN",
+  "SEARCH_CAP",
+  "BREAKER",
+  "NO_SONARR",
+  "NOT_IN_SONARR",
+  "UNAVAILABLE",
+  "NOTHING_MISSING",
+  "NOT_ON_SERVER",
+  "NOT_AIRED",
+  "TOO_MANY",
+  "NOT_FOUND",
+  "PLEX_DIDNT_ADD",
+  "REFRESHED",
+  "REFRESH_FAILED",
+] as const
+export type ToAdminReason = (typeof TO_ADMIN_REASONS)[number]
+
+/** A `TO_ADMIN` event's data: why the fix handed the report to the server admin. */
+export const toAdminDataSchema = z.object({ reason: z.enum(TO_ADMIN_REASONS), action: fixActionSchema.optional() })
+
+/** An admin's one-tap fix on a report. */
+export const runProblemFixSchema = z.object({ reportId: problemReportIdSchema, action: fixActionSchema })
 
 /** The evidence a `REPORTED` or `ALSO_REPORTED` event carries (`lib/problem-reports/evidence.ts`); anything else reads as none. */
 const evidenceSchema = z

@@ -40,6 +40,7 @@ import { reportProblem } from "@/lib/problem-reports/service"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
 import { needsNote, PROBLEM_KINDS, PROBLEMS, type ProblemCode, type ProblemKind, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { reportTitle } from "@/lib/problem-reports/title"
+import { serverZone } from "@/lib/utils/server-zone"
 import { ratingKeySchema } from "@/lib/validations/params"
 
 import { COMMAND_DEFINITIONS, REPORT_PREFIX } from "../definitions"
@@ -142,7 +143,10 @@ async function onProblem(edit: Edit, userId: string, ratingKey: string, kind: Pr
 
 async function onSend(edit: Edit, userId: string, ratingKey: string, problem: ProblemCode): Promise<void> {
   const result = await reportProblem({ userId, ratingKey, problem, note: null })
-  await edit(result.ok ? sent(result.outcome === "joined") : words(refusalCopy(result.refusal, result.retryAfterSec)))
+  if (!result.ok) return void (await edit(words(refusalCopy(result.refusal, result.retryAfterSec))))
+  // Discord has no zone of the member's, so a date is the server's
+  const day = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: await serverZone() })
+  await edit(sent(result, (iso) => day.format(new Date(iso))))
 }
 
 /** Routes a `/report` component to its step. */

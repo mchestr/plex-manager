@@ -2,9 +2,11 @@
 
 /**
  * Problem reports for the server admin (docs/problem-reports.md): Mark fixed
- * and Close, the feature switch, and a member's "Swaps need approval". Each
- * is audited: `PROBLEM_REPORT_CLOSED` (ids and the outcome, never a title or
- * a note), `PROBLEM_REPORT_SETTINGS_CHANGED` and
+ * and Close, the one-tap fixes, resuming fixes after the breaker, the
+ * feature switch, and a member's "Swaps need approval". Each is audited:
+ * `PROBLEM_REPORT_CLOSED` (ids and the outcome, never a title or a note),
+ * `PROBLEM_FIX_RUN` (by the run itself, before it acts),
+ * `PROBLEM_BREAKER_RESUMED`, `PROBLEM_REPORT_SETTINGS_CHANGED` and
  * `PROBLEM_SWAP_APPROVAL_CHANGED`.
  *
  * @module actions/admin/problem-reports
@@ -16,10 +18,15 @@ import { z } from "zod"
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { problemReport, problemReports, userDetail } from "@/lib/admin/routes"
+import { principalSession } from "@/lib/mcp/principal"
 import { prisma } from "@/lib/prisma"
+import { fixesFor } from "@/lib/problem-reports/fixes"
+import { startFix } from "@/lib/problem-reports/run"
 import { getProblemReportSettings, PROBLEM_REPORT_SETTINGS_ID } from "@/lib/problem-reports/settings"
+import { reportableTypeOf } from "@/lib/problem-reports/taxonomy"
+import { queueMemberUpdates } from "@/lib/problem-reports/updates"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
-import { problemReportSettingsSchema, resolveProblemReportSchema } from "@/lib/validations/problem-reports"
+import { problemReportSettingsSchema, resolveProblemReportSchema, runProblemFixSchema } from "@/lib/validations/problem-reports"
 import { userIdSchema } from "@/lib/validations/shared-schemas"
 
 /** The member pages that show reports or link to `/report`. */
@@ -52,9 +59,51 @@ export const resolveProblemReport = adminAction({
     if (!resolved.success) return resolved
 
     logAuditEvent(AuditEventType.PROBLEM_REPORT_CLOSED, userId, { targetUserId: resolved.data, reportId, outcome, memberNote: memberNote !== null })
+    await queueMemberUpdates(reportId, outcome === "fixed" ? "FIXED" : "CLOSED", { from: "request" })
     revalidatePath(problemReports())
     revalidatePath(problemReport(reportId))
     revalidatePath("/report")
+    return ok(null)
+  },
+})
+
+/**
+ * Runs a fix on an open report: Look for the episodes (Sonarr's search for
+ * the show's missing episodes, or a Plex scan of its folder) or Refresh the
+ * details (Plex reads them again). Neither removes anything. The run goes
+ * through the same gate and daily search cap as a member's, and answers at
+ * once; the report shows how it went.
+ */
+export const runProblemFix = adminAction({
+  input: runProblemFixSchema,
+  rateLimit: { name: "admin:problem-fix" },
+  fallbackError: "Could not start the fix",
+  handler: async ({ reportId, action }, { userId }) => {
+    const report = await prisma.problemReport.findUnique({ where: { id: reportId }, select: { mediaType: true } })
+    if (!report) return fail("NOT_FOUND", "Report not found")
+    const type = reportableTypeOf(report.mediaType)
+    if (!type || !fixesFor(type).includes(action)) return fail("VALIDATION", "That fix doesn't apply to this title.")
+
+    const started = await startFix({ reportId, action, trigger: principalSession() ? "mcp" : "web", actorUserId: userId })
+    revalidatePath(problemReport(reportId))
+    if (started.ok) return ok(null)
+    return started.reason === "NOT_OPEN"
+      ? fail("CONFLICT", "This report is closed, or a fix is running on it.")
+      : fail("UPSTREAM_UNAVAILABLE", "Fixes run on the job queue, which isn't running.")
+  },
+})
+
+/** Resumes the fixes that replace files after the breaker tripped. */
+export const resumeProblemFixes = adminAction({
+  input: z.object({}),
+  fallbackError: "Could not resume the fixes",
+  handler: async (_input, { userId }) => {
+    const { count } = await prisma.problemReportSettings.updateMany({
+      where: { id: PROBLEM_REPORT_SETTINGS_ID, breakerTrippedAt: { not: null } },
+      data: { breakerTrippedAt: null, updatedBy: userId },
+    })
+    if (count > 0) logAuditEvent(AuditEventType.PROBLEM_BREAKER_RESUMED, userId, {})
+    revalidatePath(problemReports())
     return ok(null)
   },
 })
