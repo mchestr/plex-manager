@@ -25,7 +25,11 @@ interface RuleCardProps {
   today: string
 }
 
-/** The next step of the header (UX 4.1.3 item 2): "Turn on..." for a Dry run rule, "Review the batch" for a live rule with a waiting batch. */
+/**
+ * The next step of the header (UX 4.1.3 item 2): "Turn on..." for a Dry run
+ * rule, "Review the batch" for a live rule with a waiting deletion batch,
+ * and "Review the matches" for one with a waiting entry batch (UX 8.2).
+ */
 function NextStep({ card, redis }: Omit<RuleCardProps, "today">) {
   const reasonId = useId()
   const id = `admin-cleanup-rule-${card.id}`
@@ -50,15 +54,16 @@ function NextStep({ card, redis }: Omit<RuleCardProps, "today">) {
     )
   }
   if (!card.waitingBatch) return null
+  const label = card.waitingBatch === "entry" ? "Review the matches" : "Review the batch"
   return (
     <Button
       size="sm"
       nativeButton={false}
       render={<Link href={cleanup({ tab: "leaving-soon" })} />}
-      aria-label={`Review the batch: ${card.name}`}
+      aria-label={`${label}: ${card.name}`}
       data-testid={`${id}-review`}
     >
-      Review the batch
+      {label}
     </Button>
   )
 }

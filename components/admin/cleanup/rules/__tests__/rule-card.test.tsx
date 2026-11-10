@@ -105,6 +105,13 @@ describe("RuleCard header", () => {
     expect(screen.getByTestId("admin-cleanup-rule-rule-auto-edit")).toBeInTheDocument()
   })
 
+  it("offers Review the matches, not Review the batch, for a waiting entry batch (UX 8.2, UX review UX-11)", () => {
+    renderCard(card({ id: "rule-auto", name: "Old seasons of running shows", mode: "automatic", level: "season", waitingBatch: "entry" }))
+    const review = screen.getByTestId("admin-cleanup-rule-rule-auto-review")
+    expect(review).toHaveTextContent("Review the matches")
+    expect(review).toHaveAccessibleName("Review the matches: Old seasons of running shows")
+  })
+
   it("draws no poster strip for a rule that matches nothing", () => {
     renderCard(card({ posters: [] }))
     expect(screen.queryByTestId("admin-cleanup-rule-rule-dry-posters")).not.toBeInTheDocument()
