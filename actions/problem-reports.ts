@@ -65,9 +65,12 @@ export const followProblemReport = memberAction({
   },
 })
 
-/** Cancels one of the member's own reports while nothing has run on it. */
+/**
+ * Cancels one of the member's own reports while nothing has run on it. It
+ * needs only a session: a member whose membership lapsed can still withdraw
+ * their own report.
+ */
 export const cancelProblemReport = memberAction({
-  entitlement: "full",
   input: z.object({ reportId: problemReportIdSchema }),
   fallbackError: "Could not cancel the report",
   handler: async ({ reportId }, { userId }): Promise<ActionResult<null>> => {

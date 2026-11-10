@@ -331,6 +331,12 @@ The regular user has section 1 shared and section 2 not
 `/identity` and the item's `/library/metadata/{ratingKey}`;
 `e2e/poster-library-access.spec.ts` shows both.
 
+The web server keeps what it reads for the whole run: a member's share list
+for 10 minutes per server, and an item's section for 24 hours
+(`lib/connections/plex-shared-sections.ts`). A spec that needs different
+shares gives the member its own Plex account in `MOCK_SHARED_SECTIONS`, and
+uses rating keys no other spec uses.
+
 ## Writing New Tests
 
 ### Example: Testing Admin Functionality
