@@ -46,7 +46,7 @@ export function StatTiles({ stats, library, today }: StatTilesProps) {
           waiting && (
             <StatusDot
               tone="warning"
-              label={waiting.dueToday ? "Due today" : `Due ${dayWords(f, waiting.dueAt, today)}`}
+              label={waiting.dueToday ? "Due today" : `Due ${waiting.dueAt < today ? "since " : ""}${dayWords(f, waiting.dueAt, today)}`}
               className="text-label text-muted-foreground"
             />
           )

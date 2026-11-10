@@ -146,7 +146,7 @@ describe("RuleCard facts by mode", () => {
   it("names the day of an older batch, and the next leave date while no batch waits", () => {
     const leaving = { count: 2, bytes: bytes(20), turnedOnAt: null, nextLeaveOn: "2026-12-02", nextCount: 2 }
     const { unmount } = renderCard(card({ id: "rule-rf", mode: "reviewFirst", facts: { ...FACTS, leaving, waiting: { count: 1, bytes: bytes(5), dueOn: "2026-11-03", dueToday: false } } }))
-    expect(fact("rule-rf", "waiting")).toHaveTextContent("Waiting for you1 movie, due Nov 35 GB")
+    expect(fact("rule-rf", "waiting")).toHaveTextContent("Waiting for you1 movie, due since Nov 35 GB")
     expect(fact("rule-rf", "leaving")).toHaveTextContent(/^In Leaving soon2 movies, 20 GB$/)
     unmount()
 

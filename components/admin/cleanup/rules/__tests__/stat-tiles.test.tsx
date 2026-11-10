@@ -51,7 +51,8 @@ describe("StatTiles", () => {
   it("names the day of a batch that is due since an earlier day, and mixed levels as titles", () => {
     renderStats({ waiting: { count: 2, bytes: b(10 * GB), dueAt: "2026-11-03", dueToday: false, level: null } })
 
-    expect(tile("waiting")).toHaveTextContent("Waiting for you2titles, 10 GBDue Nov 3")
+    // A past due day reads as past, as the batch card does (UX 4.7.1, 8.7; UX review UX-08)
+    expect(tile("waiting")).toHaveTextContent("Waiting for you2titles, 10 GBDue since Nov 3")
   })
 
   it("shows 0 with no batch, nothing freed, no next leave date and an unknown disk", () => {

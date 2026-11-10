@@ -65,7 +65,7 @@ function factsOf(card: RuleCardData, f: BoundFormat, today: string): Fact[] {
             value: (
               <StatusDot
                 tone="warning"
-                label={`${items(waiting.count)}, due ${waiting.dueToday ? "today" : dayWords(f, waiting.dueOn, today)}`}
+                label={`${items(waiting.count)}, due ${waiting.dueToday ? "today" : `${waiting.dueOn < today ? "since " : ""}${dayWords(f, waiting.dueOn, today)}`}`}
                 className="font-medium"
               />
             ),
