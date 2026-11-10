@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Route } from "next"
 import { redirect } from "next/navigation"
 import type { ReactNode } from "react"
 
@@ -53,7 +53,11 @@ export default async function HelpPage() {
         )}
 
         <HelpSection id="support" title="Report a problem">
-          <SupportGuide discord={help.discord} instructions={help.instructions} />
+          <SupportGuide
+            discord={help.discord}
+            instructions={help.instructions}
+            reportHref={help.reportsEnabled ? ("/report" as Route) : undefined}
+          />
         </HelpSection>
       </div>
     </div>

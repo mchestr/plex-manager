@@ -45,6 +45,9 @@ const itemSchema = z.looseObject({
   guid: z.string().optional().catch(undefined),
   librarySectionID: optionalKey,
   grandparentRatingKey: optionalKey,
+  grandparentTitle: z.string().optional().catch(undefined),
+  parentIndex: z.number().int().optional().catch(undefined),
+  index: z.number().int().optional().catch(undefined),
   Guid: z.array(z.looseObject({ id: z.string() })).optional().catch(undefined),
   Media: z.array(z.looseObject({ Part: z.array(partSchema).optional().catch(undefined) })).optional().catch(undefined),
   Location: z.array(z.looseObject({ path: z.string() })).optional().catch(undefined),
@@ -69,8 +72,11 @@ export interface PlexItemMetadata {
   ids: PlexExternalIds
   /** `librarySectionID` as a string, like the share list's section keys. */
   librarySectionId?: string
-  /** An episode's show. */
+  /** An episode's show, its title, and the episode's season and number. */
   grandparentRatingKey?: string
+  showTitle?: string
+  seasonNumber?: number
+  episodeNumber?: number
   /** Every file of every version, as the server sees it. */
   parts: { file: string; size?: number }[]
   /** A show's folders. */
@@ -118,6 +124,9 @@ export async function getPlexItemMetadata(
       ids: parsePlexExternalIds(item.guid, item.Guid?.map((tag) => tag.id) ?? []),
       librarySectionId: item.librarySectionID ?? container.librarySectionID,
       grandparentRatingKey: item.grandparentRatingKey,
+      showTitle: item.grandparentTitle,
+      seasonNumber: item.parentIndex,
+      episodeNumber: item.index,
       parts: (item.Media ?? []).flatMap((media) => media.Part ?? []).map(({ file, size }) => ({ file, size })),
       locations: (item.Location ?? []).map((location) => location.path),
     },

@@ -132,6 +132,14 @@ export const STATUS = {
     available: { label: "Available", tone: "success", mark: icons.done },
     declined: { label: "Declined", tone: "destructive" },
   },
+  // A problem report (lib/problem-reports), one row per `ProblemReportStatus`; Closed always carries its reason as the sub-line
+  problemReport: {
+    SENT: { label: "Sent", tone: "neutral" },
+    FIXING: { label: "Fixing", tone: "info", mark: icons.pending },
+    FIXED: { label: "Fixed", tone: "success", mark: icons.done },
+    WITH_ADMIN: { label: "With the server admin", tone: "info", mark: icons.pending },
+    CLOSED: { label: "Closed", tone: "outline", sub: "{note}" },
+  },
   // The watchlist sync admin table, one row per `WatchlistSyncStatus`
   watchlistSync: {
     REQUESTED: { label: "Requested", tone: "info", mark: icons.pending },

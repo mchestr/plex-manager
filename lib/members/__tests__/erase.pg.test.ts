@@ -134,6 +134,15 @@ async function seedMember(db: PrismaClient) {
   await db.inactivityNotice.create({
     data: { userId: MEMBER, cycleAt: new Date('2026-05-01T20:00:00Z'), leadDays: 30, removeAfter: new Date('2026-10-28T04:00:00Z'), zone: 'America/Toronto' },
   })
+  const title = { mediaType: 'MOVIE' as const, title: 'Reported', status: 'WITH_ADMIN' as const }
+  const own = await db.problemReport.create({
+    data: { ...title, reporterId: MEMBER, problem: 'wont_start', note: 'their note', plexRatingKey: '44', titleKey: `${RUN}-own`, activeKey: `${RUN}-own` },
+  })
+  await db.problemReportEvent.create({ data: { reportId: own.id, kind: 'REPORTED', actorUserId: MEMBER } })
+  const others = await db.problemReport.create({
+    data: { ...title, reporterId: ADMIN, problem: 'no_sound', plexRatingKey: '45', titleKey: `${RUN}-other`, activeKey: `${RUN}-other` },
+  })
+  await db.problemReportEvent.create({ data: { reportId: others.id, kind: 'ALSO_REPORTED', actorUserId: MEMBER, data: { problem: 'no_sound', note: 'their note' } } })
   return { wrappedId: wrapped.id, generationId: generation.id, shareId: share.id, conversationId: conversation.id }
 }
 
@@ -206,6 +215,8 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
       mockDb.inactivityNotice.count(byUser),
       mockDb.affiliateApplication.count(byUser),
       mockDb.invite.count({ where: { OR: [{ affiliateUserId: MEMBER }, { joinedUserId: MEMBER }] } }),
+      mockDb.problemReport.count({ where: { reporterId: MEMBER } }),
+      mockDb.problemReportEvent.count({ where: { actorUserId: MEMBER } }),
     ])
     expect(remaining.every((count) => count === 0)).toBe(true)
 
@@ -215,6 +226,10 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
       { code: `${RUN}-joined`, affiliateUserId: ADMIN, joinedUserId: null },
       { code: `${RUN}-used`, affiliateUserId: null, joinedUserId: null },
     ])
+
+    // The admin's report stays, without the member's note
+    await expect(mockDb.problemReport.count({ where: { titleKey: `${RUN}-other` } })).resolves.toBe(1)
+    await expect(mockDb.problemReportEvent.count({ where: { report: { titleKey: `${RUN}-other` } } })).resolves.toBe(0)
 
     const adminUsage = await mockDb.lLMUsage.findFirstOrThrow({ where: { userId: ADMIN } })
     expect(adminUsage).toMatchObject({ prompt: null, response: null, cost: 0.5, generationId: null, wrappedId: null })

@@ -3,6 +3,7 @@ import "server-only"
 import type { SupportDiscord } from "@/components/guides/support-guide"
 import { serverName as getServerName } from "@/lib/brand"
 import { primaryService } from "@/lib/members/service"
+import { getProblemReportSettings } from "@/lib/problem-reports/settings"
 import { prisma } from "@/lib/prisma"
 import { safeHref } from "@/lib/ui/markdown"
 import type { AuthService } from "@/types/onboarding"
@@ -17,6 +18,8 @@ export interface HelpData {
   requestsUrl: string | null
   discord: SupportDiscord | null
   instructions: string | null
+  /** Problem reports are on, so help links to `/report`. */
+  reportsEnabled: boolean
 }
 
 /**
@@ -25,7 +28,7 @@ export interface HelpData {
  * the requests guide rather than leaking its internal address.
  */
 export async function getHelpData(userId: string): Promise<HelpData> {
-  const [user, overseerr, integration, connection] = await Promise.all([
+  const [user, overseerr, integration, connection, reports] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { primaryAuthService: true, plexUserId: true },
@@ -44,6 +47,7 @@ export async function getHelpData(userId: string): Promise<HelpData> {
       },
     }),
     prisma.discordConnection.findUnique({ where: { userId }, select: { username: true } }),
+    getProblemReportSettings(),
   ])
 
   const service: AuthService = user ? primaryService(user) : "plex"
@@ -55,6 +59,7 @@ export async function getHelpData(userId: string): Promise<HelpData> {
     requestsUrl: safeHref(overseerr?.publicUrl),
     discord: supportDiscord(integration, connection?.username ?? null),
     instructions: integration?.instructions ?? null,
+    reportsEnabled: reports.enabled,
   }
 }
 

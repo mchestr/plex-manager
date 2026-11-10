@@ -26,6 +26,7 @@ Removal runs in this order:
    - Discord command log rows, chat sessions and pending selections, by app user id and by Discord id;
    - prompts and responses of LLM rows that admins generated about the member (for example an admin regeneration of their Rewind) are set to null, keeping tokens and cost;
    - the member's unused affiliate invites are deleted;
+   - the member's `ALSO_REPORTED` events on other members' problem reports, which hold their notes, are deleted;
    - the `User` row is deleted, and the rest cascades;
    - one `MEMBER_ERASED` audit row is written.
 
@@ -55,6 +56,8 @@ From Account, Your data, a member can delete, one at a time and only their own (
 
 - a mark (Discord `/mymarks` links here; there is no `/unmark`); and
 - a watchlist history item. If the title is still on their Plex watchlist, the next sync can request it again.
+
+Your data also lists the member's problem reports, read-only; an open one can be cancelled on `/report`.
 
 A member's Discord assistant conversations cannot be deleted by the member; the retention sweep below removes them. Share links and hidden titles keep their own controls on the Rewind.
 
@@ -154,6 +157,8 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `AuditLog` | actor and target user ids, event details (ids and counts, never secrets) | A and Support in **Admin > Audit log** (Support sees who, what and when, never the stored details); the operator | Kept (ids only) | No |
 | `RequestTierRun` | per run, each member's Overseerr display name, watch hours, tier and request quota before and after (no foreign key to `User`) | A **Admin > Automations > Request limits** | Not erased on removal; the daily sync keeps only the newest 30 runs, so a removed member's name leaves within about a month | No |
 | `InactivityRun` | per daily member activity run, the ids of the members the inactivity sweep removed, skipped or failed on, with their last seen dates (no names, no foreign key to `User`); the number of warning emails it planned (`warned`) and the newest play on the server that it read (`newestPlayAt`) | A **Admin > Automations > Inactive members** | Not erased on removal; the daily run keeps only the newest 30 runs, so a removed member's id leaves within about a month | No |
+| `ProblemReport` | a problem the member reported with a title: the problem code, the member's note, the title's Plex rating key, guid and display fields, the status, the server admin's note to the member and internal note, dates | M `/report` and Your data; A problem report pages | Cascade | No |
+| `ProblemReportEvent` | one step of a report: its kind, the member or admin who took it (`actorUserId`), and its data. A second reporter's `ALSO_REPORTED` event holds their problem and note | M status words only, never who else reported; A problem report pages | The member's own `ALSO_REPORTED` events on others' reports are deleted; the events of their reports cascade; on other events `actorUserId` is set to null | No |
 | `InactivityNotice` | one warning email that the inactivity sweep planned for the member before removal: the stage (`leadDays`), the cycle and removal dates (`cycleAt`, `removeAfter`), the member zone, the status, a result code, the send attempts and the run that planned it. No address and no email text | A **Admin > Automations > Inactive members** | Cascade | No |
 
 ### Server data with no member's personal data
@@ -175,6 +180,7 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `BrandAsset` | the uploaded wordmark, icon, favicon and login background (Settings, Appearance), with who uploaded each | none |
 | `Config` | app settings, Stripe keys, Rewind settings, affiliate invite settings and the affiliate block key | `stripeSecretKey`, `stripeWebhookSecret`, `rewindSerialKey`, `affiliateBlockKey` |
 | `DiscordIntegration` | Discord app credentials and bot settings; `updatedBy` admin id | `clientSecret`, `botToken` |
+| `ProblemReportSettings` | whether members can report problems on `/report`; `updatedBy` admin id | No |
 | `InactivitySettings` | whether the inactivity sweep is on, its days without a play, the claim of the run in progress, whether warning emails are on and the days before removal that they go out (`warningsEnabled`, `warningDays`); `updatedBy` admin id | No |
 | `LeaseLock` | which instance holds each lease (Discord bot, watchlist sync, retention) and until when | No |
 | `RewindServerAggregate` | server-wide yearly totals, no per-member rows | No |

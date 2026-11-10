@@ -40,6 +40,8 @@ const LABELS: Record<keyof InventoryCounts, string> = {
   affiliateInvite: "Unused affiliate invites",
   affiliateInviteKept: "Used affiliate invites (kept, without their name)",
   affiliateJoinKept: "Invite they joined with (kept, date only)",
+  problemReport: "Problem reports",
+  problemReportEvent: "Their notes on others' problem reports",
 }
 
 /** The tables with rows, in inventory order: `{ key, label, count }`. */

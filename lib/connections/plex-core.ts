@@ -41,6 +41,8 @@ export interface PlexMediaItem {
   thumb?: string
   viewCount?: number
   lastViewedAt?: number
+  /** The library section, from a search result. */
+  librarySectionId?: string
 }
 
 export interface InviteSettings {

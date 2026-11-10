@@ -27,6 +27,7 @@ import {
   FileQuestionMark,
   CreditCard,
   Film,
+  Flag,
   History,
   Hourglass,
   House,
@@ -94,6 +95,7 @@ export const icons = {
   inactivity: Hourglass,
   audit: ScrollText,
   playback: SlidersHorizontal,
+  problemReport: Flag,
   // Actions and states
   externalLink: ArrowUpRight,
   internalLink: ChevronRight,

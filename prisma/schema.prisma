@@ -60,6 +60,8 @@ model User {
   inactivityExcluded    Boolean                @default(false) // The inactivity sweep never removes this member's Plex access
   inactivityEmailsOff   Boolean                @default(false) // The member turned off the warning emails before removal for inactivity
   inactivityNotices     InactivityNotice[]
+  problemReports        ProblemReport[]
+  problemReportEvents   ProblemReportEvent[]   @relation("ProblemReportEventActor")
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
 
@@ -1284,4 +1286,65 @@ model SkillSource {
   updatedAt DateTime @updatedAt
 
   @@index([isActive])
+}
+
+/// Where a problem report stands (lib/problem-reports). Words in lib/ui/status.ts, `problemReport`.
+enum ProblemReportStatus {
+  SENT
+  FIXING
+  FIXED
+  WITH_ADMIN
+  CLOSED
+}
+
+/// A member's report of a problem with a title (docs/problem-reports.md). One open report per title: see activeKey.
+model ProblemReport {
+  id            String               @id @default(cuid())
+  reporterId    String
+  reporter      User                 @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  problem       String // A problem code from lib/problem-reports/taxonomy.ts; the kind is derived from it
+  note          String?              @db.VarChar(500) // The member's own words, plain text
+  mediaType     MediaType // From Plex, never from input
+  plexRatingKey String
+  titleKey      String // The item's Plex guid: stable when the file changes
+  title         String
+  year          Int?
+  showTitle     String?
+  seasonNumber  Int?
+  episodeNumber Int?
+  activeKey     String?              @unique // = titleKey until the report closes (stands in for a partial unique index)
+  status        ProblemReportStatus  @default(SENT) // The service saves a new report as WITH_ADMIN until fixes run on their own
+  memberNote    String?              @db.VarChar(500) // The server admin's note the member sees
+  adminNote     String?              @db.VarChar(2000) // Internal
+  resolvedAt    DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  events        ProblemReportEvent[]
+
+  @@index([status, createdAt])
+  @@index([reporterId, createdAt])
+  @@index([titleKey])
+}
+
+/// One step in a report's timeline: REPORTED, ALSO_REPORTED, CLOSED, ... `data` is parsed with Zod on read.
+model ProblemReportEvent {
+  id          String        @id @default(cuid())
+  reportId    String
+  report      ProblemReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  kind        String
+  actorUserId String?
+  actor       User?         @relation("ProblemReportEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  data        Json?
+  createdAt   DateTime      @default(now())
+
+  @@index([reportId, createdAt])
+  @@index([actorUserId])
+}
+
+/// Problem reports settings (lib/problem-reports/settings.ts): one row, id "problem-reports". Without a row the feature is off.
+model ProblemReportSettings {
+  id        String   @id @default("problem-reports")
+  enabled   Boolean  @default(false) // Members can report problems on /report
+  updatedAt DateTime @updatedAt
+  updatedBy String?
 }
