@@ -103,6 +103,21 @@ describe('reportProblem', () => {
     })
   })
 
+  it("keeps the player answer only when the evidence names the player it was about", async () => {
+    jest.mocked(readEvidence).mockResolvedValueOnce({ lastPlay: null, playedToEnd: null })
+    jest.mocked(readEvidence).mockResolvedValueOnce({ lastPlay: { ...EVIDENCE.lastPlay, player: null }, playedToEnd: true })
+
+    await report({ problem: 'no_sound', device: 'nothing_plays' })
+    await report({ problem: 'no_sound', device: 'nothing_plays' })
+
+    expect(prismaMock.problemReportEvent.create).toHaveBeenNthCalledWith(1, {
+      data: expect.objectContaining({ data: { problem: 'no_sound', evidence: { lastPlay: null, playedToEnd: null } } }),
+    })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenNthCalledWith(2, {
+      data: expect.objectContaining({ data: { problem: 'no_sound', evidence: { lastPlay: { ...EVIDENCE.lastPlay, player: null }, playedToEnd: true } } }),
+    })
+  })
+
   it("keys a title without a guid by its rating key", async () => {
     jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: { ...MOVIE, guid: undefined }, server: SERVER })
 

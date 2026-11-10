@@ -42,8 +42,9 @@ interface ReportProblemStepProps {
 
 /**
  * Step 2: the problem, a show's episode, "Does anything else play on
- * {player}?" for playback problems when the member's last player is known,
- * a note (required for "Something else"), what happens next, and the button
+ * {player}?" for playback problems when the member's last player of the
+ * opened title is known and the report is for that title (not one episode of
+ * the show), a note (required for "Something else"), what happens next, and the button
  * named for it. A converted last play first explains itself for picture
  * problems. Choosing a radio never moves on by itself.
  */
@@ -56,7 +57,8 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
   const [device, setDevice] = useState<DeviceAnswer | null>(null)
   const [pending, startTransition] = useTransition()
   const player = selected.lastPlay?.player ?? null
-  const askDevice = problem !== null && asksDevice(problem) && player !== null
+  // The player is from the last play of the title the sheet opened; one episode of a show may have played elsewhere
+  const askDevice = problem !== null && asksDevice(problem) && player !== null && episode === WHOLE_SHOW
   const transcodeTip = problem !== null && showsTranscodeTip(problem) && selected.lastPlay?.transcoded === true
 
   const noteRequired = problem !== null && needsNote(problem)

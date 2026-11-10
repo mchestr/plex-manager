@@ -104,6 +104,23 @@ describe('ReportSheet', () => {
     expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '555', problem: 'wont_start', note: '', device: 'nothing_plays' })
   })
 
+  it("asks about a show's player for the whole show only, since another episode's last play may differ", async () => {
+    const user = userEvent.setup()
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-4', joined: false } })
+    render(<ReportSheet selected={{ ...SHOW, lastPlay: { player: 'Living Room', transcoded: false, at: '2026-11-08T20:00:00.000Z' } }} closeHref="/report" />)
+
+    await user.click(screen.getByTestId('report-kind-playback'))
+    await user.click(within(screen.getByTestId('report-problem-wont_start')).getByText("Won't start"))
+    expect(screen.getByText('Does anything else play on Living Room?')).toBeInTheDocument()
+    await user.click(within(screen.getByTestId('report-device-nothing_plays')).getByText('No, nothing plays'))
+    await user.click(screen.getByTestId('report-episode-trigger'))
+    await user.click(await screen.findByTestId('report-episode-option-7001'))
+
+    expect(screen.queryByTestId('report-device')).not.toBeInTheDocument()
+    await user.click(screen.getByTestId('report-send'))
+    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '7001', problem: 'wont_start', note: '' })
+  })
+
   it('explains a converted play for a blurry picture, and asks nothing about the device', async () => {
     const user = userEvent.setup()
     render(<ReportSheet selected={{ ...MOVIE, lastPlay: { player: 'Phone', transcoded: true, at: '2026-11-08T20:00:00.000Z' } }} closeHref="/report" />)
