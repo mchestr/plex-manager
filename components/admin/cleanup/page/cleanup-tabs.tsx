@@ -10,7 +10,7 @@ import { useFormat } from "@/lib/format-context"
 import { cn } from "@/lib/utils"
 
 /** The page tabs of UX 3.2 and 8.1. */
-export const CLEANUP_TAB_LABELS: Record<CleanupTab, string> = {
+const CLEANUP_TAB_LABELS: Record<CleanupTab, string> = {
   rules: "Rules",
   "leaving-soon": "Leaving soon",
   kept: "Kept and excluded",

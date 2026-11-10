@@ -16,7 +16,7 @@ import { icons } from "@/lib/ui/icons"
 import type { BoundFormat } from "@/lib/utils/format"
 
 /** "No dry run of this version yet" (UX 8.2, TS 12.7 item 12): a Dry run rule with no other footer line. */
-export const NO_DRY_RUN = "No dry run of this version yet"
+const NO_DRY_RUN = "No dry run of this version yet"
 
 /** "today", "yesterday", or "on Nov 3". */
 function whenWords(f: BoundFormat, iso: string, today: string): string {

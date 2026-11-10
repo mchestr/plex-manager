@@ -14,7 +14,7 @@ import type { CleanupOverviewData } from "@/lib/cleanup/types/screens"
 /** While the first library read runs, the page reads its data again this often, so the counts show when it ends. @internal */
 export const FIRST_READ_REFRESH_MS = 20_000
 
-/** No complete library read yet. */
+/** No complete library read yet. @internal */
 export const hasNoLibraryData = (snapshot: CleanupOverviewData["snapshot"]): boolean => !snapshot.takenAt && !snapshot.finishedAt
 
 /**
@@ -54,7 +54,7 @@ export function FirstUse({ data, now }: { data: CleanupOverviewData; now: number
   return (
     <div className="flex flex-col gap-6">
       {!feature.enabled && <OffAlert />}
-      <CleanupSteps />
+      <CleanupSteps graceDays={data.defaults.graceDays} />
       <LibraryTiles library={data.library} />
       <section aria-labelledby="admin-cleanup-recipes-heading" className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">

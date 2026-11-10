@@ -16,7 +16,7 @@ import type { RecipeCardData } from "@/lib/cleanup/types/rule-parts"
 import { useFormat } from "@/lib/format-context"
 import type { BoundFormat } from "@/lib/utils/format"
 
-/** "Today": "152 movies, 0.9 TB", or "38 movies or 21 shows" for a two-level recipe (UX 4.1.1). Null with no library data. */
+/** "Today": "152 movies, 0.9 TB", or "38 movies or 21 shows" for a two-level recipe (UX 4.1.1). Null with no library data. @internal */
 export function recipeCount(recipe: Pick<RecipeCardData, "level" | "today">, f: BoundFormat): string | null {
   const { today, level } = recipe
   if (!today) return null
@@ -30,6 +30,8 @@ export function recipeCount(recipe: Pick<RecipeCardData, "level" | "today">, f: 
 /**
  * The first sentence of a rule: what it matches. The protections and the
  * Then part read the same in every recipe, and the recipe step shows them.
+ *
+ * @internal
  */
 export function firstSentence(parts: readonly WhyPart[]): WhyPart[] {
   const sentence: WhyPart[] = []

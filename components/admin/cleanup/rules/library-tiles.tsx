@@ -55,7 +55,7 @@ export function FreeSpaceTile({ library, leavingBytes, meta }: FreeSpaceTileProp
   )
 }
 
-/** "About 18 months of space at this growth" (TS 12.7 item 3): the free space over the growth, rounded down. */
+/** "About 18 months of space at this growth" (TS 12.7 item 3): the free space over the growth, rounded down. @internal */
 export function monthsOfSpace(library: Pick<Library, "freeBytes" | "growthBytesPerMonth">, f: BoundFormat): string | null {
   const free = num(library.freeBytes)
   const growth = num(library.growthBytesPerMonth)

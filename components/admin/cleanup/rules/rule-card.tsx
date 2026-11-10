@@ -15,7 +15,7 @@ import { cleanup, cleanupRule, cleanupTurnOn } from "@/lib/admin/routes"
 import type { RuleCardData } from "@/lib/cleanup/types/rule-parts"
 
 /** The reason of a disabled "Turn on..." (UX 4.1.4, TS 9.5 item 4). */
-export const TURN_ON_REDIS_REASON = "Redis is not set up."
+const TURN_ON_REDIS_REASON = "Redis is not set up."
 
 interface RuleCardProps {
   card: RuleCardData

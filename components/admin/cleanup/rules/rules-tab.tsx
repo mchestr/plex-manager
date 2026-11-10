@@ -7,7 +7,7 @@ import type { CleanupOverviewData } from "@/lib/cleanup/types/screens"
 import { getFormatSettings } from "@/lib/settings/app-settings"
 import { dayKey } from "@/lib/utils/zoned-time"
 
-/** "3 rules. A title that two rules match is in Leaving soon once, with the longer grace period." (UX 8.2) */
+/** "3 rules. A title that two rules match is in Leaving soon once, with the longer grace period." (UX 8.2) @internal */
 export function rulesLine(count: number): string {
   return `${count} ${count === 1 ? "rule" : "rules"}. A title that two rules match is in Leaving soon once, with the longer grace period.`
 }

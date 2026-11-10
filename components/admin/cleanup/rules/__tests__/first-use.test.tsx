@@ -113,6 +113,9 @@ describe("FirstUse gallery", () => {
   it("shows the off alert while off, a skeleton count on every recipe before the first read, and the blank card", () => {
     render(<FirstUse data={data()} now={NOW} />)
 
+    // Step 3 names the Settings grace period of a new rule
+    expect(screen.getByTestId("admin-cleanup-steps")).toHaveTextContent("Matches wait in Leaving soon for 45 days.")
+
     expect(screen.getByTestId("admin-cleanup-alert-off")).toBeInTheDocument()
     for (const id of RECIPE_IDS) expect(screen.getByTestId(`admin-cleanup-recipe-${id}-count`)).toHaveAttribute("data-slot", "skeleton")
     expect(screen.getByTestId("admin-cleanup-recipe-blank-start")).toHaveTextContent("Start from a blank rule")
