@@ -355,6 +355,17 @@ describe("watchingCommand.handle, Report a problem", () => {
     ])
   })
 
+  it("adds one button for a title playing in two sessions, since Discord refuses two buttons with one id", async () => {
+    jest.mocked(getProblemReportSettings).mockResolvedValue({ enabled: true })
+    mockGetSessions.mockResolvedValue({ success: true, data: { MediaContainer: { size: 2, Metadata: [myEpisodeSession, { ...myEpisodeSession, sessionKey: "second" }] } } })
+    const { ctx, editReply } = createMockContext()
+
+    await watchingCommand.handle(ctx)
+
+    const { components } = editReply.mock.calls[0][0] as { components: { components: { data: { customId: string } }[] }[] }
+    expect(components[0].components.map((button) => button.data.customId)).toEqual(["report:watching:discord-user-1:7001"])
+  })
+
   it("adds none while problem reports are off", async () => {
     const { ctx, editReply } = createMockContext()
 

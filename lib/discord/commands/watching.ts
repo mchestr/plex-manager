@@ -276,11 +276,17 @@ async function handleWatching(ctx: InteractionContext): Promise<void> {
   await interaction.editReply({ embeds: [buildWatchingEmbed(mySessions)], components: reportRows })
 }
 
-/** The streams a member can report from `/watching`: movies and episodes with a rating key. @internal */
+/**
+ * The streams a member can report from `/watching`: movies and episodes with
+ * a rating key, each title once, since a button's id is the title's and
+ * Discord refuses a message with two buttons of one id. @internal
+ */
 function reportableStreams(sessions: PlexSession[]): { ratingKey: string; title: string }[] {
+  const seen = new Set<string>()
   return sessions.flatMap((session) => {
     const ratingKey = normalizeString(session.ratingKey)
-    if ((session.type !== "movie" && session.type !== "episode") || !ratingKey || !/^\d{1,12}$/.test(ratingKey)) return []
+    if ((session.type !== "movie" && session.type !== "episode") || !ratingKey || !/^\d{1,12}$/.test(ratingKey) || seen.has(ratingKey)) return []
+    seen.add(ratingKey)
     const title = reportTitle({
       title: session.title?.trim() || "Unknown",
       year: normalizeNumber(session.year),

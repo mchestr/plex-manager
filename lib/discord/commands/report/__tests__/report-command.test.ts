@@ -193,6 +193,14 @@ describe("the steps", () => {
     expect(edited(pick)).toEqual({ content: "We couldn't find that title in your libraries.", components: [] })
   })
 
+  it("refuses a kind the title doesn't offer, such as episode problems for a movie", async () => {
+    const forged = component("report:kind:555", { values: ["episodes"] })
+
+    await handleStep(forged)
+
+    expect(edited(forged).content).toBe("That choice is no longer valid. Run /report again.")
+  })
+
   it("asks which problem of the kind, then confirms with the web's words and button", async () => {
     const kind = component("report:kind:555", { values: ["playback"] })
     await handleStep(kind)

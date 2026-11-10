@@ -19,8 +19,9 @@
  *
  * Each step's `custom_id` carries what the next needs (`./ids.ts`); nothing
  * is parked between steps. Each step checks the member is linked and
- * entitled (the router does too), and reads the title again, so a title
- * outside their libraries never shows. The send goes through
+ * entitled (the router does too), and each step that shows the title reads
+ * it again, so a title outside their libraries never shows; a hand-off only
+ * links to the web, which checks it there. The send goes through
  * `lib/problem-reports/service.ts`: the switch, entitlement, rate limits,
  * the library check and the one open report per title. There is no
  * autocomplete: the router checks no user for one, and a library check
@@ -32,13 +33,12 @@
 import { MessageFlags, type MessageComponentInteraction } from "discord.js"
 
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
-import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { memberLibraryAccess, readMemberItem } from "@/lib/problem-reports/access"
 import { refusalCopy, REFUSALS } from "@/lib/problem-reports/refusals"
 import { searchMemberTitles } from "@/lib/problem-reports/search"
 import { reportProblem } from "@/lib/problem-reports/service"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
-import { needsNote, PROBLEM_KINDS, PROBLEMS, type ProblemCode, type ProblemKind, type ReportableType } from "@/lib/problem-reports/taxonomy"
+import { kindsFor, needsNote, PROBLEM_KINDS, PROBLEMS, type ProblemCode, type ProblemKind, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { reportTitle } from "@/lib/problem-reports/title"
 import { ratingKeySchema } from "@/lib/validations/params"
 
@@ -130,7 +130,9 @@ async function onKind(edit: Edit, userId: string, ratingKey: string, kind: strin
   if (!isKind(kind)) return void (await edit(EXPIRED))
   if (kind === "other") return void (await edit(writeNoteOnWeb(ratingKey)))
   const read = await readTitle(edit, userId, ratingKey)
-  if (read) await edit(chooseProblem(read.title, kind, ratingKey))
+  if (!read) return
+  // A kind the title doesn't offer (episodes for a movie) comes only from a forged id
+  await edit(kindsFor(read.type).some((offered) => offered.id === kind) ? chooseProblem(read.title, kind, ratingKey) : EXPIRED)
 }
 
 async function onProblem(edit: Edit, userId: string, ratingKey: string, kind: ProblemKind, problem: string | null): Promise<void> {
@@ -170,14 +172,14 @@ async function handleStep(interaction: MessageComponentInteraction): Promise<voi
 
 const stepComponent: ComponentHandler = {
   customIdPrefix: REPORT_PREFIX,
-  commandType: "PROBLEM_REPORT" as DiscordCommandType,
+  commandType: "PROBLEM_REPORT",
   handle: handleStep,
 }
 
 /** `/report title:`, and its steps' select menus and buttons. */
 export const reportCommand: SlashCommand = {
   data: COMMAND_DEFINITIONS.report,
-  commandType: "PROBLEM_REPORT" as DiscordCommandType,
+  commandType: "PROBLEM_REPORT",
   handle: handleReport,
   components: [stepComponent],
 }
