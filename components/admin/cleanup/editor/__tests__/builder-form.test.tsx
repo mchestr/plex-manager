@@ -292,6 +292,25 @@ describe("BuilderForm", () => {
     expect(tid("admin-cleanup-condition-c5")).toHaveAccessibleName(/Requested in Overseerr: no/)
   })
 
+  it("on a phone, Duplicate in the condition Sheet's menu puts focus on the copy's box (UX 7.9, UX review UX-06)", async () => {
+    wide(false)
+    // A phone shows the boxes and hides the desktop rows (`hidden md:flex`)
+    Object.defineProperty(HTMLElement.prototype, "checkVisibility", { configurable: true, value: function (this: HTMLElement) {
+      return this.closest(".hidden") === null
+    } })
+    try {
+      const { user } = setup()
+      await user.click(tid("admin-cleanup-condition-c2-box"))
+      await waitFor(() => expect(editor()).not.toBeNull())
+      await user.click(tid("admin-cleanup-condition-editor-menu"))
+      await user.click(await screen.findByTestId("admin-cleanup-condition-editor-menu-duplicate"))
+      await waitFor(() => expect(editor()).toBeNull())
+      await waitFor(() => expect(tid("admin-cleanup-condition-c5-box")).toHaveFocus())
+    } finally {
+      delete (HTMLElement.prototype as { checkVisibility?: unknown }).checkVisibility
+    }
+  })
+
   it("duplicates a row after itself and speaks it as added", async () => {
     const { user } = setup()
     await user.click(tid("admin-cleanup-condition-c2-menu"))

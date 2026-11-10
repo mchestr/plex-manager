@@ -37,8 +37,8 @@ interface TokenPickerProps {
   headerActions?: ReactNode
   /** The control that takes focus on open: the part the token names (UX 4.4 item 1). */
   initialFocus?: RefObject<HTMLElement | null>
-  /** Where focus goes on close, when not the anchor: the box of a moved row (UX 7.9). */
-  finalFocus?: RefObject<HTMLElement | null>
+  /** Where focus goes on close, when not the anchor: the box of a moved row (UX 7.9). `false`: nowhere, the owner moves it. */
+  finalFocus?: RefObject<HTMLElement | false | null>
   "data-testid": string
 }
 
@@ -116,7 +116,8 @@ export function TokenPicker({
   const returnFocus = () => {
     const active = document.activeElement
     if (active instanceof HTMLElement && active !== document.body && !active.closest("[data-token-picker]")) return false
-    return (finalFocus ?? anchor).current ?? true
+    const target = (finalFocus ?? anchor).current
+    return target === false ? false : (target ?? true)
   }
 
   const footerNode = typeof footer === "function" ? footer(shell) : footer

@@ -62,7 +62,7 @@ export interface ConditionEditorProps {
   /** The phone Sheet's "More actions for this condition" menu (`condition-menu.tsx`, UX 4.3.8 item 2.3). */
   headerActions?: ReactNode
   /** Where focus goes on close, when not the anchor: the box of a moved row (UX 7.9). */
-  finalFocus?: RefObject<HTMLElement | null>
+  finalFocus?: RefObject<HTMLElement | false | null>
 }
 
 /**

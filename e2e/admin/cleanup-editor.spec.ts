@@ -155,6 +155,28 @@ test.describe('Media cleanup rule editor', () => {
     await expect(editor).toHaveCount(0);
   });
 
+  test('on a phone, Duplicate in the condition Sheet menu puts focus on the copy box (UX 7.9)', async ({ adminPage: page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openEditor(page, `/admin/cleanup/rules/${IDS.rules.dry}`);
+    const before = await page.locator('[data-testid$="-box"][data-testid^="admin-cleanup-condition-c"]').filter({ visible: true }).count();
+    const sheet = tid(page, 'admin-cleanup-condition-editor');
+    await expect(async () => {
+      await tid(page, 'admin-cleanup-condition-c1-box').click();
+      await expect(sheet).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await tid(page, 'admin-cleanup-condition-editor-menu').click();
+    await tid(page, 'admin-cleanup-condition-editor-menu-duplicate').click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.locator('[data-testid$="-box"][data-testid^="admin-cleanup-condition-c"]').filter({ visible: true })).toHaveCount(before + 1);
+    // The copy follows its original: focus is on the box after c1's, never on c1's own
+    await expect.poll(() => page.evaluate(() => {
+      const boxes = [...document.querySelectorAll<HTMLElement>('[data-testid^="admin-cleanup-condition-c"][data-testid$="-box"]')]
+        .filter((box) => box.checkVisibility());
+      const copy = boxes[boxes.findIndex((box) => box.dataset.testid === 'admin-cleanup-condition-c1-box') + 1];
+      return copy !== undefined && document.activeElement === copy;
+    })).toBe(true);
+  });
+
   test('adds an any-of group and a rule protection', async ({ adminPage: page }) => {
     await openEditor(page, `/admin/cleanup/rules/${IDS.rules.dry}`);
     await tid(page, 'admin-cleanup-add-group').click();

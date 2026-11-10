@@ -84,9 +84,12 @@ export function BuilderForm(props: BuilderFormProps) {
   const [settled, setSettled] = useState<number | null>(updating ? null : preview.matches)
   if (!updating && settled !== preview.matches) setSettled(preview.matches)
 
+  // A header menu action of the phone Sheet moves focus itself after the commit, when the row it names exists (UX 7.9)
+  const ownsFocus = useRef(false)
   const openEditor = (id: string, anchor: Anchor, focus?: EditorFocusPart, from = draft) => {
     const condition = findCondition(from, id)
     if (!condition) return
+    ownsFocus.current = false
     setEditing({ id, anchor, focus: focus ?? editorFocusPart(condition, anchor), original: condition, open: true })
     setFocusNext(null)
   }
@@ -166,8 +169,10 @@ export function BuilderForm(props: BuilderFormProps) {
   )
   const finalFocus = useMemo(
     () => ({
-      get current() {
+      get current(): HTMLElement | false | null {
         const root = document.getElementById(formId)
+        // The Sheet can close before the commit that adds the copy's box: then nothing here, and the effect above focuses it
+        if (ownsFocus.current) return (focusNext ? targetElement(root, focusNext.target) : null) ?? false
         const next = focusNext?.closing ? targetElement(root, focusNext.target) : null
         return next ?? (editing ? rowElement(root, editing.id, editing.anchor) : null)
       },
@@ -287,8 +292,9 @@ export function BuilderForm(props: BuilderFormProps) {
               variant="sheet"
               canRemove={list === "protections" || flat.length > 1}
               onAction={(action) => {
+                ownsFocus.current = true
                 closeEditor()
-                act(action, true)
+                act(action)
               }}
             />
           }
