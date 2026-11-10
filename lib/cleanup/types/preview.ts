@@ -160,6 +160,10 @@ export interface WhySheetCondition {
 export interface WhySheetData {
   item: ItemRef
   state: WhySheetState
+  /** The newest of the Plex and arr added dates (ISO), the meta line's "Added {date}." (UX 8.5). Null when neither is known. */
+  addedAt: string | null
+  /** State `cannotDelete` only: the cause sentence of TS 6.9 ("Two Radarr records match."), the summary "{Cause} Cleanup never deletes it." */
+  cause?: string
   /** Admin only (TS 13.4). Arr links use `titleSlug`. */
   links: { plexUrl: string | null; arrUrl: string | null }
   conditions: WhySheetCondition[]

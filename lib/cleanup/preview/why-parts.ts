@@ -110,3 +110,9 @@ export function whyHints(item: SnapshotItem, ctx: EvalContext): WhySheetData["hi
     .filter((title) => !named.has(title.trim().toLowerCase()))
     .map((collection) => ({ kind: "seasonalCollection", collection }))
 }
+
+/** The newest of the Plex and arr added dates (Unix seconds) as ISO, as `library.added` reads them (E16), or null for neither. */
+export function newestAdded(plex: number | null, arr: number | null): string | null {
+  const newest = Math.max(plex ?? -1, arr ?? -1)
+  return newest < 0 ? null : new Date(newest * 1000).toISOString()
+}

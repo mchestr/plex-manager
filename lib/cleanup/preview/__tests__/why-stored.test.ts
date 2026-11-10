@@ -85,4 +85,14 @@ describe("storedWhy", () => {
     expect(storedWhy({ outcome: { ref, kind, runId: null }, why: buildWhySnapshot(why), definition: null, protections: buildOptions().protections,
       words: { memberName: () => null }, zone: "UTC" }).state).toBe(state)
   })
+
+  it("dates the newest stored add, and names the cause that the stored match state stands for", () => {
+    expect(stored(buildWhySnapshot({ facts: { ...FACTS, addedPlex: 1_700_000_000, addedArr: 1_600_000_000 } })).addedAt).toBe(new Date(1_700_000_000_000).toISOString())
+    expect(stored(buildWhySnapshot({ facts: { ...FACTS, addedPlex: null, addedArr: null } })).addedAt).toBeNull()
+    const released = storedWhy({ outcome: { ref, kind: "released", runId: null }, why: buildWhySnapshot({ match: { state: "unmatched" } }), definition: null,
+      protections: buildOptions().protections, words: { memberName: () => null }, zone: "UTC" })
+    expect(released.state).toBe("cannotDelete")
+    expect(released.cause).toBe("No Radarr record matches.")
+    expect(stored().cause).toBeUndefined()
+  })
 })

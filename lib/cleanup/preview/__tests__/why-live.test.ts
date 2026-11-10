@@ -126,4 +126,17 @@ describe("liveWhy", () => {
     const data = liveWhy(input(NEVER, buildDraft({ conditions: [LAST_PLAYED], protections: [p1] })))
     expect(data.protections[0]).toEqual({ id: "p1", label: "Has at least 0 plays in total", verdict: "protects", value: [{ text: "No counted play." }] })
   })
+
+  it("dates the newest add for the meta line, and names the cause of a title that cannot be deleted", () => {
+    const added = buildMovieItem({ added: { plex: daysAgo(400), arr: daysAgo(300) } })
+    const data = liveWhy(input(added, buildDraft({ conditions: [LAST_PLAYED] })))
+    expect(data.addedAt).toBe(new Date(daysAgo(300) * 1000).toISOString())
+    expect(data.cause).toBeUndefined()
+    expect(liveWhy(input(buildMovieItem({ added: { plex: null, arr: null } }), buildDraft({ conditions: [LAST_PLAYED] }))).addedAt).toBeNull()
+
+    const conflicted = buildMovieItem({ match: { state: "conflicted", cause: "twoArrRecords" }, plays: NEVER.plays })
+    const blocked = liveWhy(input(conflicted, buildDraft({ conditions: [LAST_PLAYED] })))
+    expect(blocked.state).toBe("cannotDelete")
+    expect(blocked.cause).toBe("Two Radarr records match.")
+  })
 })

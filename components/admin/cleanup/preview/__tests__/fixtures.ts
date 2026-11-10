@@ -100,6 +100,7 @@ export function buildWhy(overrides: Partial<WhySheetData> = {}): WhySheetData {
   return {
     item: buildRef(),
     state: "match",
+    addedAt: null,
     links: { plexUrl: null, arrUrl: null },
     conditions: [],
     hints: [],

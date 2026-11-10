@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 
 import { postponeCleanupItems } from "@/actions/admin/cleanup-items"
-import { WhySheet, type WhySheetProps, whySummary } from "@/components/admin/cleanup/why/why-sheet"
+import { metaLine, WhySheet, type WhySheetProps, whySummary } from "@/components/admin/cleanup/why/why-sheet"
 import { Button } from "@/components/ui/button"
 import { CleanupWhyFailed, useCleanupWhy } from "@/hooks/use-cleanup-why"
 import { useMediaQuery } from "@/hooks/use-media-query"
@@ -41,6 +41,7 @@ const MATCH: WhySheetData = {
   item: { itemKey: "movie:tmdb:1", level: "movie", title: "Invented Movie", year: 2023, seasonNumber: null, episodeCount: null, seasonCount: null,
     posterKey: "5001", sectionId: "1", sizeBytes: String(17 * GB) },
   state: "match",
+  addedAt: "2024-03-03T12:00:00.000Z",
   links: { plexUrl: "https://app.plex.tv/desktop/#!/server/abc/details?key=%2Flibrary%2Fmetadata%2F5001", arrUrl: "https://radarr.example.com/movie/invented-movie-2023" },
   conditions: [
     { id: "c1", label: "Added", verdict: "pass", value: [{ text: "Added Mar 3, 2024." }], threshold: "more than 365 days", sources: [] },
@@ -117,7 +118,7 @@ describe("WhySheet", () => {
     const title = screen.getByRole("heading", { level: 2, name: "Invented Movie (2023)" })
     await waitFor(() => expect(title).toHaveFocus())
     expect(screen.getByTestId("admin-cleanup-why-state")).toHaveTextContent("Match")
-    expect(sheet).toHaveTextContent("Movies. 17 GB on disk, up to 17 GB freed.")
+    expect(sheet).toHaveTextContent("Movies. 17 GB on disk, up to 17 GB freed. Added Mar 3, 2024.")
     expect(screen.getByTestId("admin-cleanup-why-open-plex")).toHaveAttribute("href", MATCH.links.plexUrl)
     expect(screen.getByTestId("admin-cleanup-why-open-arr")).toHaveTextContent("Open in Radarr")
     expect(screen.getByTestId("admin-cleanup-why-open-arr")).toHaveAttribute("target", "_blank")
@@ -249,11 +250,21 @@ describe("whySummary", () => {
     ["a missing protection value", { state: "missing" as const, protections: [{ id: "g8", label: "On a watchlist", verdict: "unknown" as const, value: [] }] },
       "On a watchlist is unknown, so it is not a match. It keeps its current state."],
     ["missing data with no named value", { state: "missing" as const, protections: [] }, "A value is unknown, so it is not a match. It keeps its current state."],
-    ["a show that cannot be deleted", { state: "cannotDelete" as const, item: show }, "Sonarr cannot delete it. Cleanup never deletes it."],
+    ["a show that cannot be deleted, with no cause", { state: "cannotDelete" as const, item: show }, "Sonarr cannot delete it. Cleanup never deletes it."],
+    ["a title that cannot be deleted, with its cause", { state: "cannotDelete" as const, cause: "Two Radarr records match." },
+      "Two Radarr records match. Cleanup never deletes it."],
     ["a Leaving soon title with no dates", { state: "leaving" as const, leaving: undefined }, "It is in Leaving soon."],
     ["a deletion with no run", { state: "deleted" as const }, "Radarr deleted it. These are the facts that the run saw."],
     ["an item that no list shows", { state: "notListed" as const }, ""],
   ])("words %s", (_label, change, words) => {
     expect(whySummary({ ...MATCH, ...change }, f)).toBe(words)
+  })
+
+  it.each([
+    ["a size and an added date", {}, "Movies. 17 GB on disk, up to 17 GB freed. Added Mar 3, 2024."],
+    ["no added date", { addedAt: null }, "Movies. 17 GB on disk, up to 17 GB freed."],
+    ["an unknown size", { item: { ...MATCH.item, sizeBytes: null } }, "Movies. Size unknown. Added Mar 3, 2024."],
+  ])("writes the meta line with %s", (_label, change, words) => {
+    expect(metaLine({ ...MATCH, ...change }, f)).toBe(words)
   })
 })

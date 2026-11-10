@@ -11,8 +11,9 @@
 import type { DescribeWords } from "@/lib/cleanup/engine/types"
 import { anyFieldMeta } from "@/lib/cleanup/fields/catalog"
 import { dateWords, SERVICE_NAMES } from "@/lib/cleanup/fields/words"
-import { thresholdText } from "@/lib/cleanup/preview/condition-words"
+import { cannotDeleteWords, thresholdText } from "@/lib/cleanup/preview/condition-words"
 import { protectionLabel } from "@/lib/cleanup/preview/protection-words"
+import { newestAdded } from "@/lib/cleanup/preview/why-parts"
 import type { WhySnapshot } from "@/lib/cleanup/schema/why"
 import type { ItemRef, WhySheetData, WhySheetState } from "@/lib/cleanup/types/preview"
 import { DEFAULT_LOCALE, formatBytes, formatDate } from "@/lib/utils/format"
@@ -97,9 +98,12 @@ export function storedWhy({ outcome, why, definition, protections, words, zone }
   const level = outcome.ref.level
   const current = new Map((definition?.conditions ?? []).flatMap((c) => ("kind" in c ? c.conditions : [c])).map((c) => [c.id, c]))
   const labels = { protections, ruleProtections: definition?.protections ?? [], level, words }
+  const state = storedState(outcome.kind, why)
   return {
     item: outcome.ref,
-    state: storedState(outcome.kind, why),
+    state,
+    addedAt: newestAdded(why.facts.addedPlex, why.facts.addedArr),
+    ...(state === "cannotDelete" ? { cause: cannotDeleteWords(undefined, why.match.state, LEVEL_ARR[level])[0] } : {}),
     links: { plexUrl: null, arrUrl: null },
     conditions: why.conditions.map((row) => {
       const c = current.get(row.id)

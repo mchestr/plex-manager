@@ -53,13 +53,14 @@ export interface WhySheetProps {
 const capital = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
 const freesSpace = (state: WhySheetData["state"]) => state === "match" || state === "leaving" || state === "deleted"
 
-/** "Movies. 17.1 GB on disk, up to 17.1 GB freed." (UX 8.5). */
-function metaLine(data: WhySheetData): string {
+/** "Movies. 17.1 GB on disk, up to 17.1 GB freed. Added Mar 3, 2024." (UX 8.5). */
+export function metaLine(data: WhySheetData, f: BoundFormat): string {
   const { item, state } = data
   const kind = capital(NOUNS[item.level][1])
-  if (item.sizeBytes === null) return `${kind}. Size unknown.`
+  const added = data.addedAt ? ` Added ${f.date(data.addedAt)}.` : ""
+  if (item.sizeBytes === null) return `${kind}. Size unknown.${added}`
   const size = formatBytes(BigInt(item.sizeBytes))
-  return `${kind}. ${size} on disk${freesSpace(state) ? `, up to ${size} freed` : ""}.`
+  return `${kind}. ${size} on disk${freesSpace(state) ? `, up to ${size} freed` : ""}.${added}`
 }
 
 const conditionsWord = (count: number) => (count === 1 ? "1 condition" : `${count} conditions`)
@@ -83,7 +84,7 @@ export function whySummary(data: WhySheetData, f: BoundFormat): string {
       return `${unknown ? unknown.label : "A value"} is unknown, so it is not a match. It keeps its current state.`
     }
     case "cannotDelete":
-      return `${SERVICE_NAMES[LEVEL_ARR[data.item.level]]} cannot delete it. Cleanup never deletes it.`
+      return `${data.cause ?? `${SERVICE_NAMES[LEVEL_ARR[data.item.level]]} cannot delete it.`} Cleanup never deletes it.`
     case "leaving":
       return data.leaving
         ? `It joined Leaving soon on ${f.date(data.leaving.enteredAt)}. It leaves on ${f.dayKey(data.leaving.leaveOn)}, unless something takes it out.`
@@ -129,7 +130,7 @@ function Header({ data, f, titleRef }: { data: WhySheetData; f: BoundFormat; tit
           {itemLabel(item)}
           {item.year !== null && <span className="font-normal text-muted-foreground"> ({item.year})</span>}
         </SheetTitle>
-        <SheetDescription className="text-ui text-muted-foreground">{metaLine(data)}</SheetDescription>
+        <SheetDescription className="text-ui text-muted-foreground">{metaLine(data, f)}</SheetDescription>
         <div className="-ml-3 flex flex-wrap gap-x-1">
           {links.plexUrl && <LinkButton href={links.plexUrl} label="Open in Plex" testId="admin-cleanup-why-open-plex" />}
           {links.arrUrl && <LinkButton href={links.arrUrl} label={`Open in ${SERVICE_NAMES[LEVEL_ARR[item.level]]}`} testId="admin-cleanup-why-open-arr" />}

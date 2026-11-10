@@ -20,13 +20,13 @@ import { ruleCoversItem } from "@/lib/cleanup/engine/scope"
 import { type StatusItem, itemStatus } from "@/lib/cleanup/engine/status"
 import type { CompiledRule, DescribeWords, EvalContext } from "@/lib/cleanup/engine/types"
 import { dateWords } from "@/lib/cleanup/fields/words"
-import { tryValueLabel } from "@/lib/cleanup/preview/condition-words"
+import { cannotDeleteWords, tryValueLabel } from "@/lib/cleanup/preview/condition-words"
 import { itemRef } from "@/lib/cleanup/preview/rows"
-import { whyConditions, whyHints, whyProtections, whyThen } from "@/lib/cleanup/preview/why-parts"
+import { newestAdded, whyConditions, whyHints, whyProtections, whyThen } from "@/lib/cleanup/preview/why-parts"
 import type { SnapshotItem, SourceStatus } from "@/lib/cleanup/schema/snapshot"
 import type { WhySheetData } from "@/lib/cleanup/types/preview"
 import { arrItemHref, plexItemHref } from "@/lib/ui/plex-links"
-import { type ActionId, type Mode } from "@/lib/validations/cleanup-vocabulary"
+import { type ActionId, LEVEL_ARR, type Mode } from "@/lib/validations/cleanup-vocabulary"
 
 /** The `CleanupItem` columns of the title that the Sheet reads. */
 export interface WhyRow extends StatusItem {
@@ -71,6 +71,7 @@ export function liveWhy(input: LiveWhyInput): WhySheetData {
   const data: WhySheetData = {
     item: itemRef(item),
     state: leaving && !input.editor ? "leaving" : classification.class,
+    addedAt: newestAdded(item.added.plex, item.added.arr),
     links: {
       plexUrl: plexItemHref(input.links.machineId, item.ratingKey),
       arrUrl: item.arr ? arrItemHref(input.links.arrBase, item.arr.service, item.arr.titleSlug) : null,
@@ -81,6 +82,7 @@ export function liveWhy(input: LiveWhyInput): WhySheetData {
     otherRules: [],
     sources: [...input.sources],
   }
+  if (data.state === "cannotDelete") data.cause = cannotDeleteWords(classification.cause, result.match.state, LEVEL_ARR[item.level])[0]
   const failing = classification.failing
   if (classification.class === "nearMiss" && failing !== undefined) {
     const day = nearMissForecast(compiled, result, failing, ctx)

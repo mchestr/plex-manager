@@ -20,6 +20,7 @@ const DATA: WhySheetData = {
   item: { itemKey: "movie:tmdb:1", level: "movie", title: "Invented Movie", year: 2021, seasonNumber: null, episodeCount: null, seasonCount: null,
     posterKey: "5001", sectionId: "1", sizeBytes: "1000" },
   state: "leaving",
+  addedAt: null,
   links: { plexUrl: null, arrUrl: null },
   conditions: [],
   hints: [],
