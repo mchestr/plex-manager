@@ -5,6 +5,7 @@ import { z } from "zod"
 import { seerrRequestPageSchema, seerrRequestSchema, type SeerrRequest } from "@/lib/cleanup/schema/upstream"
 import {
   MAX_PAGES,
+  namesTitle,
   newTally,
   parseRows,
   runCall,
@@ -46,6 +47,9 @@ export interface RequestReadOptions extends CleanupReadOptions {
 export type OverseerrJobId = "availability-sync"
 
 const TAKE = 100
+
+/** The ids of a request row that name its title. */
+const REQUEST_TITLE_FIELDS = [["media", "tmdbId"], ["media", "tvdbId"]] as const
 const PAGE_TIMEOUT_MS = 20_000
 const JOB_TIMEOUT_MS = 15_000
 
@@ -55,8 +59,10 @@ function seerrUrl(config: OverseerrEndpoint, path: string): string {
 
 /**
  * Every request, 100 a page (`sort=added`, `filter=all`), handed to `onRows`.
- * A request id seen before is dropped. Above 1 % bad rows the read fails with
- * `ROWS_INVALID`, and after 200 pages with `PAGE_LIMIT`. A request whose
+ * A request id seen before is dropped. One bad row that names a title
+ * (a TMDB or TVDB id), or above 1 % bad rows, fails the read with
+ * `ROWS_INVALID`: a lost request must read as unknown, never as "not
+ * requested". After 200 pages it fails with `PAGE_LIMIT`. A request whose
  * `createdAt` does not parse is kept, so it can still rescue a title.
  */
 export async function forEachRequest(
@@ -90,12 +96,17 @@ export async function forEachRequest(
     if (!result.ok) return result
 
     let older = false
-    const parsed = parseRows("overseerr requests", seerrRequestSchema, result.data.results, tally).filter((request) => {
+    // A lost request of a title would read as "not requested": fail the read instead (TS 7.8, correctness review C-08)
+    let named = 0
+    const parsed = parseRows("overseerr requests", seerrRequestSchema, result.data.results, tally, (row) => {
+      if (namesTitle(row, REQUEST_TITLE_FIELDS)) named += 1
+    }).filter((request) => {
       if (seen.has(request.id)) return false
       seen.add(request.id)
       if (until !== undefined && Date.parse(request.createdAt) < until) older = true
       return !older
     })
+    if (named > 0) return { ok: false, code: "ROWS_INVALID" }
     rows += parsed.length
     const stopped = (await onRows(parsed)) === false
     const done = older || result.data.results.length === 0 || result.data.pageInfo.page >= result.data.pageInfo.pages

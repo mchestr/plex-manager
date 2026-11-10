@@ -101,6 +101,14 @@ describe("forEachRequest (O2)", () => {
     expect(await forEachRequest(CONFIG, () => undefined)).toEqual({ ok: false, code: "ROWS_INVALID" })
   })
 
+  it("fails on one bad row that names a title, and keeps going past a bad row that names none (correctness review C-08)", async () => {
+    jest.replaceProperty(process.env, "NODE_ENV", "production")
+    serve(() => page([...requests(1, 200), { ...MOVIE_REQUEST, id: 999, status: "pending" }], 1, 1))
+    expect(await forEachRequest(CONFIG, () => undefined)).toEqual({ ok: false, code: "ROWS_INVALID" })
+    serve(() => page([...requests(1, 200), { ...MOVIE_REQUEST, id: 999, media: null }], 1, 1))
+    expect(await forEachRequest(CONFIG, () => undefined)).toEqual({ ok: true, data: { rows: 200, pages: 1 } })
+  })
+
   it("stops after 200 pages with PAGE_LIMIT", async () => {
     serve((skip) => page(requests(skip + 1, 100), skip / 100 + 1, 100_000))
 

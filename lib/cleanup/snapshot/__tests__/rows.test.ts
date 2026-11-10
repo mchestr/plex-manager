@@ -5,7 +5,7 @@
 
 import { z } from "zod"
 
-import { MAX_PAGES, newTally, parseRows, runCall, SourceRowError, tooManyInvalid } from "@/lib/cleanup/snapshot/rows"
+import { MAX_PAGES, namesTitle, newTally, parseRows, runCall, SourceRowError, tooManyInvalid } from "@/lib/cleanup/snapshot/rows"
 
 const mockWarn = jest.fn()
 jest.mock("@/lib/utils/logger", () => ({
@@ -115,4 +115,22 @@ describe("runCall", () => {
 
 it("caps a paged read at 200 pages (TS 7.8 PAGE_LIMIT)", () => {
   expect(MAX_PAGES).toBe(200)
+})
+
+describe("namesTitle and onDropped (correctness review C-08)", () => {
+  it("tells a dropped row that names a title through a field path from one that names none", () => {
+    const fields = [["media", "tmdbId"], ["guid"]] as const
+    expect(namesTitle({ media: { tmdbId: 55 } }, fields)).toBe(true)
+    expect(namesTitle({ guid: "plex://movie/a" }, fields)).toBe(true)
+    expect(namesTitle({ media: { tmdbId: 0 }, guid: " " }, fields)).toBe(false)
+    expect(namesTitle({ media: null }, fields)).toBe(false)
+    expect(namesTitle(null, fields)).toBe(false)
+  })
+
+  it("hands each dropped row to onDropped", () => {
+    jest.replaceProperty(process.env, "NODE_ENV", "production")
+    const dropped: unknown[] = []
+    expect(parseRows("plex movies", rowSchema, [good(1), renamed], newTally(), (row) => dropped.push(row))).toHaveLength(1)
+    expect(dropped).toEqual([renamed])
+  })
 })

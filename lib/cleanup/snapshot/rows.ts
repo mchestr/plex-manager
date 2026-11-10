@@ -7,7 +7,10 @@
  * `NODE_ENV=test` it throws instead, so a fixture with a renamed field fails
  * loudly. A source whose dropped rows exceed 1 % of what it read fails as a
  * whole with `ROWS_INVALID` ({@link tooManyInvalid}), because missing rows
- * make items vanish.
+ * make items vanish. That share is for the Plex and arr lists (TS 7.2.3).
+ * A row of a request or a play decides a fact of its title, so a lost one
+ * would read as "no request" or "no play": those reads fail on one dropped
+ * row that names a title ({@link namesTitle}, TS 7.8, UX 5.3 rule 1).
  *
  * @module lib/cleanup/snapshot/rows
  */
@@ -69,8 +72,11 @@ export function newTally(): RowTally {
   return { read: 0, dropped: 0 }
 }
 
-/** Parse `raw` with `schema`, keeping the rows that pass and adding to `tally`. */
-export function parseRows<T>(source: string, schema: z.ZodType<T>, raw: readonly unknown[], tally: RowTally): T[] {
+/**
+ * Parse `raw` with `schema`, keeping the rows that pass and adding to `tally`.
+ * `onDropped` sees each raw row that failed, before the test-mode throw.
+ */
+export function parseRows<T>(source: string, schema: z.ZodType<T>, raw: readonly unknown[], tally: RowTally, onDropped?: (row: unknown) => void): T[] {
   const rows: T[] = []
   const issues = new Set<string>()
   for (const item of raw) {
@@ -79,6 +85,7 @@ export function parseRows<T>(source: string, schema: z.ZodType<T>, raw: readonly
       rows.push(parsed.data)
       continue
     }
+    onDropped?.(item)
     for (const issue of parsed.error.issues) issues.add(issue.path.join(".") || "(root)")
   }
 
@@ -98,4 +105,19 @@ export function parseRows<T>(source: string, schema: z.ZodType<T>, raw: readonly
 /** Whether more than 1 % of the rows a source read were dropped. */
 export function tooManyInvalid(tally: RowTally): boolean {
   return tally.dropped > tally.read * MAX_INVALID_SHARE
+}
+
+const filled = (value: unknown) => (typeof value === "number" && value !== 0) || (typeof value === "string" && value.trim() !== "")
+
+/**
+ * Whether a raw row that failed its schema still names a title through one
+ * of `fields` (a path of keys: `["media", "tmdbId"]`), so its loss could
+ * change that title's facts. A row that names nothing changes no title.
+ */
+export function namesTitle(row: unknown, fields: readonly (readonly string[])[]): boolean {
+  return fields.some((path) => {
+    let at: unknown = row
+    for (const key of path) at = at !== null && typeof at === "object" ? (at as Record<string, unknown>)[key] : undefined
+    return filled(at)
+  })
 }

@@ -123,6 +123,15 @@ describe("forEachHistoryRow, the library read (T1)", () => {
     expect(await forEachHistoryRow(CONFIG, {}, () => undefined)).toEqual({ ok: false, code: "ROWS_INVALID" })
   })
 
+  it("fails on one bad row that names a title, and keeps going past a bad row that names none (correctness review C-08)", async () => {
+    jest.replaceProperty(process.env, "NODE_ENV", "production")
+    serve(() => ({ recordsFiltered: 301, data: [...rows(1, 300), { ...MOVIE_ROW, row_id: 301, started: "soon" }] }))
+    expect(await forEachHistoryRow(CONFIG, {}, () => undefined)).toEqual({ ok: false, code: "ROWS_INVALID" })
+    const nameless = { ...MOVIE_ROW, row_id: 301, rating_key: null, parent_rating_key: null, grandparent_rating_key: null, guid: "" }
+    serve(() => ({ recordsFiltered: 301, data: [...rows(1, 300), nameless] }))
+    expect(await forEachHistoryRow(CONFIG, {}, () => undefined)).toEqual({ ok: true, data: { rows: 300, pages: 1, complete: true } })
+  })
+
   it("stops after 200 pages with PAGE_LIMIT", async () => {
     serve((start, length) => ({ recordsFiltered: 10_000_000, data: rows(start + 1, length) }))
 

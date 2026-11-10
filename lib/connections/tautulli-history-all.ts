@@ -5,6 +5,7 @@ import type { z } from "zod"
 import { historyPageSchema, historyRowSchema, recentHistoryRowSchema, type HistoryRow, type RecentHistoryRow } from "@/lib/cleanup/schema/upstream"
 import {
   MAX_PAGES,
+  namesTitle,
   newTally,
   parseRows,
   runCall,
@@ -27,7 +28,9 @@ import type { TautulliParsed } from "@/lib/validations/tautulli"
  * 1. The library read (T1, an empty query): `grouping=1`,
  *    `include_archived=1`, `include_activity=0`, oldest first by `started`,
  *    1000 rows a page until `recordsFiltered`, 20 s a page, at most 200
- *    pages (`PAGE_LIMIT`). Above 1 % bad rows it fails with `ROWS_INVALID`.
+ *    pages (`PAGE_LIMIT`). One bad row that names a title (a rating key
+ *    or a guid), or above 1 % bad rows, fails it with `ROWS_INVALID`: a
+ *    lost play must read as unknown, never as "not played".
  * 2. The pre-delete read (TS 8.8 row 4, a query with `after` and
  *    `ratingKeys`): `include_activity=1`, newest first by `date`, 25 rows a
  *    page from `start=0`, the next page only while a page is full, at most
@@ -69,6 +72,9 @@ const RECENT = { length: 25, maxPages: 8, timeoutMs: 10_000 }
 const DIGITS = /^\d+$/
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/
 
+/** The keys of a history row that name a title. */
+const HISTORY_TITLE_FIELDS = [["rating_key"], ["parent_rating_key"], ["grandparent_rating_key"], ["guid"]] as const
+
 async function readPages<T extends { row_id: string | null }>(
   config: TautulliEndpoint,
   params: Record<string, string | number>,
@@ -91,14 +97,18 @@ async function readPages<T extends { row_id: string | null }>(
     if (!result.ok) return result
 
     const raw = Array.isArray(result.data) ? result.data : result.data.data
-    const parsed = parseRows("tautulli get_history", schema, raw, tally).filter((row) => {
+    // A lost play of a title would read as "not played": fail the read instead (TS 7.8, correctness review C-08)
+    let named = 0
+    const parsed = parseRows("tautulli get_history", schema, raw, tally, (row) => {
+      if (namesTitle(row, HISTORY_TITLE_FIELDS)) named += 1
+    }).filter((row) => {
       if (row.row_id === null) return true
       if (seen.has(row.row_id)) return false
       seen.add(row.row_id)
       return true
     })
     // The pre-delete form decides on each page, so one bad row fails it at once.
-    if (form === RECENT && tally.dropped > 0) return { ok: false, code: "ROWS_INVALID" }
+    if (named > 0 || (form === RECENT && tally.dropped > 0)) return { ok: false, code: "ROWS_INVALID" }
     rows += parsed.length
     const stopped = (await onRows(parsed)) === false
     // T1 pages until `recordsFiltered`. The pre-delete form reads on while a page is full.
