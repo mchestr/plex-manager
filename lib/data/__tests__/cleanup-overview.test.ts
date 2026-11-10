@@ -91,6 +91,16 @@ describe("first use", () => {
     expect(data.recipes.every((r) => r.today === null && r.posters.length === 0)).toBe(true)
     expect(data.recipes.find((r) => r.id === "big-shows-nobody-plays")?.needs).toEqual(["sonarr"])
     expect(data.recipes.find((r) => r.id === "never-watched-movies")?.needs).toEqual([])
+    expect(data.defaults).toEqual({ graceDays: 30 })
+  })
+
+  it("gives the New rule Sheet the grace period default of Settings", async () => {
+    snapshotMock.mockResolvedValue(null)
+    mockStoredDefaults({ options: { version: 1, defaults: { graceDays: 14, importListExclusion: true } } })
+
+    const data = await getCleanupOverview()
+
+    expect(data.defaults).toEqual({ graceDays: 14 })
   })
 })
 

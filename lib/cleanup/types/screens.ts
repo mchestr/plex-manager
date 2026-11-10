@@ -69,6 +69,8 @@ export interface CleanupOverviewData {
   rules: RuleCardData[]
   /** The gallery, evaluated with their defaults (TS 12.7 item 2). */
   recipes: RecipeCardData[]
+  /** The Settings defaults of a new rule: the New rule Sheet preselects the grace chip of `graceDays` (TS 6.10). */
+  defaults: { graceDays: number }
 }
 
 /** `getCleanupRuleEditor(...)`: the editor of a saved rule or a new rule (UX 12.2, TS 10.4). */

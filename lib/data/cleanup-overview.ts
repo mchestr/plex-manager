@@ -53,5 +53,6 @@ export async function getCleanupOverview(now: Date = new Date()): Promise<Cleanu
     batches: overviewBatches(groups, new Map(rows.rules.map((rule) => [rule.id, { name: rule.name, level: rule.level }])), today, zone),
     rules: ruleCards({ screen, rows, batches: groups }),
     recipes: recipeCards({ snapshot, ctx: screen.ctx, live: screen.live, options: settings.options, setUp }),
+    defaults: { graceDays: settings.options.defaults.graceDays },
   }
 }
