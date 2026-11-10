@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { FIX_ACTIONS } from "@/lib/problem-reports/fixes"
+import { FILE_FIXES, FIX_ACTIONS } from "@/lib/problem-reports/fixes"
 import { PROBLEM_CODES } from "@/lib/problem-reports/taxonomy"
 import { ratingKeySchema } from "@/lib/validations/params"
 
@@ -57,8 +57,17 @@ export const closedEventDataSchema = z.object({ reason: z.enum(["cancelled", "ad
 
 const fixActionSchema = z.enum(FIX_ACTIONS)
 
-/** A `FIXED` event's data: the server admin marked it fixed, or a fix found it fixed. */
-export const fixedEventDataSchema = z.object({ reason: z.enum(["admin", "fix"]), action: fixActionSchema.optional() })
+/**
+ * A `FIXED` event's data: the server admin marked it fixed, or a fix found it
+ * fixed. A swap adds the release it grabbed and whether the bad one is on the
+ * blocklist now (`null` when it couldn't be checked).
+ */
+export const fixedEventDataSchema = z.object({
+  reason: z.enum(["admin", "fix"]),
+  action: fixActionSchema.optional(),
+  release: z.string().nullable().optional(),
+  blocklisted: z.boolean().nullable().optional(),
+})
 
 /** A `FIX_STARTED` event's data: the fix and who started it. */
 export const fixStartedDataSchema = z.object({ action: fixActionSchema, trigger: z.enum(["automatic", "web", "mcp"]) })
@@ -95,14 +104,25 @@ const TO_ADMIN_REASONS = [
   "IMPORT_BLOCKED",
   "DOWNLOAD_FAILED",
   "STILL_DOWNLOADING",
+  "BUSY",
+  "NO_OTHER_COPY",
+  "ONLY_LOWER",
+  "GRAB_FAILED",
+  "ROOT_FOLDER_MISSING",
+  "DELETE_FAILED",
+  "NOTHING_GRABBED",
+  "INTERRUPTED",
 ] as const
 export type ToAdminReason = (typeof TO_ADMIN_REASONS)[number]
 
 /** A `TO_ADMIN` event's data: why the fix handed the report to the server admin. */
 export const toAdminDataSchema = z.object({ reason: z.enum(TO_ADMIN_REASONS), action: fixActionSchema.optional() })
 
-/** An admin's one-tap fix on a report. */
-export const runProblemFixSchema = z.object({ reportId: problemReportIdSchema, action: fixActionSchema })
+/** An admin's one-tap fix on a report; the fixes that replace the file have their own actions. */
+export const runProblemFixSchema = z.object({ reportId: problemReportIdSchema, action: fixActionSchema.exclude(FILE_FIXES) })
+
+/** Swap the copy, or Remove the file and search, on a report. */
+export const fileFixSchema = z.object({ reportId: problemReportIdSchema })
 
 /** The evidence a `REPORTED` or `ALSO_REPORTED` event carries (`lib/problem-reports/evidence.ts`); anything else reads as none. */
 const evidenceSchema = z

@@ -13,7 +13,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder }
 import { plainDiscordText } from "@/lib/discord/plain-text"
 import { getBaseUrl } from "@/lib/env"
 import { answerWords } from "@/lib/problem-reports/answers"
-import type { FixAction } from "@/lib/problem-reports/fixes"
+import type { MemberFixAction } from "@/lib/problem-reports/fixes"
 import type { FoundTitle } from "@/lib/problem-reports/search"
 import type { ReportOutcome } from "@/lib/problem-reports/service"
 import { kindsFor, problemLabel, problemsOf, type ProblemCode, type ProblemKind, type ReportableType } from "@/lib/problem-reports/taxonomy"
@@ -93,7 +93,7 @@ export function confirmProblem(title: string, problem: ProblemCode, ratingKey: s
 }
 
 /** What a fix that started is doing, as the web's sheet says it. */
-const FIXING: Record<FixAction, string> = {
+const FIXING: Record<MemberFixAction, string> = {
   BETTER_COPY: "We'll look for a better copy now. The one you have keeps playing, and if there isn't a better one, nothing changes.",
   LOOK_FOR_MISSING: "We'll look for the missing episodes now. Nothing is removed.",
   REFRESH: "We'll ask Plex to read the details again.",

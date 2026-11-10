@@ -4,23 +4,25 @@
  * and the history since the search decide the rest).
  */
 
-import { getArrCommandState, listTitleHistory, listTitleQueue } from "@/lib/connections/arr-upgrade"
+import { getArrCommandState, listTitleHistory, listTitleQueue, type ArrHistoryRecord } from "@/lib/connections/arr-upgrade"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { scanPlexFolder } from "@/lib/connections/plex-library-actions"
-import { getRadarrMovieFile, startRadarrMovieSearch } from "@/lib/connections/radarr-movie"
-import { listSonarrEpisodes, searchSonarrEpisodes } from "@/lib/connections/sonarr-episodes"
+import { searchSonarrEpisodes, startRadarrMovieSearch } from "@/lib/connections/arr-writes"
+import { getRadarrMovieFile } from "@/lib/connections/radarr-movie"
+import { listSonarrEpisodes } from "@/lib/connections/sonarr-episodes"
 import { getActiveService } from "@/lib/data/active-service"
 import { gateAndRecord } from "@/lib/problem-reports/ledger"
 import { resolveFile, type ResolvedFile } from "@/lib/problem-reports/resolve"
 import { runBetterCopy } from "@/lib/problem-reports/steps/better-copy"
 import { readUpgrade } from "@/lib/problem-reports/upgrade"
-import type { BetterCopyWatch, ProblemReportFixPayload } from "@/lib/queue/types"
+import type { CopyWatch, ProblemReportFixPayload } from "@/lib/queue/types"
 
 jest.mock("@/lib/connections/arr-upgrade", () => ({ getArrCommandState: jest.fn(), listTitleHistory: jest.fn(), listTitleQueue: jest.fn() }))
 jest.mock("@/lib/connections/plex-config", () => ({ getActivePlexServerConfig: jest.fn() }))
 jest.mock("@/lib/connections/plex-library-actions", () => ({ scanPlexFolder: jest.fn() }))
-jest.mock("@/lib/connections/radarr-movie", () => ({ getRadarrMovieFile: jest.fn(), startRadarrMovieSearch: jest.fn() }))
-jest.mock("@/lib/connections/sonarr-episodes", () => ({ listSonarrEpisodes: jest.fn(), searchSonarrEpisodes: jest.fn() }))
+jest.mock("@/lib/connections/arr-writes", () => ({ searchSonarrEpisodes: jest.fn(), startRadarrMovieSearch: jest.fn() }))
+jest.mock("@/lib/connections/radarr-movie", () => ({ getRadarrMovieFile: jest.fn() }))
+jest.mock("@/lib/connections/sonarr-episodes", () => ({ listSonarrEpisodes: jest.fn() }))
 jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
 jest.mock("@/lib/problem-reports/ledger", () => ({ gateAndRecord: jest.fn() }))
 jest.mock("@/lib/problem-reports/resolve", () => ({ resolveFile: jest.fn() }))
@@ -34,15 +36,26 @@ const RADARR = { name: "Radarr", url: "http://radarr.local:7878", apiKey: "radar
 const SONARR = { name: "Sonarr", url: "http://sonarr.local:8989", apiKey: "sonarr-key" }
 const REPORT = { id: "report-1", runToken: 3, action: "BETTER_COPY" as const, reporterId: "member-1", plexRatingKey: "555" }
 const START: ProblemReportFixPayload = { reportId: "report-1", runToken: 3, step: "start", trigger: "automatic", actorUserId: "member-1" }
-const FILE = { id: 77, relativePath: "Heat (1995) WEBDL-720p.mkv", path: "/movies/Heat (1995)/Heat (1995) WEBDL-720p.mkv", size: 4200, qualityCutoffNotMet: true, customFormatScore: 0 }
-const PLEX = { ratingKey: "555", sectionId: "1", file: "/data/movies/Heat (1995)/Heat (1995) WEBDL-720p.mkv", folder: "/data/movies/Heat (1995)" }
+const FILE = {
+  id: 77,
+  relativePath: "Heat (1995) WEBDL-720p.mkv",
+  path: "/movies/Heat (1995)/Heat (1995) WEBDL-720p.mkv",
+  size: 4200,
+  qualityCutoffNotMet: true,
+  customFormatScore: 0,
+  sceneName: null,
+  quality: null,
+  languages: [],
+}
+const PLEX = { ratingKey: "555", guid: "plex://movie/heat", sectionId: "1", file: "/data/movies/Heat (1995)/Heat (1995) WEBDL-720p.mkv", folder: "/data/movies/Heat (1995)" }
 const MOVIE: ResolvedFile = { service: "radarr", config: RADARR, titleId: 5, qualityProfileId: 4, file: FILE, episodeIds: [], plex: PLEX }
 const EPISODES: ResolvedFile = { ...MOVIE, service: "sonarr", config: SONARR, titleId: 42, qualityProfileId: 6, file: { ...FILE, id: 501 }, episodeIds: [11, 12] }
 
 const SINCE = NOW.getTime() - 30 * MINUTE
-const WATCH: BetterCopyWatch = { service: "radarr", titleId: 5, fileId: 77, episodeIds: [], commandId: 31, since: SINCE, sectionId: "1", folder: PLEX.folder }
-const waiting = (watch: BetterCopyWatch = WATCH, deadline = SINCE + DAY): ProblemReportFixPayload => ({ ...START, step: "wait", watch, deadline })
+const WATCH: CopyWatch = { service: "radarr", titleId: 5, fileId: 77, episodeIds: [], commandId: 31, since: SINCE, sectionId: "1", folder: PLEX.folder }
+const waiting = (watch: CopyWatch = WATCH, deadline = SINCE + DAY): ProblemReportFixPayload => ({ ...START, step: "wait", watch, deadline })
 const later = { next: { at: NOW.getTime() + 10 * MINUTE, data: {} } }
+const record = (fields: Pick<ArrHistoryRecord, "eventType" | "at" | "downloadId" | "episodeId">): ArrHistoryRecord => ({ id: 1, sourceTitle: null, fileId: null, infoHash: null, ...fields })
 
 beforeEach(() => {
   jest.resetAllMocks()
@@ -124,7 +137,7 @@ describe("the wait", () => {
   })
 
   it("is fixed once every episode of the file has a new file in Sonarr, and not before", async () => {
-    const watch: BetterCopyWatch = { ...WATCH, service: "sonarr", titleId: 42, fileId: 501, episodeIds: [11, 12] }
+    const watch: CopyWatch = { ...WATCH, service: "sonarr", titleId: 42, fileId: 501, episodeIds: [11, 12] }
     const episode = (id: number, episodeFileId: number | null) => ({ id, seasonNumber: 1, episodeNumber: id, airDateUtc: null, monitored: true, hasFile: episodeFileId !== null, episodeFileId })
     jest.mocked(listSonarrEpisodes).mockResolvedValueOnce({ success: true, data: [episode(11, 600), episode(12, 501), episode(13, 700)] })
     jest.mocked(listSonarrEpisodes).mockResolvedValueOnce({ success: true, data: [episode(11, 600), episode(12, 600)] })
@@ -133,6 +146,15 @@ describe("the wait", () => {
     await expect(runBetterCopy(REPORT, waiting(watch), NOW)).resolves.toEqual(later)
     await expect(runBetterCopy(REPORT, waiting(watch), NOW)).resolves.toEqual({ fixed: true })
     expect(listSonarrEpisodes).toHaveBeenCalledWith(SONARR, 42)
+  })
+
+  it("doesn't read episodes left without a file, as after a removal, as a new copy", async () => {
+    const watch: CopyWatch = { ...WATCH, service: "sonarr", titleId: 42, fileId: 501, episodeIds: [11, 12] }
+    const removed = (id: number) => ({ id, seasonNumber: 1, episodeNumber: id, airDateUtc: null, monitored: true, hasFile: false, episodeFileId: null })
+    jest.mocked(listSonarrEpisodes).mockResolvedValue({ success: true, data: [removed(11), removed(12)] })
+    jest.mocked(getArrCommandState).mockResolvedValue({ success: true, data: "running" })
+
+    await expect(runBetterCopy(REPORT, waiting(watch), NOW)).resolves.toEqual(later)
   })
 
   it("hands the report back when the queue says the download is stuck", async () => {
@@ -149,14 +171,14 @@ describe("the wait", () => {
   })
 
   it("waits for a grab that isn't in the queue yet", async () => {
-    jest.mocked(listTitleHistory).mockResolvedValue({ success: true, data: [{ eventType: "grabbed", at: SINCE + MINUTE, downloadId: "ABC", episodeId: null }] })
+    jest.mocked(listTitleHistory).mockResolvedValue({ success: true, data: [record({ eventType: "grabbed", at: SINCE + MINUTE, downloadId: "ABC", episodeId: null })] })
 
     await expect(runBetterCopy(REPORT, waiting(), NOW)).resolves.toEqual(later)
     expect(getArrCommandState).not.toHaveBeenCalled()
   })
 
   it("counts a grab Radarr dates up to a minute before the search, for a clock a little behind the worker's", async () => {
-    jest.mocked(listTitleHistory).mockResolvedValue({ success: true, data: [{ eventType: "grabbed", at: SINCE - 30_000, downloadId: "ABC", episodeId: null }] })
+    jest.mocked(listTitleHistory).mockResolvedValue({ success: true, data: [record({ eventType: "grabbed", at: SINCE - 30_000, downloadId: "ABC", episodeId: null })] })
 
     await expect(runBetterCopy(REPORT, waiting(), NOW)).resolves.toEqual(later)
     expect(getArrCommandState).not.toHaveBeenCalled()
@@ -166,8 +188,8 @@ describe("the wait", () => {
     jest.mocked(listTitleHistory).mockResolvedValue({
       success: true,
       data: [
-        { eventType: "downloadFailed", at: SINCE + 5 * MINUTE, downloadId: "ABC", episodeId: null },
-        { eventType: "grabbed", at: SINCE + MINUTE, downloadId: "ABC", episodeId: null },
+        record({ eventType: "downloadFailed", at: SINCE + 5 * MINUTE, downloadId: "ABC", episodeId: null }),
+        record({ eventType: "grabbed", at: SINCE + MINUTE, downloadId: "ABC", episodeId: null }),
       ],
     })
 
@@ -175,17 +197,17 @@ describe("the wait", () => {
   })
 
   it("finds no better copy once the search is done and grabbed nothing, ignoring history from before it", async () => {
-    jest.mocked(listTitleHistory).mockResolvedValue({ success: true, data: [{ eventType: "grabbed", at: SINCE - DAY, downloadId: "OLD", episodeId: null }] })
+    jest.mocked(listTitleHistory).mockResolvedValue({ success: true, data: [record({ eventType: "grabbed", at: SINCE - DAY, downloadId: "OLD", episodeId: null })] })
 
     await expect(runBetterCopy(REPORT, waiting(), NOW)).resolves.toEqual({ noBetterCopy: true })
     expect(getArrCommandState).toHaveBeenCalledWith("Radarr", RADARR, 31)
   })
 
   it("ignores another episode's downloads in Sonarr", async () => {
-    const watch: BetterCopyWatch = { ...WATCH, service: "sonarr", titleId: 42, fileId: 501, episodeIds: [11] }
+    const watch: CopyWatch = { ...WATCH, service: "sonarr", titleId: 42, fileId: 501, episodeIds: [11] }
     jest.mocked(listSonarrEpisodes).mockResolvedValue({ success: true, data: [{ id: 11, seasonNumber: 1, episodeNumber: 1, airDateUtc: null, monitored: true, hasFile: true, episodeFileId: 501 }] })
     jest.mocked(listTitleQueue).mockResolvedValue({ success: true, data: [{ downloadId: "B", episodeId: 99, status: "downloading", trackedDownloadState: "downloading", trackedDownloadStatus: "ok" }] })
-    jest.mocked(listTitleHistory).mockResolvedValue({ success: true, data: [{ eventType: "grabbed", at: SINCE + MINUTE, downloadId: "B", episodeId: 99 }] })
+    jest.mocked(listTitleHistory).mockResolvedValue({ success: true, data: [record({ eventType: "grabbed", at: SINCE + MINUTE, downloadId: "B", episodeId: 99 })] })
 
     await expect(runBetterCopy(REPORT, waiting(watch), NOW)).resolves.toEqual({ noBetterCopy: true })
     expect(getArrCommandState).toHaveBeenCalledWith("Sonarr", SONARR, 31)

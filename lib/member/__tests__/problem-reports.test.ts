@@ -101,6 +101,7 @@ describe('getReportPageData', () => {
     const none = { kind: 'CLOSED', data: { reason: 'no_better_copy' }, createdAt: AT }
     prismaMock.problemReport.findMany.mockResolvedValue([
       { ...report, id: 'better', reporterId: 'member-1', status: 'FIXED', action: 'BETTER_COPY', events: [{ kind: 'FIXED', data: { reason: 'fix', action: 'BETTER_COPY' }, createdAt: AT }] },
+      { ...report, id: 'swapped', reporterId: 'member-1', status: 'FIXED', action: 'SWAP', events: [{ kind: 'FIXED', data: { reason: 'fix', action: 'SWAP', release: 'Heat.GOOD', blocklisted: true }, createdAt: AT }] },
       { ...report, id: 'none', reporterId: 'member-1', status: 'CLOSED', action: 'BETTER_COPY', events: [none] },
       { ...report, id: 'none-followed', reporterId: 'member-2', status: 'CLOSED', action: 'BETTER_COPY', events: [none] },
       { ...report, id: 'asked', reporterId: 'member-1', status: 'WITH_ADMIN', action: 'BETTER_COPY', events: [{ kind: 'REOPENED', data: null, createdAt: AT }] },
@@ -111,6 +112,7 @@ describe('getReportPageData', () => {
 
     expect(reports.map(({ id, latest, statusSub, canAsk }) => ({ id, words: latest.words, statusSub, canAsk }))).toEqual([
       { id: 'better', words: 'A better copy is on the server now', statusSub: null, canAsk: false },
+      { id: 'swapped', words: 'A different copy is on the server now', statusSub: null, canAsk: false },
       { id: 'none', words: "We looked, but there's no better copy right now", statusSub: 'No better copy right now', canAsk: true },
       { id: 'none-followed', words: "We looked, but there's no better copy right now", statusSub: 'No better copy right now', canAsk: false },
       { id: 'asked', words: 'You sent it to the server admin', statusSub: null, canAsk: false },

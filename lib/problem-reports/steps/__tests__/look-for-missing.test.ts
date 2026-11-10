@@ -6,14 +6,14 @@
 
 import { scanPlexFolder } from "@/lib/connections/plex-library-actions"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
-import { searchSonarrEpisodes } from "@/lib/connections/sonarr-episodes"
+import { searchSonarrEpisodes } from "@/lib/connections/arr-writes"
 import { gateAndRecord } from "@/lib/problem-reports/ledger"
 import { runLookForMissing } from "@/lib/problem-reports/steps/look-for-missing"
 import { readMissingState, type MissingState } from "@/lib/problem-reports/steps/missing-state"
 
 jest.mock("@/lib/connections/plex-config", () => ({ getActivePlexServerConfig: jest.fn() }))
 jest.mock("@/lib/connections/plex-library-actions", () => ({ scanPlexFolder: jest.fn() }))
-jest.mock("@/lib/connections/sonarr-episodes", () => ({ searchSonarrEpisodes: jest.fn() }))
+jest.mock("@/lib/connections/arr-writes", () => ({ searchSonarrEpisodes: jest.fn() }))
 jest.mock("@/lib/problem-reports/ledger", () => ({ gateAndRecord: jest.fn() }))
 jest.mock("@/lib/problem-reports/steps/missing-state", () => ({ readMissingState: jest.fn() }))
 

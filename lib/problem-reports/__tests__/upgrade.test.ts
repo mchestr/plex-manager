@@ -10,7 +10,7 @@ import { readUpgrade, wantsUpgrade } from "@/lib/problem-reports/upgrade"
 
 jest.mock("@/lib/connections/arr-upgrade", () => ({ getArrQualityProfile: jest.fn() }))
 
-const PROFILE = { id: 4, upgradeAllowed: true, cutoffFormatScore: 100 }
+const PROFILE = { id: 4, upgradeAllowed: true, cutoffFormatScore: 100, qualityOrder: [] }
 const FILE = { qualityCutoffNotMet: false, customFormatScore: 100 }
 
 describe("wantsUpgrade", () => {
@@ -42,9 +42,9 @@ describe("readUpgrade", () => {
     config: { name: "Sonarr", url: "http://sonarr.local:8989", apiKey: "arr-key" },
     titleId: 42,
     qualityProfileId: 6,
-    file: { id: 501, relativePath: null, path: "/tv/x.mkv", size: 1, qualityCutoffNotMet: true, customFormatScore: 0 },
+    file: { id: 501, relativePath: null, path: "/tv/x.mkv", size: 1, qualityCutoffNotMet: true, customFormatScore: 0, sceneName: null, quality: null, languages: [] },
     episodeIds: [11],
-    plex: { ratingKey: "7001", sectionId: "2", file: "/data/tv/x.mkv", folder: "/data/tv" },
+    plex: { ratingKey: "7001", guid: null, sectionId: "2", file: "/data/tv/x.mkv", folder: "/data/tv" },
   } satisfies ResolvedFile
 
   it("reads the file's profile and applies the rule", async () => {

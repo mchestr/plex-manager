@@ -2,8 +2,9 @@
 
 /**
  * Problem reports for the server admin (docs/problem-reports.md): Mark fixed
- * and Close, the one-tap fixes, resuming fixes after the breaker, the
- * feature switch, and a member's "Swaps need approval". Each is audited:
+ * and Close, the one-tap fixes, Swap the copy, Remove the file and search,
+ * resuming fixes after the breaker, the feature switch, and a member's "Swaps
+ * need approval". Each is audited:
  * `PROBLEM_REPORT_CLOSED` (ids and the outcome, never a title or a note),
  * `PROBLEM_FIX_RUN` (by the run itself, before it acts),
  * `PROBLEM_BREAKER_RESUMED`, `PROBLEM_REPORT_SETTINGS_CHANGED` and
@@ -16,17 +17,17 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 import { adminAction } from "@/lib/actions/define-action"
-import { fail, ok } from "@/lib/actions/result"
+import { fail, ok, type ActionResult } from "@/lib/actions/result"
 import { problemReport, problemReports, userDetail } from "@/lib/admin/routes"
 import { principalSession } from "@/lib/mcp/principal"
 import { prisma } from "@/lib/prisma"
-import { fixesFor } from "@/lib/problem-reports/fixes"
+import { fixesFor, type FixAction } from "@/lib/problem-reports/fixes"
 import { startFix } from "@/lib/problem-reports/run"
 import { getProblemReportSettings, PROBLEM_REPORT_SETTINGS_ID } from "@/lib/problem-reports/settings"
 import { reportableTypeOf } from "@/lib/problem-reports/taxonomy"
 import { queueMemberUpdates } from "@/lib/problem-reports/updates"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
-import { problemReportSettingsSchema, resolveProblemReportSchema, runProblemFixSchema } from "@/lib/validations/problem-reports"
+import { fileFixSchema, problemReportSettingsSchema, resolveProblemReportSchema, runProblemFixSchema } from "@/lib/validations/problem-reports"
 import { userIdSchema } from "@/lib/validations/shared-schemas"
 
 /** The member pages that show reports or link to `/report`. */
@@ -67,30 +68,67 @@ export const resolveProblemReport = adminAction({
   },
 })
 
+/** Starts an admin's fix on a report about a title it applies to, from the web or over MCP. */
+async function startAdminFix(reportId: string, action: FixAction, userId: string): Promise<ActionResult<null>> {
+  const report = await prisma.problemReport.findUnique({ where: { id: reportId }, select: { mediaType: true } })
+  if (!report) return fail("NOT_FOUND", "Report not found")
+  const type = reportableTypeOf(report.mediaType)
+  if (!type || !fixesFor(type).includes(action)) return fail("VALIDATION", "That fix doesn't apply to this title.")
+
+  const started = await startFix({ reportId, action, trigger: principalSession() ? "mcp" : "web", actorUserId: userId })
+  revalidatePath(problemReport(reportId))
+  if (started.ok) return ok(null)
+  return started.reason === "NOT_OPEN"
+    ? fail("CONFLICT", "This report is closed, or a fix is running on it.")
+    : fail("UPSTREAM_UNAVAILABLE", "Fixes run on the job queue, which isn't running.")
+}
+
 /**
- * Runs a fix on an open report: Look for the episodes (Sonarr's search for
- * the show's missing episodes, or a Plex scan of its folder) or Refresh the
- * details (Plex reads them again). Neither removes anything. The run goes
- * through the same gate and daily search cap as a member's, and answers at
- * once; the report shows how it went.
+ * Runs a fix that leaves the file alone on an open report: Look for the
+ * episodes (Sonarr's search for the show's missing episodes, or a Plex scan
+ * of its folder), Look for a better copy (Radarr's or Sonarr's search with
+ * the file in place, which grabs only an upgrade the quality profile wants)
+ * or Refresh the details (Plex reads them again). None removes anything. The
+ * run goes through the same gate and daily search cap as a member's, and
+ * answers at once; the report shows how it went.
  */
 export const runProblemFix = adminAction({
   input: runProblemFixSchema,
   rateLimit: { name: "admin:problem-fix" },
   fallbackError: "Could not start the fix",
-  handler: async ({ reportId, action }, { userId }) => {
-    const report = await prisma.problemReport.findUnique({ where: { id: reportId }, select: { mediaType: true } })
-    if (!report) return fail("NOT_FOUND", "Report not found")
-    const type = reportableTypeOf(report.mediaType)
-    if (!type || !fixesFor(type).includes(action)) return fail("VALIDATION", "That fix doesn't apply to this title.")
+  handler: async ({ reportId, action }, { userId }) => startAdminFix(reportId, action, userId),
+})
 
-    const started = await startFix({ reportId, action, trigger: principalSession() ? "mcp" : "web", actorUserId: userId })
-    revalidatePath(problemReport(reportId))
-    if (started.ok) return ok(null)
-    return started.reason === "NOT_OPEN"
-      ? fail("CONFLICT", "This report is closed, or a fix is running on it.")
-      : fail("UPSTREAM_UNAVAILABLE", "Fixes run on the job queue, which isn't running.")
-  },
+/**
+ * Swaps the copy of a report's movie or episode for another release of the
+ * same quality or better, from an interactive search of Radarr's or Sonarr's
+ * indexers. The copy members have keeps playing until the new one imports;
+ * then the old release is marked failed, so Radarr or Sonarr blocklists it.
+ * Nothing changes when there is no such release. It counts against the daily
+ * search cap and the breaker for fixes that replace files, and answers at
+ * once; the report shows how it went.
+ */
+export const swapProblemCopy = adminAction({
+  input: fileFixSchema,
+  rateLimit: { name: "admin:problem-fix" },
+  fallbackError: "Could not start the swap",
+  handler: async ({ reportId }, { userId }) => startAdminFix(reportId, "SWAP", userId),
+})
+
+/**
+ * Removes the file of a report's movie or episode, then searches for any
+ * copy its quality profile allows: for a copy whose only other copies are
+ * lower quality. The title is unavailable to everyone until a new copy
+ * imports. The removed release is marked failed first, so Radarr or Sonarr
+ * blocklists it, and the file goes to their recycle bin only when one is
+ * set. It counts against the daily search cap and the breaker for fixes that
+ * replace files, and answers at once; the report shows how it went.
+ */
+export const removeProblemFile = adminAction({
+  input: fileFixSchema,
+  rateLimit: { name: "admin:problem-fix" },
+  fallbackError: "Could not start the removal",
+  handler: async ({ reportId }, { userId }) => startAdminFix(reportId, "REMOVE_AND_SEARCH", userId),
 })
 
 /** Resumes the fixes that replace files after the breaker tripped. */

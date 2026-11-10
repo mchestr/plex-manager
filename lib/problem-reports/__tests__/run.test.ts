@@ -12,6 +12,8 @@ import { startFix, runFixStep } from "@/lib/problem-reports/run"
 import { runBetterCopy } from "@/lib/problem-reports/steps/better-copy"
 import { runLookForMissing } from "@/lib/problem-reports/steps/look-for-missing"
 import { runRefresh } from "@/lib/problem-reports/steps/refresh"
+import { runRemoveAndSearch } from "@/lib/problem-reports/steps/remove-and-search"
+import { runSwap } from "@/lib/problem-reports/steps/swap"
 import { queueAdminAlertFromWorker, queueMemberUpdates } from "@/lib/problem-reports/updates"
 import { enqueueFromRequest } from "@/lib/queue/request-path"
 import { JOB_TYPES } from "@/lib/queue/types"
@@ -21,6 +23,9 @@ jest.mock("@/lib/problem-reports/settings", () => ({ getProblemReportSettings: j
 jest.mock("@/lib/problem-reports/steps/better-copy", () => ({ runBetterCopy: jest.fn() }))
 jest.mock("@/lib/problem-reports/steps/look-for-missing", () => ({ runLookForMissing: jest.fn() }))
 jest.mock("@/lib/problem-reports/steps/refresh", () => ({ runRefresh: jest.fn() }))
+jest.mock("@/lib/problem-reports/steps/swap", () => ({ runSwap: jest.fn() }))
+jest.mock("@/lib/problem-reports/steps/remove-and-search", () => ({ runRemoveAndSearch: jest.fn() }))
+jest.mock("@/lib/problem-reports/breaker-alert", () => ({ queueBreakerAlert: jest.fn() }))
 jest.mock("@/lib/problem-reports/updates", () => ({ queueMemberUpdates: jest.fn(), queueAdminAlertFromWorker: jest.fn() }))
 jest.mock("@/lib/queue/connection", () => ({ isRedisConfigured: () => mockRedis() }))
 jest.mock("@/lib/queue/request-path", () => ({ enqueueFromRequest: jest.fn() }))
@@ -117,6 +122,29 @@ describe("runFixStep", () => {
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({ data: { reportId: "report-1", kind: "FIXED", data: { reason: "fix", action: "LOOK_FOR_MISSING" } } })
     expect(prismaMock.problemFixLedger.updateMany).toHaveBeenCalledWith({ where: { id: "report-1:3", endedAt: null }, data: { outcome: "FIXED", endedAt: NOW } })
     expect(queueMemberUpdates).toHaveBeenCalledWith("report-1", "FIXED", { from: "worker" })
+  })
+
+  it("writes what a swap did on the fixed step, and keeps the title's new rating key", async () => {
+    prismaMock.problemReport.findUnique.mockResolvedValue({ ...ROW, action: "SWAP", plexRatingKey: "555" } as never)
+    jest.mocked(runSwap).mockResolvedValue({ fixed: true, details: { release: "Heat.1995.1080p.BluRay-GOOD", blocklisted: true, ratingKey: "9001" } })
+
+    await runFixStep({ ...DATA, step: "wait" }, NOW)
+    expect(runSwap).toHaveBeenCalledWith(expect.objectContaining({ action: "SWAP", plexRatingKey: "555" }), { ...DATA, step: "wait" }, NOW)
+    expect(prismaMock.problemReport.updateMany).toHaveBeenCalledWith({
+      where: { id: "report-1", runToken: 3, status: "FIXING" },
+      data: { status: "FIXED", activeKey: null, resolvedAt: NOW, plexRatingKey: "9001" },
+    })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
+      data: { reportId: "report-1", kind: "FIXED", data: { reason: "fix", action: "SWAP", release: "Heat.1995.1080p.BluRay-GOOD", blocklisted: true } },
+    })
+  })
+
+  it("runs a removal's step for Remove the file and search", async () => {
+    prismaMock.problemReport.findUnique.mockResolvedValue({ ...ROW, action: "REMOVE_AND_SEARCH" } as never)
+    jest.mocked(runRemoveAndSearch).mockResolvedValue({ toAdmin: "ROOT_FOLDER_MISSING" })
+
+    await runFixStep({ ...DATA, trigger: "web", actorUserId: "admin-1" }, NOW)
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({ data: { reportId: "report-1", kind: "TO_ADMIN", data: { reason: "ROOT_FOLDER_MISSING", action: "REMOVE_AND_SEARCH" } } })
   })
 
   it("tells nobody when another change won the report first", async () => {

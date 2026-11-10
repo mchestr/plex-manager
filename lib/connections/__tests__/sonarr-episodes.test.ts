@@ -1,9 +1,9 @@
 /**
- * A series' episodes and episode files from Sonarr, skipping records that
- * don't parse, and the EpisodeSearch command for exactly the given episodes.
+ * A series' monitoring and profile, and its episodes and episode files from
+ * Sonarr, skipping records that don't parse.
  */
 
-import { getSonarrSeriesState, listSonarrEpisodeFiles, listSonarrEpisodes, searchSonarrEpisodes } from "@/lib/connections/sonarr-episodes"
+import { getSonarrSeriesState, listSonarrEpisodeFiles, listSonarrEpisodes } from "@/lib/connections/sonarr-episodes"
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
@@ -40,6 +40,12 @@ describe("listSonarrEpisodes", () => {
     expect(mockFetch.mock.calls[0][0]).toBe("http://sonarr.local:8989/api/v3/episode?seriesId=42")
   })
 
+  it("reads the file id 0 Sonarr sends for an episode without a file as none", async () => {
+    mockFetch.mockResolvedValue(respond(200, [{ id: 13, seasonNumber: 1, episodeNumber: 3, monitored: true, hasFile: false, episodeFileId: 0 }]))
+
+    await expect(listSonarrEpisodes(CONFIG, 42)).resolves.toEqual({ success: true, data: [expect.objectContaining({ id: 13, episodeFileId: null })] })
+  })
+
   it("refuses a series id that isn't a positive whole number", async () => {
     expect(await listSonarrEpisodes(CONFIG, 0)).toEqual({ success: false, error: "Invalid Sonarr request parameters" })
     expect(mockFetch).not.toHaveBeenCalled()
@@ -55,25 +61,6 @@ describe("listSonarrEpisodeFiles", () => {
       data: [expect.objectContaining({ id: 5, relativePath: "Season 01/S01E01.mkv", path: "/tv/Show/Season 01/S01E01.mkv" })],
     })
     expect(mockFetch.mock.calls[0][0]).toBe("http://sonarr.local:8989/api/v3/episodefile?seriesId=42")
-  })
-})
-
-describe("searchSonarrEpisodes", () => {
-  it("posts EpisodeSearch with the episode ids and answers with the command id", async () => {
-    mockFetch.mockResolvedValue(respond(201, { id: 900, name: "EpisodeSearch" }))
-
-    expect(await searchSonarrEpisodes(CONFIG, [12, 13])).toEqual({ success: true, data: expect.objectContaining({ id: 900 }) })
-    const [url, init] = mockFetch.mock.calls[0]
-    expect(url).toBe("http://sonarr.local:8989/api/v3/command")
-    expect(init.method).toBe("POST")
-    expect(JSON.parse(init.body)).toEqual({ name: "EpisodeSearch", episodeIds: [12, 13] })
-    expect(init.headers).toEqual(expect.objectContaining({ "X-Api-Key": "arr-key", "Content-Type": "application/json" }))
-  })
-
-  it("sends nothing for no episodes or a bad id", async () => {
-    expect((await searchSonarrEpisodes(CONFIG, [])).success).toBe(false)
-    expect((await searchSonarrEpisodes(CONFIG, [1.5])).success).toBe(false)
-    expect(mockFetch).not.toHaveBeenCalled()
   })
 })
 
@@ -95,16 +82,45 @@ describe("listSonarrEpisodeFiles quality", () => {
   it("reads each file's size and quality against the profile, null where Sonarr sends none", async () => {
     mockFetch.mockResolvedValue(
       respond(200, [
-        { id: 5, relativePath: "Season 01/S01E01.mkv", size: 900, qualityCutoffNotMet: false, customFormatScore: 35 },
-        { id: 6, relativePath: "Season 01/S01E02.mkv" },
+        {
+          id: 5,
+          relativePath: "Season 01/S01E01.mkv",
+          size: 900,
+          qualityCutoffNotMet: false,
+          customFormatScore: 35,
+          sceneName: "Show.S01E01.1080p.WEB.h264-GRP",
+          quality: { quality: { id: 3, name: "WEBDL-1080p" }, revision: { version: 2, real: 0, isRepack: true } },
+          languages: [{ id: 1, name: "English" }],
+        },
+        { id: 6, relativePath: "Season 01/S01E02.mkv", quality: { quality: { id: 3, name: "WEBDL-1080p" } }, languages: "odd" },
       ])
     )
 
     expect(await listSonarrEpisodeFiles(CONFIG, 42)).toEqual({
       success: true,
       data: [
-        { id: 5, relativePath: "Season 01/S01E01.mkv", path: null, size: 900, qualityCutoffNotMet: false, customFormatScore: 35 },
-        { id: 6, relativePath: "Season 01/S01E02.mkv", path: null, size: null, qualityCutoffNotMet: null, customFormatScore: null },
+        {
+          id: 5,
+          relativePath: "Season 01/S01E01.mkv",
+          path: null,
+          size: 900,
+          qualityCutoffNotMet: false,
+          customFormatScore: 35,
+          sceneName: "Show.S01E01.1080p.WEB.h264-GRP",
+          quality: { id: 3, name: "WEBDL-1080p", version: 2, real: 0 },
+          languages: [1],
+        },
+        {
+          id: 6,
+          relativePath: "Season 01/S01E02.mkv",
+          path: null,
+          size: null,
+          qualityCutoffNotMet: null,
+          customFormatScore: null,
+          sceneName: null,
+          quality: { id: 3, name: "WEBDL-1080p", version: 1, real: 0 },
+          languages: [],
+        },
       ],
     })
   })

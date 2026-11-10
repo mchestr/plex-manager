@@ -59,8 +59,10 @@ export interface MemberUpdate {
 
 /** What a fix that worked did, about a title. */
 const FIXED_BY: Partial<Record<FixAction, (title: string) => string>> = {
+  SWAP: (title) => `A different copy of ${title} is on the server now.`,
   BETTER_COPY: (title) => `A better copy of ${title} is on the server now.`,
   LOOK_FOR_MISSING: (title) => `${title} has the missing episodes now.`,
+  REMOVE_AND_SEARCH: (title) => `A new copy of ${title} is on the server now.`,
 }
 
 /** A fix's end, in the member's words. */
@@ -85,4 +87,9 @@ export function memberUpdateText(update: MemberUpdate, baseUrl: string): string 
           : `The server admin closed the report you follow about ${title}.`
   const note = update.own && update.hasNote ? " The server admin left you a note." : ""
   return `${words}${note}\nYour reports: <${baseUrl}/report>`
+}
+
+/** The admins' DM when fixes that replace files trip the breaker. */
+export function breakerAlertText(baseUrl: string): string {
+  return `Fixes that replace files are paused: more ran in the last hour or day than the breaker allows. Check the recent swaps, then resume fixes on the problem reports page: <${baseUrl}/admin/problem-reports>`
 }
