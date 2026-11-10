@@ -6,7 +6,8 @@
  * grab with that download id names the release, its info hash for a torrent,
  * and the history record to mark failed, which blocklists the release. A file
  * added by hand has no grab: a swap still passes over its scene name, and
- * nothing is marked failed.
+ * nothing is marked failed. With no scene name either, nothing tells the
+ * release apart from the search's, so a swap may take the same one again.
  *
  * @module lib/problem-reports/bad-copy
  */
