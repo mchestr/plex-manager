@@ -337,7 +337,7 @@ for 10 minutes per server, and an item's section for 24 hours
 shares gives the member its own Plex account in `MOCK_SHARED_SECTIONS`, and
 uses rating keys no other spec uses.
 
-## Sonarr for a spec
+## Sonarr and Radarr for a spec
 
 `e2e/mocks/sonarr-server.ts` is a Sonarr stand-in a spec starts itself
 (`startMockSonarr()`), pointing an active `Sonarr.url` at it with the API key
@@ -346,6 +346,14 @@ sets its episodes and files in `state`, and reads the commands it was sent
 (Sonarr's `EpisodeSearch`, say) from `commands`.
 `e2e/problem-reports-missing.spec.ts` shows it, with the fix job running in
 the web server's worker, so the spec needs Redis.
+
+`e2e/mocks/radarr-server.ts` is the same for Radarr (`startMockRadarr(folder)`,
+API key `e2e-radarr-key`). It knows one movie (`MOCK_MOVIE`, TMDB id 95101)
+in the folder it is given: a test sets its file in `file` (whether it is
+below the quality cutoff, say), and reads the commands it was sent
+(`MoviesSearch`) from `commands`. Its queue and history are empty, and every
+command it is asked about is still running, so a run waits.
+`e2e/problem-reports-better-copy.spec.ts` shows it.
 
 ## Writing New Tests
 
