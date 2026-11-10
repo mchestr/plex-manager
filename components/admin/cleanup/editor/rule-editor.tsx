@@ -14,6 +14,7 @@ import { EDITOR_TOASTS, takeTitleFocus, useRuleSave, useRuleState } from "@/comp
 import { NewRuleSheet } from "@/components/admin/cleanup/new-rule/new-rule-sheet"
 import { recipeLevelOf } from "@/components/admin/cleanup/new-rule/recipe-words"
 import { clauseLabels } from "@/components/admin/cleanup/preview/clause-labels"
+import { LARGEST_MATCHES_HEADING_ID } from "@/components/admin/cleanup/preview/largest-matches"
 import { PreviewCard } from "@/components/admin/cleanup/preview/preview-card"
 import { ResultsSection } from "@/components/admin/cleanup/results/results-section"
 import { DEFAULT_RESULTS_VIEW, focusResultsHeading, focusResultsTab, RESULTS_HEADING_ID, type ResultsView, viewForTab } from "@/components/admin/cleanup/results/view"
@@ -55,9 +56,13 @@ function focusIfLost(target: () => HTMLElement | null, frames = 30): void {
   }
   requestAnimationFrame(() => step(frames))
 }
-/** Focus after a Why Sheet action (UX 7.9, ux-a11y-r8-1): the title's Why button in Results or Largest matches, else the Results heading. */
-const afterAction = (itemKey: string) =>
-  byTestId(`admin-cleanup-results-row-${itemKey}-why`) ?? byTestId(`admin-cleanup-preview-largest-${itemKey}-why`) ?? document.getElementById(RESULTS_HEADING_ID)
+/** The section whose "Why" button opened the Why Sheet. */
+type WhyOpener = "largest" | "results"
+/** Focus after a Why Sheet action (UX 7.9, ux-a11y-r8-1, owner-r8-1): the title's Why button in the section that opened the Sheet, else its heading. */
+const afterAction = (itemKey: string, from: WhyOpener) =>
+  from === "largest"
+    ? (byTestId(`admin-cleanup-preview-largest-${itemKey}-why`) ?? document.getElementById(LARGEST_MATCHES_HEADING_ID) ?? document.getElementById(RESULTS_HEADING_ID))
+    : (byTestId(`admin-cleanup-results-row-${itemKey}-why`) ?? document.getElementById(RESULTS_HEADING_ID))
 
 /**
  * The rule editor (UX 4.3, TS 12.6 editor item 1): the header, the sentence
@@ -86,11 +91,12 @@ export function RuleEditor({ data, now, redis }: RuleEditorProps) {
   const [errors, setErrors] = useState<EditorError[]>([])
   const [focusRequest, setFocusRequest] = useState<FocusTarget | null>(null)
   const [why, setWhy] = useState<string | null>(null)
+  const opener = useRef<WhyOpener>("results")
   const [recipe, setRecipe] = useState<RecipeId | null>(null)
   const [refreshing, startRefresh] = useTransition()
   const titleRef = useRef<HTMLHeadingElement>(null)
   const tried = useRef<string | null>(null)
-  const acted = useRef<{ key: string; data: PreviewResponse } | null>(null)
+  const acted = useRef<{ key: string; from: WhyOpener; data: PreviewResponse } | null>(null)
   const { saving, confirming, pending, save, confirmImpact, cancelImpact } = useRuleSave({
     rule,
     ruleId,
@@ -149,7 +155,7 @@ export function RuleEditor({ data, now, redis }: RuleEditorProps) {
     const done = acted.current
     if (!done || done.data === preview.data) return
     acted.current = null
-    focusIfLost(() => afterAction(done.key))
+    focusIfLost(() => afterAction(done.key, done.from))
   }, [preview.data])
   const onTry = (value: TryValue) => {
     const condition = findCondition(draft, value.conditionId)
@@ -161,7 +167,7 @@ export function RuleEditor({ data, now, redis }: RuleEditorProps) {
     const id = tried.current
     tried.current = null
     if (id) return targetElement(ruleForm(), { kind: "token", id, part: "value" }) ?? true
-    return (acted.current && afterAction(acted.current.key)) || true
+    return (acted.current && afterAction(acted.current.key, acted.current.from)) || true
   }
   const whyTitle = why ? (preview.data.rows.find((r) => r.itemKey === why) ?? preview.data.largest.find((r) => r.itemKey === why))?.title : undefined
   const refresh = {
@@ -224,7 +230,10 @@ export function RuleEditor({ data, now, redis }: RuleEditorProps) {
           rateLimited={preview.rateLimited}
           delta={preview.delta}
           refresh={refresh}
-          onWhy={setWhy}
+          onWhy={(key) => {
+            opener.current = "largest"
+            setWhy(key)
+          }}
           onSelectTab={(tab) => {
             setView((v) => viewForTab(v, tab))
             focusResultsTab(tab)
@@ -240,7 +249,10 @@ export function RuleEditor({ data, now, redis }: RuleEditorProps) {
         ruleName={state.name}
         now={now}
         updating={preview.updating}
-        onWhy={setWhy}
+        onWhy={(key) => {
+          opener.current = "results"
+          setWhy(key)
+        }}
       />
       <CountBar
         preview={preview.data}
@@ -263,7 +275,7 @@ export function RuleEditor({ data, now, redis }: RuleEditorProps) {
         title={whyTitle}
         onTry={onTry}
         onActionDone={() => {
-          if (why) acted.current = { key: why, data: preview.data }
+          if (why) acted.current = { key: why, from: opener.current, data: preview.data }
           void queryClient.invalidateQueries({ queryKey: ["cleanup-preview", scope] })
         }}
         finalFocus={whyFinalFocus}

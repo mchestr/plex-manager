@@ -21,6 +21,7 @@ import { refreshCleanupData } from "@/actions/admin/cleanup-settings"
 import { RuleEditor } from "@/components/admin/cleanup/editor/rule-editor"
 import { EDITOR_TOASTS } from "@/components/admin/cleanup/editor/use-rule-state"
 import { buildPreview, buildRef, buildWhy } from "@/components/admin/cleanup/preview/__tests__/fixtures"
+import { LARGEST_MATCHES_HEADING_ID } from "@/components/admin/cleanup/preview/largest-matches"
 import type { PreviewImpact, PreviewResponse } from "@/lib/cleanup/types/preview"
 import type { CleanupEditorData } from "@/lib/cleanup/types/screens"
 import type { RuleDraft } from "@/lib/validations/cleanup-draft"
@@ -243,6 +244,19 @@ describe("RuleEditor", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     await waitFor(() => expect(maybe("admin-cleanup-results-row-movie-1001-why")).toBeNull())
     await waitFor(() => expect(document.getElementById("admin-cleanup-results-heading")).toHaveFocus())
+  })
+
+  it("after an exclusion from a Largest matches Why, focuses the Largest matches heading when the row went", async () => {
+    ;(getCleanupItemWhy as jest.Mock).mockResolvedValue({ success: true, data: why({ state: "match" }) })
+    ;(excludeCleanupItems as jest.Mock).mockResolvedValue({ success: true, data: { excluded: 1, rescued: 0, skipped: 0 } })
+    const { user } = setup()
+    await user.click(tid("admin-cleanup-preview-largest-movie-1001-why"))
+    await user.click(await screen.findByTestId("admin-cleanup-why-exclude"))
+    nextPreview = buildPreview({ largest: PREVIEW.largest.slice(1), tabs: { ...PREVIEW.tabs, matches: 196 } })
+    await user.click(await screen.findByTestId("admin-cleanup-exclude-confirm"))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    await waitFor(() => expect(maybe("admin-cleanup-preview-largest-movie-1001-why")).toBeNull())
+    await waitFor(() => expect(document.getElementById(LARGEST_MATCHES_HEADING_ID)).toHaveFocus())
   })
 
   it("saves with Ctrl S and Cmd S only while the page shows", async () => {
