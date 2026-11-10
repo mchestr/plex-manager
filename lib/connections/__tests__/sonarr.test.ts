@@ -9,7 +9,9 @@ import historyPage2 from "./fixtures/arr/sonarr-history-page-2.json"
 import seriesHistory from "./fixtures/arr/sonarr-series-history.json"
 import queue from "./fixtures/arr/sonarr-queue.json"
 import calendar from "./fixtures/arr/sonarr-calendar.json"
+import seriesByTvdb from "./fixtures/arr/sonarr-series-by-tvdb.json"
 import {
+  findSonarrSeries,
   getSonarrCalendar,
   getSonarrHistory,
   getSonarrQueue,
@@ -137,5 +139,57 @@ describe("list calls", () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(1)
     expect(result.success && result.data.records).toHaveLength(20)
+  })
+})
+
+describe("findSonarrSeries", () => {
+  const otherSeries = { ...seriesByTvdb[0], id: 8, tvdbId: 79168, tmdbId: 1668, imdbId: "tt0108778", titleSlug: "friends" }
+
+  it("asks Sonarr for the series with a TVDB id", async () => {
+    mockFetch.mockResolvedValue(respond(seriesByTvdb))
+
+    const result = await findSonarrSeries(config, { tvdb: 73244, tmdb: 2316 })
+
+    expect(result).toEqual({ success: true, data: expect.objectContaining({ id: 7, titleSlug: "the-office-us", tvdbId: 73244 }) })
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(call(0)).toEqual({ path: "/api/v3/series", query: { tvdbId: "73244" } })
+    expect(mockFetch.mock.calls[0][1].headers["X-Api-Key"]).toBe("arr-key")
+  })
+
+  it.each([
+    ["TMDB", { tmdb: 2316 }],
+    ["IMDb", { imdb: "tt0386676" }],
+  ])("finds a series without a TVDB id by its %s id across the library", async (_label, ids) => {
+    mockFetch.mockResolvedValue(respond([otherSeries, ...seriesByTvdb]))
+
+    expect(await findSonarrSeries(config, ids)).toEqual({ success: true, data: expect.objectContaining({ id: 7 }) })
+    expect(call(0)).toEqual({ path: "/api/v3/series", query: {} })
+  })
+
+  it("falls back to the other ids when the TVDB id finds nothing", async () => {
+    mockFetch.mockResolvedValueOnce(respond([])).mockResolvedValueOnce(respond([otherSeries, ...seriesByTvdb]))
+
+    expect(await findSonarrSeries(config, { tvdb: 73245, imdb: "tt0386676" })).toEqual({
+      success: true,
+      data: expect.objectContaining({ id: 7 }),
+    })
+  })
+
+  it("finds nothing for a series Sonarr doesn't have", async () => {
+    mockFetch.mockResolvedValue(respond([]))
+
+    expect(await findSonarrSeries(config, { tvdb: 73245 })).toEqual({ success: true, data: null })
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it("makes no request without an id", async () => {
+    expect(await findSonarrSeries(config, {})).toEqual({ success: true, data: null })
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it("reports a failed request", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 500, headers: new Headers(), json: async () => ({}) })
+
+    expect(await findSonarrSeries(config, { tvdb: 73244 })).toEqual({ success: false, error: "Sonarr returned HTTP 500" })
   })
 })

@@ -1,0 +1,143 @@
+{
+  "movie": {
+    "MediaContainer": {
+      "size": 1,
+      "allowSync": true,
+      "identifier": "com.plexapp.plugins.library",
+      "librarySectionID": 1,
+      "librarySectionTitle": "Movies",
+      "librarySectionUUID": "3a4c3b8e-0a5f-4b2d-9c1e-6f7d8e9a0b1c",
+      "mediaTagPrefix": "/system/bundle/media/flags/",
+      "mediaTagVersion": 1700000000,
+      "Metadata": [
+        {
+          "ratingKey": "555",
+          "key": "/library/metadata/555",
+          "guid": "plex://movie/5d776b59ad5437001f79c6f8",
+          "slug": "fight-club",
+          "studio": "Fox 2000 Pictures",
+          "type": "movie",
+          "title": "Fight Club",
+          "librarySectionTitle": "Movies",
+          "librarySectionID": 1,
+          "librarySectionKey": "/library/sections/1",
+          "contentRating": "R",
+          "year": 1999,
+          "duration": 8340000,
+          "addedAt": 1700000000,
+          "updatedAt": 1700000000,
+          "Media": [
+            {
+              "id": 1201,
+              "duration": 8340000,
+              "bitrate": 10500,
+              "width": 1920,
+              "height": 800,
+              "audioChannels": 6,
+              "audioCodec": "eac3",
+              "videoCodec": "h264",
+              "videoResolution": "1080",
+              "container": "mkv",
+              "Part": [
+                {
+                  "id": 1301,
+                  "key": "/library/parts/1301/1700000000/file.mkv",
+                  "duration": 8340000,
+                  "file": "/data/movies/Fight Club (1999)/Fight Club (1999) Bluray-1080p.mkv",
+                  "size": 10947358412,
+                  "container": "mkv"
+                }
+              ]
+            }
+          ],
+          "Guid": [{ "id": "imdb://tt0137523" }, { "id": "tmdb://550" }, { "id": "tvdb://194" }]
+        }
+      ]
+    }
+  },
+  "legacyMovie": {
+    "MediaContainer": {
+      "size": 1,
+      "librarySectionID": 4,
+      "librarySectionTitle": "Old Movies",
+      "Metadata": [
+        {
+          "ratingKey": "556",
+          "key": "/library/metadata/556",
+          "guid": "com.plexapp.agents.imdb://tt0137523?lang=en",
+          "type": "movie",
+          "title": "Fight Club",
+          "librarySectionID": 4,
+          "year": 1999,
+          "Media": [{ "id": 1202, "Part": [{ "id": 1302, "file": "/data/old/Fight Club.avi", "size": 734003200 }] }]
+        }
+      ]
+    }
+  },
+  "episode": {
+    "MediaContainer": {
+      "size": 1,
+      "allowSync": true,
+      "identifier": "com.plexapp.plugins.library",
+      "librarySectionID": 2,
+      "librarySectionTitle": "TV Shows",
+      "Metadata": [
+        {
+          "ratingKey": "7001",
+          "key": "/library/metadata/7001",
+          "parentRatingKey": "7000",
+          "grandparentRatingKey": "6999",
+          "guid": "plex://episode/5d9c11ee2192ba001f312f7d",
+          "parentGuid": "plex://season/602e6b7f8e0f1d002d2c6f63",
+          "grandparentGuid": "plex://show/5d9c086c46115600200aa2fe",
+          "type": "episode",
+          "title": "Pilot",
+          "grandparentKey": "/library/metadata/6999",
+          "parentKey": "/library/metadata/7000",
+          "librarySectionTitle": "TV Shows",
+          "librarySectionID": 2,
+          "grandparentTitle": "The Office",
+          "parentTitle": "Season 1",
+          "index": 1,
+          "parentIndex": 1,
+          "year": 2005,
+          "Media": [
+            {
+              "id": 2201,
+              "Part": [
+                {
+                  "id": 2301,
+                  "file": "/data/tv/The Office (US)/Season 01/The Office (US) - S01E01 - Pilot.mkv",
+                  "size": 734003200
+                }
+              ]
+            }
+          ],
+          "Guid": [{ "id": "imdb://tt0664521" }, { "id": "tmdb://397627" }, { "id": "tvdb://110413" }]
+        }
+      ]
+    }
+  },
+  "show": {
+    "MediaContainer": {
+      "size": 1,
+      "librarySectionID": 2,
+      "librarySectionTitle": "TV Shows",
+      "Metadata": [
+        {
+          "ratingKey": "6999",
+          "key": "/library/metadata/6999/children",
+          "guid": "plex://show/5d9c086c46115600200aa2fe",
+          "type": "show",
+          "title": "The Office",
+          "librarySectionID": 2,
+          "year": 2005,
+          "leafCount": 201,
+          "childCount": 9,
+          "Location": [{ "path": "/data/tv/The Office (US)" }],
+          "Guid": [{ "id": "imdb://tt0386676" }, { "id": "tmdb://2316" }, { "id": "tvdb://73244" }]
+        }
+      ]
+    }
+  }
+}

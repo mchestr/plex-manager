@@ -10,11 +10,11 @@ import { clearMemberTokenCache } from "@/lib/connections/plex-member-token"
 import { type PlexServerConfig } from "@/lib/connections/plex-config"
 import { prisma } from "@/lib/prisma"
 import { MarkType, MediaType } from "@/lib/generated/prisma/client"
-import { findRadarrIdByTitle, findSonarrIdByTitle } from "@/lib/utils/media-matching"
+import { findArrTitle } from "@/lib/connections/plex-arr"
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock("@/lib/utils/media-matching")
+jest.mock("@/lib/connections/plex-arr", () => ({ findArrTitle: jest.fn() }))
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
 beforeEach(() => mockReset(prismaMock))
@@ -33,12 +33,7 @@ jest.mock("@/lib/utils/logger", () => ({
 const RESOURCES = jest.requireActual<unknown[]>("./fixtures/plex-tv-resources.json")
 const MEMBER_PLEX_SIGN_IN = "member-plex-tv-token"
 const MEMBER_SERVER_TOKEN = "member-shared-token-for-this-server"
-const mockFindRadarrIdByTitle = findRadarrIdByTitle as jest.MockedFunction<
-  typeof findRadarrIdByTitle
->
-const mockFindSonarrIdByTitle = findSonarrIdByTitle as jest.MockedFunction<
-  typeof findSonarrIdByTitle
->
+const mockFindArrTitle = jest.mocked(findArrTitle)
 const mockUpsert = prisma.userMediaMark.upsert as jest.Mock
 
 const plexConfig: PlexServerConfig = {
@@ -107,8 +102,7 @@ beforeEach(() => {
   clearMemberTokenCache()
   process.env.PLEX_CLIENT_IDENTIFIER = "test-client"
   mockUpsert.mockResolvedValue({})
-  mockFindRadarrIdByTitle.mockResolvedValue(null)
-  mockFindSonarrIdByTitle.mockResolvedValue(null)
+  mockFindArrTitle.mockResolvedValue(null)
   prismaMock.user.findUnique.mockResolvedValue({ plexAuthToken: MEMBER_PLEX_SIGN_IN } as never)
 })
 
@@ -151,9 +145,9 @@ describe("applyMark", () => {
     })
   })
 
-  it("matches Radarr by title for movies (not Sonarr)", async () => {
-    mockFindRadarrIdByTitle.mockResolvedValue({ id: 42, titleSlug: "inception" })
-    const item = makeItem({ title: "Inception", type: "movie", year: 2010 })
+  it("links a movie to its Radarr movie by the item's Plex ids", async () => {
+    mockFindArrTitle.mockResolvedValue({ service: "radarr", id: 42, titleSlug: "27205" })
+    const item = makeItem({ ratingKey: "movie-1", title: "Inception", type: "movie", year: 2010 })
 
     await applyMark({
       userId: "user-1",
@@ -163,13 +157,12 @@ describe("applyMark", () => {
       plexConfig,
     })
 
-    expect(mockFindRadarrIdByTitle).toHaveBeenCalledWith("Inception", 2010)
-    expect(mockFindSonarrIdByTitle).not.toHaveBeenCalled()
+    expect(mockFindArrTitle).toHaveBeenCalledWith(plexConfig, "movie-1")
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
           radarrId: 42,
-          radarrTitleSlug: "inception",
+          radarrTitleSlug: "27205",
           sonarrId: null,
           sonarrTitleSlug: null,
         }),
@@ -177,8 +170,8 @@ describe("applyMark", () => {
     )
   })
 
-  it("matches Sonarr by show title for series (not Radarr)", async () => {
-    mockFindSonarrIdByTitle.mockResolvedValue({ id: 7, titleSlug: "the-office" })
+  it("links a series to its Sonarr series by the item's Plex ids", async () => {
+    mockFindArrTitle.mockResolvedValue({ service: "sonarr", id: 7, titleSlug: "the-office" })
     const item = makeItem({ title: "The Office", type: "show", year: 2005 })
 
     await applyMark({
@@ -189,8 +182,7 @@ describe("applyMark", () => {
       plexConfig,
     })
 
-    expect(mockFindSonarrIdByTitle).toHaveBeenCalledWith("The Office", 2005)
-    expect(mockFindRadarrIdByTitle).not.toHaveBeenCalled()
+    expect(mockFindArrTitle).toHaveBeenCalledWith(plexConfig, "rk-1")
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
@@ -203,8 +195,8 @@ describe("applyMark", () => {
     )
   })
 
-  it("matches episodes against the grandparent (show) title via Sonarr", async () => {
-    mockFindSonarrIdByTitle.mockResolvedValue({ id: 7, titleSlug: "the-office" })
+  it("links an episode to its show's Sonarr series", async () => {
+    mockFindArrTitle.mockResolvedValue({ service: "sonarr", id: 7, titleSlug: "the-office" })
     const item = makeItem({
       ratingKey: "ep-1",
       title: "Pilot",
@@ -224,15 +216,51 @@ describe("applyMark", () => {
       plexConfig,
     })
 
-    expect(mockFindSonarrIdByTitle).toHaveBeenCalledWith("The Office", 2005)
+    expect(mockFindArrTitle).toHaveBeenCalledWith(plexConfig, "ep-1")
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
           mediaType: MediaType.EPISODE,
+          sonarrId: 7,
           seasonNumber: 1,
           episodeNumber: 1,
           parentTitle: "Season 1",
         }),
+      })
+    )
+  })
+
+  it('replaces an older link when the mark is made again, and never clears one', async () => {
+    mockFindArrTitle.mockResolvedValueOnce({ service: "radarr", id: 42, titleSlug: "27205" }).mockResolvedValueOnce(null)
+    const mark = () =>
+      applyMark({ userId: "user-1", item: makeItem({ ratingKey: "movie-1", type: "movie" }), markType: MarkType.KEEP_FOREVER, markedVia: "discord", plexConfig })
+
+    await mark()
+    await mark()
+
+    expect(mockUpsert.mock.calls[0][0].update).toEqual({
+      markedAt: expect.any(Date),
+      discordChannelId: undefined,
+      radarrId: 42,
+      radarrTitleSlug: "27205",
+      sonarrId: null,
+      sonarrTitleSlug: null,
+    })
+    expect(mockUpsert.mock.calls[1][0].update).toEqual({ markedAt: expect.any(Date), discordChannelId: undefined })
+  })
+
+  it("saves a mark without a link when the title isn't in Radarr or Sonarr", async () => {
+    await applyMark({
+      userId: "user-1",
+      item: makeItem({ ratingKey: "movie-1", type: "movie" }),
+      markType: MarkType.KEEP_FOREVER,
+      markedVia: "discord",
+      plexConfig,
+    })
+
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ radarrId: null, radarrTitleSlug: null, sonarrId: null, sonarrTitleSlug: null }),
       })
     )
   })
