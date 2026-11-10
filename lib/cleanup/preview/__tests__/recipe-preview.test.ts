@@ -6,7 +6,7 @@
 
 jest.mock("@/lib/cleanup/preview/load", () => ({ ...jest.requireActual("@/lib/cleanup/preview/load"), loadLevel: jest.fn(), loadContext: jest.fn() }))
 
-import { buildMovieItem, buildShowItem, buildSnapshotFacts, buildSourceStatuses, daysAgo, NOW } from "@/lib/cleanup/__tests__/helpers/builders"
+import { buildMovieItem, buildOptions, buildShowItem, buildSnapshotFacts, buildSourceStatuses, daysAgo, NOW } from "@/lib/cleanup/__tests__/helpers/builders"
 import { realContext } from "@/lib/cleanup/preview/__tests__/helpers/preview-data"
 import { loadContext, loadLevel, type LevelData } from "@/lib/cleanup/preview/load"
 import { recipePreview, runRecipePreview } from "@/lib/cleanup/preview/recipe-preview"
@@ -85,4 +85,22 @@ describe("runRecipePreview", () => {
     expect(await runRecipePreview({ recipeId: "never-watched-movies", values: {} })).toMatchObject({ ok: true, data: { checked: 0 } })
     expect(loadContext).toHaveBeenLastCalledWith(null, [], expect.any(Date))
   })
+
+  it("counts the global protections that are on at the level: 10 for movies, 12 for seasons, one less with G2 off", () => {
+    const at = (recipeId: "never-watched-movies" | "old-seasons", level: "movie" | "season", options = buildOptions()) =>
+      recipePreview({ recipe: getRecipe(recipeId), values: {}, level, data: null, ctx: realContext({ options }) }).globalProtections
+    expect(at("never-watched-movies", "movie")).toBe(10)
+    expect(at("old-seasons", "season")).toBe(12)
+    expect(at("never-watched-movies", "movie", buildOptions({ protections: { g2: { enabled: false } } }))).toBe(9)
+  })
+
+  it("names the condition that removes the most at 0 matches, with the largest title that passes the other conditions", () => {
+    const fresh = MOVIES.map((movie) => ({ ...movie, added: { plex: daysAgo(10), arr: daysAgo(10) } }))
+    const preview = recipePreview({ recipe: getRecipe("never-watched-movies"), values: {}, level: "movie", data: data(fresh), ctx: realContext() })
+    expect(preview.matches).toBe(0)
+    expect(preview.zero).toEqual({ conditionId: expect.any(String), sentence: expect.stringMatching(/^Added more than 180 days/), leaves: 0, of: 4,
+      largestBytes: String(40 * GiB) })
+    expect(recipePreview({ recipe: getRecipe("never-watched-movies"), values: {}, level: "movie", data: data(MOVIES), ctx: realContext() }).zero).toBeNull()
+  })
 })
+

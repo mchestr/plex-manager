@@ -55,7 +55,7 @@ function preview(input: Parameters<typeof previewCleanupRecipe>[0]): RecipePrevi
     chips: Object.fromEntries(recipe.keys.filter((k) => k.field !== "grace").map((k) => [k.key, k.chips.map((chip, i) => ({
       value: chip, label: recipeValueLabel(k, chip), matches: 100 + i,
     }))])),
-    largest: [item(22), item(17), item(12), item(8)], protectedCount: 14,
+    largest: [item(22), item(17), item(12), item(8)], protectedCount: 14, globalProtections: 10, zero: null,
     sentence: [{ text: "Movies in the " }, { text: "Movies", strong: true }, { text: " library." }],
     historyStart: "2022-06-14T00:00:00.000Z", takenAt: new Date(NOW - 3600_000).toISOString(), needs: [],
   }
@@ -169,7 +169,7 @@ describe("NewRuleSheet recipe step", () => {
     expect(screen.getByText("Never means no counted play since Tautulli history starts on Jun 14, 2022. Library data from 11:00 AM today.")).toBeInTheDocument()
     expect(screen.getByText("Film 22 22 GB, Film 17 17 GB, Film 12 12 GB and 177 more.")).toBeInTheDocument()
     expect(screen.getByTestId("admin-cleanup-recipe-plain-words")).toHaveTextContent("In plain wordsMovies in the Movies library.")
-    expect(screen.getByText("Global protections keep 14 movies safe.")).toBeInTheDocument()
+    expect(screen.getByText("10 global protections keep 14 movies safe.")).toBeInTheDocument()
     expect(screen.getByText("When you create the rule, a dry run starts at once.")).toBeInTheDocument()
     expect(screen.getByText("The rule starts in Dry run")).toBeInTheDocument()
     expect(document.querySelector("[aria-live='polite']")).toHaveTextContent("180 movies of 777 checked. Up to 900 gigabytes.")
@@ -291,16 +291,37 @@ describe("NewRuleSheet recipe step", () => {
 
   it("leaves out the history and data line, the largest matches and a grace chip when they are not known", async () => {
     jest.mocked(previewCleanupRecipe).mockImplementation(async (input) => ({
-      success: true, data: { ...preview(input), historyStart: null, takenAt: null, largest: [], matches: 0, protectedCount: 1 },
+      success: true, data: { ...preview(input), historyStart: null, takenAt: null, largest: [], matches: 0, protectedCount: 1, globalProtections: 1 },
     }))
     renderSheet({ recipeId: "old-seasons", graceDays: 45 })
     expect(await screen.findByTestId("admin-cleanup-recipe-count")).toHaveTextContent("0")
     expect(screen.getByText("seasons of 777 checked")).toBeInTheDocument()
     expect(screen.queryByText(/Never means/)).not.toBeInTheDocument()
     expect(screen.queryByText("Largest matches")).not.toBeInTheDocument()
-    expect(screen.getByText("Global protections keep 1 season safe.")).toBeInTheDocument()
+    expect(screen.getByText("1 global protection keeps 1 season safe.")).toBeInTheDocument()
     expect(within(screen.getByTestId("admin-cleanup-recipe-value-grace")).queryByRole("radio", { checked: true })).not.toBeInTheDocument()
     expect(lastValues()?.values).toMatchObject({ grace: "45" })
+  })
+})
+
+describe("recipe zero result", () => {
+  it("names the condition that removes the most at 0 matches, with the largest title that passes the others (UX 4.2.2 item 6)", async () => {
+    jest.mocked(previewCleanupRecipe).mockImplementation(async (input) => ({
+      success: true, data: { ...preview(input), matches: 0, largest: [],
+        zero: { conditionId: "c1", sentence: "Last played more than 365 days ago, or never", leaves: 0, of: 777, largestBytes: String(12 * GiB) } },
+    }))
+    renderSheet({ recipeId: "never-watched-movies" })
+    expect(await screen.findByText(/leaves 0 of 777/)).toHaveTextContent(
+      "\"Last played more than 365 days ago, or never\" leaves 0 of 777. The largest movie that passes the other conditions is 12 GB.")
+  })
+
+  it("shows no zero line while the recipe has matches, or when no condition removes the most", async () => {
+    jest.mocked(previewCleanupRecipe).mockImplementation(async (input) => ({
+      success: true, data: { ...preview(input), zero: { conditionId: "c1", sentence: "Size more than 20 GB", leaves: 3, of: 777, largestBytes: null } },
+    }))
+    renderSheet({ recipeId: "never-watched-movies" })
+    expect(await screen.findByTestId("admin-cleanup-recipe-count")).toBeInTheDocument()
+    expect(screen.queryByText(/leaves 3 of 777/)).not.toBeInTheDocument()
   })
 })
 

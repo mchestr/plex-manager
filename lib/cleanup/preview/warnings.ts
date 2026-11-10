@@ -32,9 +32,10 @@ export interface WarningInput {
 
 /**
  * The zero warning (TS 6.7): the clause with the smallest pass count, and
- * the largest item that passes every other clause.
+ * the largest item that passes every other clause. The recipe step reads it
+ * too (UX 4.2.2 item 6).
  */
-function zeroWarning({ compiled, results, stats }: WarningInput): PreviewWarning | null {
+export function zeroWarning({ compiled, results, stats }: Pick<WarningInput, "compiled" | "results" | "stats">): Extract<PreviewWarning, { kind: "zero" }> | null {
   if (stats.matches !== 0 || stats.checked === 0 || compiled.clauses.length === 0) return null
   let conditionId = compiled.clauses[0].id
   for (const clause of compiled.clauses) if (stats.passAlone[clause.id] < stats.passAlone[conditionId]) conditionId = clause.id

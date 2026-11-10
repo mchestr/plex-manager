@@ -46,6 +46,7 @@ export function RecipeResult({ preview, updating, now }: RecipeResultProps) {
     preview.historyStart && `Never means no counted play since Tautulli history starts on ${f.date(preview.historyStart)}.`,
     preview.takenAt && `Library data from ${readTimeText(f, preview.takenAt, now)}.`,
   ].filter(Boolean)
+  const { zero, globalProtections: globals } = preview
 
   return (
     <div className={cn("flex flex-col gap-5 transition-opacity", updating && "opacity-55")} aria-busy={updating || undefined}>
@@ -70,6 +71,12 @@ export function RecipeResult({ preview, updating, now }: RecipeResultProps) {
           {updating ? "" : `${f.number(preview.matches)} ${noun} of ${f.number(preview.checked)} checked. Up to ${spokenSize(size)}.`}
         </p>
         {lines.length > 0 && <p className="text-label text-muted-foreground">{lines.join(" ")}</p>}
+        {preview.matches === 0 && zero && (
+          <p className="text-ui text-foreground">
+            &quot;{zero.sentence}&quot; leaves {f.number(zero.leaves)} of {f.number(zero.of)}.
+            {zero.largestBytes !== null && ` The largest ${nounWord(1, preview.level)} that passes the other conditions is ${sizeText(zero.largestBytes)}.`}
+          </p>
+        )}
       </div>
 
       {preview.largest.length > 0 && (
@@ -97,7 +104,8 @@ export function RecipeResult({ preview, updating, now }: RecipeResultProps) {
         <li className="flex items-start gap-2">
           <Icon icon={icons.keep} className="mt-0.5" />
           <span>
-            Global protections keep {f.number(preview.protectedCount)} {nounWord(preview.protectedCount, preview.level)} safe.
+            {f.number(globals)} global {globals === 1 ? "protection keeps" : "protections keep"} {f.number(preview.protectedCount)}{" "}
+            {nounWord(preview.protectedCount, preview.level)} safe.
           </span>
         </li>
         <li className="flex items-start gap-2">

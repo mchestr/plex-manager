@@ -138,6 +138,13 @@ export interface RecipePreview {
   /** 6 posters (UX 4.2.2). */
   largest: (ItemRef & { why: WhyPart[] })[]
   protectedCount: number
+  /** The global protections that are on and apply at the level (TS 5.3): "{N} global protections keep {M} {items} safe" (UX 8.3). */
+  globalProtections: number
+  /**
+   * At 0 matches of a checked library, the condition that removes the most (UX 4.2.2 item 6, as 4.3.6): its row
+   * sentence, how many items it leaves of the checked ones, and the largest item that passes the other conditions.
+   */
+  zero: { conditionId: string; sentence: string; leaves: number; of: number; largestBytes: string | null } | null
   sentence: WhyPart[]
   historyStart: string | null
   takenAt: string | null
