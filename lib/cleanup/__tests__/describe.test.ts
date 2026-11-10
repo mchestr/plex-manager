@@ -1,7 +1,7 @@
 /** The plain words of a rule (UX 5.8, TS 4.4): every predicate template, scope, groups, protections, Then and the mode sentence. */
 
 import { buildCondition, buildDefinition } from "@/lib/cleanup/__tests__/helpers/builders"
-import { type DescribeContext, describeRule, MODE_SENTENCES, plainText } from "@/lib/cleanup/describe"
+import { type DescribeContext, describeRule, MODE_SENTENCES, plainText, spacedParts } from "@/lib/cleanup/describe"
 import { describeCondition } from "@/lib/cleanup/fields/catalog"
 import type { RuleDraft } from "@/lib/validations/cleanup-draft"
 import type { Condition } from "@/lib/validations/cleanup-rule"
@@ -208,5 +208,16 @@ describe("predicate templates (UX 5.8)", () => {
     expect(said(buildCondition("show.seasonsOnDisk"), "show", "singular")).toBe("has at least 3 seasons on disk")
     expect(said(buildCondition("season.position"), "season", "singular")).toBe("is not one of the 2 newest seasons of its show")
     expect(said(buildCondition("show.lastEpisodeAdded"), "show", "singular")).toBe("got no new episode in the last 365 days")
+  })
+})
+
+describe("spacedParts (UX review UX-01)", () => {
+  it("puts one space between two sentence parts, and none inside a sentence or before a part that has one", () => {
+    const facts = [{ text: "Never played." }, { text: "No counted play since Tautulli history starts on Oct 11, 2024." }]
+    expect(plainText(facts)).toBe("Never played. No counted play since Tautulli history starts on Oct 11, 2024.")
+    expect(spacedParts([{ text: "Last played " }, { text: "Mar 2024", strong: true }, { text: "." }, { text: " Added Aug 2025." }]))
+      .toEqual([{ text: "Last played " }, { text: "Mar 2024", strong: true }, { text: "." }, { text: " Added Aug 2025." }])
+    expect(spacedParts([{ text: "Size 4.5 GB?" }, { text: "Yes!", strong: true }, { text: "Done" }]))
+      .toEqual([{ text: "Size 4.5 GB?" }, { text: " Yes!", strong: true }, { text: " Done" }])
   })
 })

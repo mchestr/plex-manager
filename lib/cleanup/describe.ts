@@ -106,4 +106,13 @@ export function describeRule(def: RuleDraft, ctx: DescribeContext): WhyPart[] {
 }
 
 /** The parts as one plain string, for audit rows and names. */
-export const plainText = (parts: readonly WhyPart[]): string => parts.map((part) => part.text).join("")
+/**
+ * The parts with one space between two sentences (UX 4.5, 8.5): a fact list
+ * such as `phrases("Never played.", "No counted play since …")` holds one
+ * part per sentence, with no separator.
+ */
+export function spacedParts(parts: readonly WhyPart[]): WhyPart[] {
+  return parts.map((part, i) => (i > 0 && /[.!?]$/.test(parts[i - 1].text) && /^\S/.test(part.text) ? { ...part, text: ` ${part.text}` } : part))
+}
+
+export const plainText = (parts: readonly WhyPart[]): string => spacedParts(parts).map((part) => part.text).join("")
