@@ -16,8 +16,8 @@ const mockAct = { actStep: jest.fn(), candidatesToday: jest.fn(), stillAdmin: je
 jest.mock("@/lib/cleanup/run/act", () => ({ actStep: (...a: unknown[]) => mockAct.actStep(...a), candidatesToday: (...a: unknown[]) => mockAct.candidatesToday(...a),
   stillAdmin: (...a: unknown[]) => mockAct.stillAdmin(...a) }))
 const mockRun = { runCleanup: jest.fn(), busyRunRow: jest.fn(), createRunRow: jest.fn(), finishRun: jest.fn() }
-jest.mock("@/lib/cleanup/run/run", () => ({ ...jest.requireActual("@/lib/cleanup/run/run"), runCleanup: (...a: unknown[]) => mockRun.runCleanup(...a),
-  busyRunRow: (...a: unknown[]) => mockRun.busyRunRow(...a), createRunRow: (...a: unknown[]) => mockRun.createRunRow(...a),
+jest.mock("@/lib/cleanup/run/run", () => ({ ...jest.requireActual("@/lib/cleanup/run/run"), runCleanup: (...a: unknown[]) => mockRun.runCleanup(...a) }))
+jest.mock("@/lib/cleanup/run/run-row", () => ({ busyRunRow: (...a: unknown[]) => mockRun.busyRunRow(...a), createRunRow: (...a: unknown[]) => mockRun.createRunRow(...a),
   finishRun: (...a: unknown[]) => mockRun.finishRun(...a) }))
 const mockClaim = { takeRunClaim: jest.fn(), releaseRunClaim: jest.fn() }
 jest.mock("@/lib/cleanup/run/run-claim", () => ({ takeRunClaim: (...a: unknown[]) => mockClaim.takeRunClaim(...a),

@@ -1,4 +1,3 @@
-/* eslint max-lines: ["error", { "max": 170, "skipBlankLines": true, "skipComments": true }] -- cohesive: the seven checks of the pre-delete re-read in their fixed order, with the reads they share */
 /**
  * The pre-delete re-read (TS 8.8 table, step 5 and 6.6): the last checks of
  * an item right before its deletion, on fresh upstream data. Server-only.
@@ -12,7 +11,7 @@
  * | 3 | Movies: every Plex file of the managed copy inside the arr path | 404: `hold("plexMissing")`. Outside: `rescue("recordChanged")` |
  * | 4 | No play since `since(item)`: a row with `stopped ≥ since`, or a live session (`row_id` null). Seasons with G12 on: no counted play of the show | `rescue("played")`, `rescue("protected")` with `g12`, `hold("noValue:g12")` after 8 full pages |
  * | 5 | No new request since `since(item)` | `rescue("requested")` |
- * | 6 | No protection now: G1 and G3 through `cascadeWhere()` and shared external ids, G2 marks, G8 watchlists, G9 tags of the record of row 1 | `rescue("kept" \| "excluded" \| "markedKeepForever" \| "protected")` |
+ * | 6 | No protection now (`pre-delete-protections.ts`): G1 and G3 through `cascadeWhere()` and shared external ids, G2 marks, G8 watchlists, G9 tags of the record of row 1 | `rescue("kept" \| "excluded" \| "markedKeepForever" \| "protected")` |
  * | 7 | Nobody plays it now (`readPlayingKeys`) | Playing or a failure: `defer` |
  *
  * `since(item) = min(why.takenAt, newest snapshot takenAt)`. The Tautulli
@@ -30,13 +29,12 @@ import "server-only"
 
 import { isCountedPlay } from "@/lib/cleanup/engine/plays"
 import { isInside, rootOf } from "@/lib/cleanup/identity/path-fence"
-import { cascadeWhere } from "@/lib/cleanup/identity/keys"
 import type { OutcomeDetail, OutcomeReason } from "@/lib/cleanup/outcomes"
-import { activeProtectionWhere } from "@/lib/cleanup/protections"
 import type { ArrRef } from "@/lib/cleanup/schema/runtime"
 import type { SnapshotItem, SnapshotUser } from "@/lib/cleanup/schema/snapshot"
 import { plexPartFiles, sonarrFileCount, type RadarrMovie, type SeerrRequest, type SonarrSeries } from "@/lib/cleanup/schema/upstream"
 import { parseWhy } from "@/lib/cleanup/schema/why"
+import { ID_KINDS, protectionCheck } from "@/lib/cleanup/run/pre-delete-protections"
 import { DECLINED_STATUS } from "@/lib/cleanup/snapshot/requests"
 import { forEachRequest } from "@/lib/connections/overseerr-cleanup"
 import { getPlexMetadata } from "@/lib/connections/plex-library-read"
@@ -46,7 +44,6 @@ import { getSonarrSeries, listSonarrRootFolders, listSonarrTags } from "@/lib/co
 import { forEachHistoryRow, type HistoryKeyFilter } from "@/lib/connections/tautulli-history-all"
 import { getActiveService } from "@/lib/data/active-service"
 import type { CleanupItem } from "@/lib/generated/prisma/client"
-import { prisma } from "@/lib/prisma"
 import { dayKey } from "@/lib/utils/zoned-time"
 import type { CleanupOptions } from "@/lib/validations/cleanup-options"
 
@@ -66,8 +63,6 @@ export interface PreDeleteEnv { services: ActServices; prepared: Prepared; optio
   takenAt: number; zone: string; now: Date; signal?: AbortSignal }
 
 const DAY_MS = 86_400_000
-const KEEP_REASONS: Record<string, OutcomeReason> = { memberKeep: "kept", adminExclude: "excluded" }
-const ID_KINDS = ["tmdb", "tvdb", "imdb"] as const
 
 /** The active connections. */
 export async function loadActServices(): Promise<ActServices> {
@@ -167,40 +162,6 @@ function requested({ item }: PreDeleteInput, since: number, requests: readonly S
     const title = r.type === "tv" && (r.media.tvdbId != null ? r.media.tvdbId === item.ids.tvdb : r.media.tmdbId != null && r.media.tmdbId === item.ids.tmdb)
     return title && (item.level === "show" || !r.seasons?.length || r.seasons.some((s) => s.seasonNumber === item.seasonNumber))
   })
-}
-
-/** The levels that a protection sharing an external id must have (safety-r2-10). */
-function sharedLevel(item: SnapshotItem) {
-  if (item.level === "movie") return { level: "movie" }
-  return item.level === "show" ? { level: { in: ["show", "season"] } } : { OR: [{ level: "show" }, { level: "season", seasonNumber: item.seasonNumber }] }
-}
-
-/** Row 6: fresh reads of G1, G3 (cascade and shared ids), G2, G8 and G9. */
-async function protectionCheck({ item, show }: PreDeleteInput, record: ArrRecord, env: PreDeleteEnv): Promise<PreDeleteResult | null> {
-  const { protections } = env.options
-  const ids = (item.level === "season" ? show?.ids : null) ?? item.ids
-  const shared = ID_KINDS.flatMap((kind) => (ids[kind] === undefined ? [] : [{ externalIds: { path: [kind], equals: ids[kind] } }]))
-  const marks = item.level === "season" ? [...item.episodeKeys, ...(show?.copies ?? []).map((c) => c.ratingKey)]
-    : [...item.copies.map((c) => c.ratingKey), ...item.episodeKeys]
-  const watched = [...(ids.tmdb === undefined ? [] : [{ tmdbId: ids.tmdb }]), ...(ids.tvdb === undefined ? [] : [{ tvdbId: ids.tvdb }]),
-    ...(ids.imdb === undefined ? [] : [{ imdbId: ids.imdb }])]
-  const [rows, mark, watchers] = await Promise.all([
-    prisma.cleanupProtection.findMany({ where: { AND: [activeProtectionWhere(env.now), { OR: [cascadeWhere({ level: item.level, itemKey: item.key,
-      titleKey: item.titleKey }), ...(shared.length > 0 ? [{ AND: [{ OR: shared }, sharedLevel(item)] }] : [])] }] }, select: { kind: true } }),
-    protections.g2.enabled ? prisma.userMediaMark.findFirst({ where: { markType: "KEEP_FOREVER", plexRatingKey: { in: marks } }, select: { id: true } }) : null,
-    protections.g8.enabled && watched.length > 0 ? prisma.watchlistSyncHistory.findMany({ where: { status: { not: "REMOVED_FROM_WATCHLIST" }, OR: watched,
-      user: { watchlistSyncSettings: { is: { syncEnabled: true } } } }, select: { user: { select: { plexUserId: true } } } }) : [],
-  ])
-  const keep = rows.find((r) => r.kind === "memberKeep") ?? rows[0]
-  if (keep) return { kind: "rescue", reason: KEEP_REASONS[keep.kind] ?? "protected" }
-  if (mark) return { kind: "rescue", reason: "markedKeepForever" }
-  const access = (id: string | null) => id !== null && Object.hasOwn(env.users, id) && env.users[id].hasAccess === true
-  if (watchers.some((w) => access(w.user.plexUserId))) return { kind: "rescue", reason: "protected", detail: { protectionId: "g8" } }
-  if (!protections.g9.enabled) return null
-  const labels = env.prepared.tags[item.level === "movie" ? "radarr" : "sonarr"]
-  if (!labels) return { kind: "hold", code: `sourceFailed:${item.level === "movie" ? "radarr" : "sonarr"}` }
-  const wanted = new Set(protections.g9.tags.map((tag) => tag.toLowerCase()))
-  return record.tags.some((id) => wanted.has(labels.get(id) ?? "")) ? { kind: "rescue", reason: "protected", detail: { protectionId: "g9" } } : null
 }
 
 /** Row 7: the copy, season and episode keys against what Plex plays now. A failed read defers too. */

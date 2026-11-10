@@ -1,4 +1,3 @@
-/* eslint max-lines: ["error", { "max": 190, "skipBlankLines": true, "skipComments": true }] -- cohesive: the 16 steps of the run in their fixed order, with the run row and its audit row that every run kind writes */
 /**
  * The run (TS 8.3, E10, E13, E14, E19): `runCleanup()` evaluates the rules,
  * writes their statistics and dry-run history, and, while the feature is on
@@ -25,9 +24,8 @@
  *    check (`releaseRunClaim()`), and ask for a collection sync after changes.
  *
  * A database error throws: the run row then has no `finishedAt`, and the
- * claim is still released. The counts of rescued, deleted and failed titles
- * come from the outcome rows of the run, so the act job (TS 9.3) writes its
- * row with the same `finishRun()`.
+ * claim is still released. The run row and its audit row live in
+ * `run-row.ts`, which the act job (TS 9.3) uses too.
  *
  * @module lib/cleanup/run/run
  */
@@ -49,15 +47,14 @@ import { pruneCleanup } from "@/lib/cleanup/run/prune"
 import { reconcile, type ReconcileContext } from "@/lib/cleanup/run/reconcile"
 import { recoverDeleting } from "@/lib/cleanup/run/recover"
 import { loadReconcileContext, releaseRunClaim, takeRunClaim } from "@/lib/cleanup/run/run-claim"
+import { auditBusyRun, busyRunRow, createRunRow, finishRun, type RunCounts } from "@/lib/cleanup/run/run-row"
 import { definitionHash } from "@/lib/cleanup/run/turn-on-review"
-import { DRY_RUNS_KEPT, parseRuleStats, type RunRuleEntry } from "@/lib/cleanup/schema/stats"
+import { DRY_RUNS_KEPT, parseRuleStats } from "@/lib/cleanup/schema/stats"
 import { isLive, readCleanupSettingsRow } from "@/lib/cleanup/settings"
 import type { CleanupRule } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { addJob } from "@/lib/queue/client"
 import { JOB_TYPES } from "@/lib/queue/types"
-import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
-import { SYSTEM_ACTOR } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
 import { parseRuleDefinition } from "@/lib/validations/cleanup-draft"
 import type { Mode } from "@/lib/validations/cleanup-vocabulary"
@@ -72,61 +69,14 @@ export const CLEANUP_JOB_OPTIONS = { attempts: 1, removeOnComplete: true, remove
 
 export interface RunCleanupOptions { trigger: "scheduled" | "admin" | "create"; actorId: string; dryRunRuleIds?: string[]; act: boolean; entries?: boolean
   readStatus?: "complete" | "failed" | "busy"; waits?: number; signal?: AbortSignal; now?: Date }
-/** The counts of a run row. `freedBytes` is a string (a `BigInt` sum). */
-export interface RunCounts { checked: number; matched: number; joined: number; held: number; rescued: number; deleted: number; failed: number
-  deferred: number; freedBytes: string }
 export type RunCleanupResult = { busy: true; retry?: number } | ({ busy: false; runId: string; outcome: RunOutcome } & RunCounts)
-export type RunKind = "run" | "dryRun" | "act"
-export interface FinishInput { kind: RunKind; trigger: string; actorId: string; outcome: RunOutcome; blocks: Block[]
-  entries: Omit<RunRuleEntry, "rescued" | "deleted" | "failed">[]; checked: number; matched: number; joined: number; held: number; deferred: number }
 
 const featureBlock = (s: { enabled: boolean }): Block => ({ code: s.enabled ? "paused" : "off" })
-const ZERO = { rescued: 0, deleted: 0, failed: 0 }
-const NONE = { checked: 0, matched: 0, joined: 0, held: 0, deferred: 0 }
-
-/** Creates a run row. The schedule's actor is stored as null. */
-export async function createRunRow(input: { kind: RunKind; trigger: string; actorId: string; snapshotId?: string | null; ruleIds?: string[] }): Promise<string> {
-  const { id } = await prisma.cleanupRun.create({ data: { kind: input.kind, trigger: input.trigger, actorId: input.actorId === SYSTEM_ACTOR ? null : input.actorId,
-    snapshotId: input.snapshotId ?? null, ruleIds: input.ruleIds ?? [] }, select: { id: true } })
-  return id
-}
-
-/** Finishes a run row (TS 8.3 step 12) and writes `CLEANUP_RUN` (step 13, logged on failure). Rescues, deletions and failures count its outcomes. */
-export async function finishRun(runId: string, input: FinishInput): Promise<RunCounts> {
-  const outcomes = await prisma.cleanupOutcome.findMany({ where: { runId }, select: { kind: true, ruleIds: true, freedBytes: true } })
-  const byRule = new Map<string, typeof ZERO>()
-  const total = { ...ZERO }
-  let freed = 0n
-  for (const { kind, ruleIds, freedBytes } of outcomes) {
-    const key = kind === "rescued" ? "rescued" : kind === "deleted" ? "deleted" : kind === "failed" ? "failed" : null
-    freed += freedBytes
-    if (!key) continue
-    total[key] += 1
-    for (const id of ruleIds) byRule.set(id, { ...ZERO, ...byRule.get(id), [key]: (byRule.get(id)?.[key] ?? 0) + 1 })
-  }
-  const { checked, matched, joined, held, deferred, outcome, blocks, kind, trigger } = input
-  const counts = { checked, matched, joined, held, deferred, ...total }
-  const entries = input.entries.map((entry) => ({ ...entry, ...(byRule.get(entry.ruleId) ?? ZERO) }))
-  await prisma.cleanupRun.update({ where: { id: runId }, data: { ...counts, freedBytes: freed, outcome, blocks, entries, finishedAt: new Date() } })
-  const details = { runId, kind, trigger, outcome, ...counts, freedBytes: freed.toString(), blocks: blocks.map((block) => block.code) }
-  await recordAuditEvent(AuditEventType.CLEANUP_RUN, input.actorId, details).catch((error: unknown) => logger.error("cleanup.run_audit_failed", error, { runId }))
-  return { ...counts, freedBytes: freed.toString() }
-}
-
-/** A run row with outcome `busy`: the last busy retry of the night, or of an act job. */
-export async function busyRunRow(kind: RunKind, trigger: string, actorId: string): Promise<void> {
-  const runId = await createRunRow({ kind, trigger, actorId })
-  await finishRun(runId, { kind, trigger, actorId, outcome: "busy", blocks: [{ code: "busy" }], entries: [], ...NONE })
-}
 
 /** Step 3 of TS 8.3 for a busy claim. */
 async function busyRun(options: RunCleanupOptions): Promise<RunCleanupResult> {
   const { trigger, actorId } = options
-  if (trigger !== "scheduled") {
-    await recordAuditEvent(AuditEventType.CLEANUP_RUN, actorId, { runId: null, kind: "run", trigger, outcome: "busy", blocks: ["busy"] })
-      .catch((error: unknown) => logger.error("cleanup.run_audit_failed", error, { runId: null }))
-    return { busy: true }
-  }
+  if (trigger !== "scheduled") return (await auditBusyRun(trigger, actorId), { busy: true })
   const waits = options.waits ?? 0
   if (waits >= BUSY_WAITS) return (await busyRunRow("run", trigger, actorId), { busy: true })
   const payload = { trigger, act: options.act, entries: options.entries, readStatus: options.readStatus, waits: waits + 1 }
