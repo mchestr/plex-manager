@@ -8,7 +8,7 @@ import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { queueBreakerAlert } from "@/lib/problem-reports/breaker-alert"
-import { endLedgerRow, gateAndRecord, gateReplace, ledgerId } from "@/lib/problem-reports/ledger"
+import { endLedgerRow, gateAndRecord, gateReplace, hasRunRecord, ledgerId } from "@/lib/problem-reports/ledger"
 import { recheckRun } from "@/lib/problem-reports/recheck"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
 
@@ -202,6 +202,14 @@ describe("gateReplace", () => {
 describe("the ledger row", () => {
   it("is named for the report and the run", () => {
     expect(ledgerId("report-1", 3)).toBe("report-1:3")
+  })
+
+  it("says whether the run recorded its row", async () => {
+    prismaMock.problemFixLedger.count.mockResolvedValueOnce(1).mockResolvedValueOnce(0)
+
+    await expect(hasRunRecord("report-1", 2)).resolves.toBe(true)
+    await expect(hasRunRecord("report-1", 3)).resolves.toBe(false)
+    expect(prismaMock.problemFixLedger.count).toHaveBeenCalledWith({ where: { id: "report-1:2" } })
   })
 
   it("ends with the outcome, once", async () => {
