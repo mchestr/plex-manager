@@ -23,10 +23,12 @@
  * year comes next, then the first, and the wait is what tells whether it was
  * the right one. A step that runs again after a crash finds its ledger row:
  * when Plex already has the right title, the match took and the report is
- * fixed; otherwise it goes to the wait without matching again. The wait
- * reads Plex once more before it matches back, so one failed read doesn't
- * undo a match that took. Matching back undoes the run's own change, so it
- * isn't gated or recorded again.
+ * fixed; otherwise it matches again, since the first match may never have
+ * gone out, and the cap counts the run once. Matching back then goes to
+ * what Plex had when the step ran again. The wait reads Plex once more
+ * before it matches back, so one failed read doesn't undo a match that
+ * took. Matching back undoes the run's own change, so it isn't gated or
+ * recorded again.
  *
  * @module lib/problem-reports/steps/fix-match
  */
@@ -92,7 +94,8 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
     now
   )
   if (gate !== null && gate !== "ALREADY_RAN") return { toAdmin: gate }
-  if (gate === null && !(await matchPlexItem(server, target.ratingKey, pick))) return { toAdmin: "MATCH_FAILED" }
+  // A step that runs again matches again: Plex still disagrees, so the first match may never have gone out
+  if (!(await matchPlexItem(server, target.ratingKey, pick))) return { toAdmin: "MATCH_FAILED" }
   const at = now.getTime()
   return {
     next: {

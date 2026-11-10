@@ -108,7 +108,7 @@ When the match differs, the fix:
 3. gates (the hourly cap on Plex changes) and records the run against the old guid, then matches (`PUT /library/metadata/<ratingKey>/match?guid=&name=`), which Plex does in the background;
 4. reads the item every 5 seconds for a minute: once it has Radarr's TMDB id (or IMDb id) or Sonarr's TVDB id, the report is fixed. Otherwise the item is matched back to what it had, and the report goes to the server admin; an item that was never matched has nothing to go back to, and the report says to check it in Plex. When the last read fails, Plex is read once more first, so one failed read doesn't undo a match that took. Matching back undoes the run's own change, so it isn't gated or counted against the cap again.
 
-A step that runs again after a crash finds its ledger row: when Plex already has the right title, the match took and the report is fixed; otherwise it goes to the wait without matching again.
+A step that runs again after a crash finds its ledger row: when Plex already has the right title, the match took and the report is fixed. Otherwise it matches again, since the first match may never have gone out, and the cap counts the run once; matching back then goes to what Plex had when the step ran again.
 
 ### The file a fix acts on
 
