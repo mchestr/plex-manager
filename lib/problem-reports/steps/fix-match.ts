@@ -20,8 +20,9 @@
  *
  * A result whose legacy guid names the expected id is taken first; the
  * current agents' guids name no id, so a result with the expected title and
- * year comes next, then the first, and the wait is what tells whether it was
- * the right one. A step that runs again after a crash finds its ledger row:
+ * year comes next, then the first from the expected year (with none from it,
+ * the server admin), and the wait is what tells whether it was the right
+ * one. A step that runs again after a crash finds its ledger row:
  * when Plex already has the right title, the match took and the report is
  * fixed; otherwise it matches again, since the first match may never have
  * gone out, and the cap counts the run once. Matching back then goes to
@@ -61,9 +62,11 @@ async function search(server: PlexServer, target: MatchTarget, expected: Expecte
   return byId === null || byId.length > 0 ? byId : searchPlexMatches(server, target.ratingKey, byTitle)
 }
 
+/** A result from the expected year, when Radarr or Sonarr has one: a result from another year is another title. */
+const sameYear = (result: PlexMatchResult, expected: ExpectedTitle) => expected.year === null || result.year === expected.year
+
 /** A result with the expected title and year, for agents whose guids name no id. */
-const sameTitle = (result: PlexMatchResult, expected: ExpectedTitle) =>
-  result.name.toLowerCase() === expected.title.toLowerCase() && (expected.year === null || result.year === expected.year)
+const sameTitle = (result: PlexMatchResult, expected: ExpectedTitle) => result.name.toLowerCase() === expected.title.toLowerCase() && sameYear(result, expected)
 
 async function start(server: PlexServer, report: StepReport, data: ProblemReportFixPayload, now: Date): Promise<StepOutcome> {
   const check = await checkMatch(server, report.plexRatingKey)
@@ -74,7 +77,10 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
 
   const results = await search(server, target, expected)
   if (results === null) return { toAdmin: "UNAVAILABLE" }
-  const pick = results.find((result) => idsFit(parsePlexExternalIds(result.guid, []), expected.ids)) ?? results.find((result) => sameTitle(result, expected)) ?? results[0]
+  const pick =
+    results.find((result) => idsFit(parsePlexExternalIds(result.guid, []), expected.ids)) ??
+    results.find((result) => sameTitle(result, expected)) ??
+    results.find((result) => sameYear(result, expected))
   if (!pick) return { toAdmin: "NO_MATCH" }
   const holder = await findPlexItemByGuid(server, target.sectionId, pick.guid)
   if (holder.status === "unknown") return { toAdmin: "UNAVAILABLE" }
