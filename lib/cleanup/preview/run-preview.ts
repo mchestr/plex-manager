@@ -43,7 +43,7 @@ function emptyPreview(request: ParsedPreviewRequest, sentence: PreviewResponse["
   if (notApplicable.length > 0) warnings.push({ kind: "notApplicable", conditionIds: notApplicable })
   return {
     level: draft.level, snapshot: null, sources: [], checked: 0, matches: 0, bytes: "0", growthWeeks: null,
-    clauses: compiled.clauses.map((c) => ({ id: c.id, passAlone: 0, heldBack: 0 })), allConditions: 0, protectedAll: 0, protectedBy: [],
+    clauses: compiled.clauses.map((c) => ({ id: c.id, passAlone: 0, heldBack: 0 })), allConditions: 0, protectedAll: 0, protectedGlobal: 0, protectedBy: [],
     tabs: { matches: 0, nearMisses: 0, protected: 0, missing: 0, cannotDelete: 0 }, rows: [], page: 1, pageCount: 1, total: 0,
     largest: [], warnings, incomplete: [...compiled.incomplete], blocks: [{ code: "noData", ...(request.ruleId ? { ruleId: request.ruleId } : {}) }],
     sentence,

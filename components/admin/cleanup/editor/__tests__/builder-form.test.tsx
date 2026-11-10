@@ -175,7 +175,8 @@ describe("BuilderForm", () => {
     expect(tid("admin-cleanup-condition-c1-held")).toHaveTextContent("22 more without it")
     expect(tid("admin-cleanup-group-a1-held")).toHaveTextContent("6 more without it")
     expect(tid("admin-cleanup-protection-p1-held")).toHaveTextContent("keeps 7 safe")
-    expect(tid("admin-cleanup-global-protections")).toHaveTextContent("Always on: 2 global protections keep 17 movies safe.")
+    // The global line counts the items that a global protection keeps (12), not every protected item (17)
+    expect(tid("admin-cleanup-global-protections")).toHaveTextContent("Always on: 2 global protections keep 12 movies safe.")
   })
 
   it("adds a condition: a complete row, the editor on it with the field search, and the message after it closes", async () => {

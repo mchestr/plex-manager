@@ -69,6 +69,7 @@ export function buildPreview(overrides: Partial<PreviewResponse> = {}): PreviewR
     ],
     allConditions: 214,
     protectedAll: 17,
+    protectedGlobal: 12,
     protectedBy: [{ protectionId: "g4", count: 12 }],
     tabs: { matches: 197, nearMisses: 41, protected: 17, missing: 4, cannotDelete: 3 },
     rows: [

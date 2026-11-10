@@ -10,7 +10,7 @@ import type { SourceStatus } from "@/lib/cleanup/schema/snapshot"
 import { GiB } from "@/lib/validations/cleanup-vocabulary"
 
 const stats = (overrides: Partial<RuleStatistics> = {}): RuleStatistics => ({
-  checked: 10, passAlone: { c1: 4, c2: 2 }, heldBack: { c1: 0, c2: 3 }, allConditions: 0, protectedAll: 0, matches: 0, bytes: 0,
+  checked: 10, passAlone: { c1: 4, c2: 2 }, heldBack: { c1: 0, c2: 3 }, allConditions: 0, protectedAll: 0, protectedGlobal: 0, matches: 0, bytes: 0,
   tabs: { matches: 0, nearMisses: 3, protected: 0, missing: 0, cannotDelete: 0 }, notListed: 7, protectedBy: {}, keepsSafe: {}, ...overrides,
 })
 

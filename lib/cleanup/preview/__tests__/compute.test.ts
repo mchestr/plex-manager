@@ -42,6 +42,8 @@ describe("computePreview", () => {
     expect(preview.clauses.map((c) => c.id)).toEqual(["c1", "c2"])
     expect(preview.clauses.reduce((n, c) => n + c.heldBack, 0)).toBe(tabs.nearMisses)
     expect(preview.tabs.cannotDelete).toBeGreaterThan(0)
+    // The draft has no rule protection, so every protected item is protected by a global one
+    expect(preview.protectedGlobal).toBe(preview.protectedAll)
     expect(preview.snapshot).toEqual({ id: "snap-1", takenAt: new Date(NOW).toISOString(), historyStart: new Date(daysAgo(3 * 365) * 1000).toISOString() })
     expect(preview.sentence.map((p) => p.text).join("")).toContain("Movies in the ")
     expect(preview.sentence.map((p) => p.text).join("")).toContain("This rule is in Dry run")

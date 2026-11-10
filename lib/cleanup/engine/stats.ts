@@ -26,6 +26,8 @@ export interface RuleStatistics {
   allConditions: number
   /** Items of class `protected`. */
   protectedAll: number
+  /** Items of class `protected` that one or more global protections protect (TS 5.6, the editor's global line). */
+  protectedGlobal: number
   matches: number
   /** The sum of `sizeBytes` of the matches. An unknown size counts 0. */
   bytes: number
@@ -65,6 +67,7 @@ export function ruleStats(
     heldBack: zeros(clauseIds),
     allConditions: 0,
     protectedAll: 0,
+    protectedGlobal: 0,
     matches: 0,
     bytes: 0,
     tabs: { matches: 0, nearMisses: 0, protected: 0, missing: 0, cannotDelete: 0 },
@@ -94,11 +97,14 @@ export function ruleStats(
       stats.heldBack[failing] = (stats.heldBack[failing] ?? 0) + 1
     } else if (itemClass === "protected") {
       stats.protectedAll += 1
+      let global = false
       for (const p of result.protections) {
         if (p.verdict !== "protects") continue
         stats.protectedBy[p.id] = (stats.protectedBy[p.id] ?? 0) + 1
         if (ruleProtections.has(p.id)) stats.keepsSafe[p.id] += 1
+        else global = true
       }
+      if (global) stats.protectedGlobal += 1
     }
   })
   return stats

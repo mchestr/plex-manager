@@ -132,6 +132,8 @@ describe("ruleStats", () => {
       heldBack: { c1: 0, c2: 1 },
       allConditions: 5,
       protectedAll: 2,
+      // m:4 has the global g4 and the rule protection p1; m:5 has only p1
+      protectedGlobal: 1,
       matches: 2,
       bytes: 10 * GiB,
       tabs: { matches: 2, nearMisses: 1, protected: 2, missing: 1, cannotDelete: 1 },

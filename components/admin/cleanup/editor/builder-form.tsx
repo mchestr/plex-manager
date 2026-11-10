@@ -232,7 +232,7 @@ export function BuilderForm(props: BuilderFormProps) {
             undo={state.undo}
             globals={editorData.globalProtections}
             counts={kit.keeps}
-            kept={preview.protectedAll}
+            kept={preview.protectedGlobal}
           />
         </section>
         <section className="p-5">

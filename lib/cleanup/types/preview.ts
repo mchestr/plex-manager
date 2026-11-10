@@ -104,6 +104,8 @@ export interface PreviewResponse {
   clauses: { id: string; passAlone: number; heldBack: number }[]
   allConditions: number
   protectedAll: number
+  /** The items that pass every condition and that one or more global protections protect: "{N} global protections keep {M} {items} safe" (TS 5.6). */
+  protectedGlobal: number
   protectedBy: { protectionId: string; count: number }[]
   tabs: Record<PreviewTab, number>
   rows: PreviewRow[]

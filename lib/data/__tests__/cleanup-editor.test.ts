@@ -37,7 +37,7 @@ const previewMock = jest.mocked(runPreview)
 const auditMock = jest.mocked(auditMemberListed)
 
 const PREVIEW: PreviewResponse = {
-  level: "movie", snapshot: null, sources: [], checked: 0, matches: 0, bytes: "0", growthWeeks: null, clauses: [], allConditions: 0, protectedAll: 0,
+  level: "movie", snapshot: null, sources: [], checked: 0, matches: 0, bytes: "0", growthWeeks: null, clauses: [], allConditions: 0, protectedAll: 0, protectedGlobal: 0,
   protectedBy: [], tabs: { matches: 0, nearMisses: 0, protected: 0, missing: 0, cannotDelete: 0 }, rows: [], page: 1, pageCount: 1, total: 0, largest: [],
   warnings: [], incomplete: [], blocks: [], sentence: [],
 }
