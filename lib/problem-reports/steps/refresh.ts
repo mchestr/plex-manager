@@ -21,6 +21,7 @@ import { refreshPlexItem } from "@/lib/connections/plex-library-actions"
 import { fixTraits } from "@/lib/problem-reports/fixes"
 import { gateAndRecord } from "@/lib/problem-reports/ledger"
 import { checkMatch } from "@/lib/problem-reports/match"
+import { runOf } from "@/lib/problem-reports/steps/run-record"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import type { ProblemReportFixPayload } from "@/lib/queue/types"
 
@@ -37,11 +38,7 @@ export async function runRefresh(report: StepReport, data: ProblemReportFixPaylo
   const done: StepOutcome = member ? { fixed: true } : { toAdmin: "REFRESHED" }
   const gate = await gateAndRecord(
     {
-      reportId: report.id,
-      runToken: report.runToken,
-      reporterId: report.reporterId,
-      actorUserId: data.actorUserId,
-      trigger: data.trigger,
+      ...runOf(report, data),
       target: `plex:${report.titleKey}`,
       action: "REFRESH",
       traits: fixTraits("REFRESH"),

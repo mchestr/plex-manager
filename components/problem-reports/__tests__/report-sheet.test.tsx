@@ -17,7 +17,18 @@ jest.mock('@/actions/problem-reports', () => ({ reportProblem: jest.fn(), follow
 const mockShowError = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showError: mockShowError, showSuccess: jest.fn() }) }))
 
-const MOVIE: SelectedTitle = { ratingKey: '555', type: 'movie', title: 'Heat (1995)', episodes: null, openReport: null, lastPlay: null, fixers: { radarr: false, sonarr: false } }
+const MOVIE: SelectedTitle = {
+  ratingKey: '555',
+  type: 'movie',
+  title: 'Heat (1995)',
+  episodes: null,
+  openReport: null,
+  lastPlay: null,
+  playedToEnd: null,
+  fixers: { radarr: false, sonarr: false },
+  swap: null,
+  matchFixes: false,
+}
 const SHOW: SelectedTitle = {
   ratingKey: '6999',
   type: 'show',
@@ -25,7 +36,10 @@ const SHOW: SelectedTitle = {
   episodes: [{ ratingKey: '7001', label: 'S1E1: Pilot' }],
   openReport: null,
   lastPlay: null,
+  playedToEnd: null,
   fixers: { radarr: false, sonarr: false },
+  swap: null,
+  matchFixes: false,
 }
 
 beforeEach(() => {
@@ -51,7 +65,7 @@ describe('ReportSheet', () => {
     expect(screen.getByTestId('report-consequence')).toHaveTextContent('The server admin will take a look.')
     await user.click(screen.getByTestId('report-send'))
 
-    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '555', problem: 'out_of_sync', note: 'From the start' })
+    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '555', problem: 'out_of_sync', note: 'From the start', swap: false })
     expect(await screen.findByTestId('report-sent')).toHaveTextContent('The server admin will take a look.')
     await user.click(screen.getByTestId('report-done'))
     expect(currentHref()).toBe('/report?q=heat')
@@ -85,7 +99,7 @@ describe('ReportSheet', () => {
     await user.click(await screen.findByTestId('report-episode-option-7001'))
     await user.click(screen.getByTestId('report-send'))
 
-    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '7001', problem: 'wont_start', note: '' })
+    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '7001', problem: 'wont_start', note: '', swap: false })
     expect(await screen.findByTestId('report-sent')).toHaveTextContent('we added yours to it')
   })
 
@@ -102,7 +116,44 @@ describe('ReportSheet', () => {
     expect(screen.getByTestId('report-device-guide')).toHaveAttribute('href', '/help#playback')
     await user.click(screen.getByTestId('report-send'))
 
-    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '555', problem: 'wont_start', note: '', device: 'nothing_plays' })
+    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '555', problem: 'wont_start', note: '', device: 'nothing_plays', swap: false })
+  })
+
+  it("offers a member's swap once other titles play on their player, says what it spends, and says it started", async () => {
+    const user = userEvent.setup()
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-9', outcome: 'fixing', answer: null, action: 'SWAP' } })
+    const selected: SelectedTitle = {
+      ...MOVIE,
+      fixers: { radarr: true, sonarr: false },
+      lastPlay: { player: 'Living Room', transcoded: false, at: '2026-11-08T20:00:00.000Z' },
+      playedToEnd: false,
+      swap: { ok: true, left: 1, of: 3, nextBack: 'Nov 12' },
+    }
+    render(<ReportSheet selected={selected} closeHref="/report" />)
+
+    await user.click(screen.getByTestId('report-kind-playback'))
+    await user.click(within(screen.getByTestId('report-problem-wont_start')).getByText("Won't start"))
+    expect(screen.getByTestId('report-send')).toHaveTextContent('Send to the server admin')
+    await user.click(within(screen.getByTestId('report-device-others_play')).getByText('Yes, others play fine'))
+    expect(screen.getByTestId('report-consequence')).toHaveTextContent('Uses 1 of your 3 swaps.')
+    expect(screen.getByTestId('report-consequence-note')).toHaveTextContent('This is your last swap until Nov 12.')
+    expect(screen.getByTestId('report-send')).toHaveTextContent('Swap the copy')
+    await user.click(screen.getByTestId('report-send'))
+
+    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '555', problem: 'wont_start', note: '', device: 'others_play', swap: true })
+    expect(await screen.findByTestId('report-step-heading')).toHaveTextContent('Swapping the copy')
+  })
+
+  it("says why a member's swap goes to the server admin", async () => {
+    const user = userEvent.setup()
+    const selected: SelectedTitle = { ...MOVIE, fixers: { radarr: true, sonarr: false }, swap: { ok: false, reason: 'TITLE_RECENT', until: null } }
+    render(<ReportSheet selected={selected} closeHref="/report" />)
+
+    await user.click(screen.getByTestId('report-kind-picture'))
+    await user.click(within(screen.getByTestId('report-problem-filmed_off_screen')).getByText('Looks filmed off a screen'))
+
+    expect(screen.getByTestId('report-consequence-note')).toHaveTextContent('This title was swapped recently.')
+    expect(screen.getByTestId('report-send')).toHaveTextContent('Send to the server admin')
   })
 
   it("asks about a show's player for the whole show only, since another episode's last play may differ", async () => {
@@ -119,7 +170,7 @@ describe('ReportSheet', () => {
 
     expect(screen.queryByTestId('report-device')).not.toBeInTheDocument()
     await user.click(screen.getByTestId('report-send'))
-    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '7001', problem: 'wont_start', note: '' })
+    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '7001', problem: 'wont_start', note: '', swap: false })
   })
 
   it("looks for missing episodes, and says a fix started", async () => {
@@ -133,7 +184,7 @@ describe('ReportSheet', () => {
     expect(screen.getByTestId('report-send')).toHaveTextContent('Look for them')
     await user.click(screen.getByTestId('report-send'))
 
-    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '6999', problem: 'missing_episodes', note: '' })
+    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '6999', problem: 'missing_episodes', note: '', swap: false })
     expect(await screen.findByTestId('report-sent-line')).toHaveTextContent("We'll look for the missing episodes now. Nothing is removed.")
   })
 
@@ -194,7 +245,7 @@ describe('ReportSheet', () => {
     expect(screen.getByTestId('report-send')).toHaveTextContent('Look for a better copy')
     await user.click(screen.getByTestId('report-send'))
 
-    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '555', problem: 'blurry', note: '' })
+    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '555', problem: 'blurry', note: '', swap: false })
     expect(await screen.findByTestId('report-step-heading')).toHaveTextContent('Looking for a better copy')
     expect(screen.getByTestId('report-sent-line')).toHaveTextContent("We'll look for a better copy now. The one you have keeps playing")
   })
@@ -228,7 +279,7 @@ describe('ReportSheet', () => {
     expect(await screen.findByTestId('report-sent-line')).toHaveTextContent('This is the best copy the server keeps.')
     await user.click(screen.getByTestId('report-send-anyway'))
 
-    expect(reportProblem).toHaveBeenLastCalledWith({ ratingKey: '555', problem: 'blurry', note: 'Soft all through', toAdmin: true })
+    expect(reportProblem).toHaveBeenLastCalledWith({ ratingKey: '555', problem: 'blurry', note: 'Soft all through', swap: false, toAdmin: true })
     expect(await screen.findByTestId('report-sent-line')).toHaveTextContent('The server admin will take a look.')
     expect(screen.queryByTestId('report-send-anyway')).not.toBeInTheDocument()
   })

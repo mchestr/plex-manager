@@ -33,6 +33,7 @@ import { searchSonarrEpisodes } from "@/lib/connections/arr-writes"
 import { fixTraits } from "@/lib/problem-reports/fixes"
 import { gateAndRecord } from "@/lib/problem-reports/ledger"
 import { readMissingState } from "@/lib/problem-reports/steps/missing-state"
+import { runOf } from "@/lib/problem-reports/steps/run-record"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import type { ProblemReportFixPayload } from "@/lib/queue/types"
 
@@ -62,11 +63,7 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
   const search = decision.kind === "SEARCH"
   const gate = await gateAndRecord(
     {
-      reportId: report.id,
-      runToken: report.runToken,
-      reporterId: report.reporterId,
-      actorUserId: data.actorUserId,
-      trigger: data.trigger,
+      ...runOf(report, data),
       target: `sonarr:series:${state.seriesId}`,
       action: search ? "LOOK_FOR_MISSING" : "SCAN",
       traits: search ? fixTraits("LOOK_FOR_MISSING") : { searches: false, replacesFile: false, changesPlex: false },

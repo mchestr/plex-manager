@@ -72,6 +72,7 @@ import type { MemberFixAction } from "@/lib/problem-reports/fixes"
 import { joinOpenReport } from "@/lib/problem-reports/join"
 import { decideBetterCopyForMember } from "@/lib/problem-reports/report-better-copy"
 import { decideDetailsForMember } from "@/lib/problem-reports/report-details"
+import { decideMatchForMember, decideSwapForMember } from "@/lib/problem-reports/member-swap"
 import { decideMissingForMember } from "@/lib/problem-reports/report-missing"
 import { startFix } from "@/lib/problem-reports/run"
 import { queueMemberUpdates } from "@/lib/problem-reports/updates"
@@ -103,8 +104,8 @@ export type ReportOutcome =
   | { ok: true; outcome: "fixing"; reportId: string; action: MemberFixAction }
   | { ok: true; outcome: "answered"; reportId: null; answer: ReportAnswer }
 
-/** What the app's own checks decided before the report is saved: a fix to start, or why it goes to the admins. */
-type Decided = { fix: MemberFixAction } | { toAdmin: ToAdminReason } | null
+/** What the app's own checks decided before the report is saved: a fix to start (a swap may be a dry run), or why it goes to the admins. */
+type Decided = { fix: MemberFixAction; dryRun: boolean } | { toAdmin: ToAdminReason } | null
 
 /** The title a problem is about: for "Episodes are missing", an episode's show. */
 async function reportedTitle(userId: string, problem: ProblemCode, member: Extract<MemberItem, { ok: true }>): Promise<MemberItem> {
@@ -124,6 +125,8 @@ export async function reportProblem(input: {
   note: string | null
   device?: DeviceAnswer
   toAdmin?: boolean
+  /** The member chose Swap the copy, on what the sheet said it would spend. */
+  swap?: boolean
 }): Promise<ReportOutcome | Refused> {
   const { userId, problem, note, device, toAdmin = false } = input
   // Before the rate limits, so a missing note doesn't spend them
@@ -145,13 +148,20 @@ export async function reportProblem(input: {
   const betterCopy = problem === "blurry" && !toAdmin && member.item.type !== "show" ? await decideBetterCopyForMember(member.server, member.item.ratingKey, evidence) : null
   if (betterCopy && "answer" in betterCopy) return { ok: true, outcome: "answered", reportId: null, answer: betterCopy.answer }
   const details = problem === "wrong_details" && !toAdmin ? await decideDetailsForMember(member.item.type) : null
-  const checked = missing ?? betterCopy ?? details
-  const fix: MemberFixAction = missing ? "LOOK_FOR_MISSING" : betterCopy ? "BETTER_COPY" : "REFRESH"
-  const decided: Decided = !checked ? null : checked.startsFix ? { fix } : { toAdmin: checked.reason }
   // The player question is asked only for some playback problems, about the player of the member's last play of
   // the title. An answer is kept only then, so it is about the player in this event's evidence, unless the member
   // started the title on another player between opening the sheet and sending it.
-  const answers = device && asksDevice(problem) && evidence.lastPlay?.player ? { device, evidence } : { evidence }
+  const kept = device && asksDevice(problem) && evidence.lastPlay?.player ? device : undefined
+  const answers = kept ? { device: kept, evidence } : { evidence }
+  const swap =
+    PROBLEMS[problem].fix === "SWAP" && !toAdmin
+      ? await decideSwapForMember({ userId, item: member.item, server: member.server, problem, device: kept, evidence, chose: input.swap === true }, new Date())
+      : null
+  const match = problem === "different_title" && !toAdmin ? await decideMatchForMember(member.server, member.item) : null
+  const checked = missing ?? betterCopy ?? details ?? swap ?? match
+  const fix: MemberFixAction = missing ? "LOOK_FOR_MISSING" : betterCopy ? "BETTER_COPY" : details ? "REFRESH" : swap ? "SWAP" : "FIX_MATCH"
+  const dryRun = swap?.startsFix === true && swap.dryRun
+  const decided: Decided = !checked ? null : checked.startsFix ? { fix, dryRun } : { toAdmin: checked.reason }
   for (let attempt = 1; attempt <= CREATE_ATTEMPTS; attempt++) {
     try {
       const report = await prisma.$transaction(async (tx) => {
@@ -165,8 +175,9 @@ export async function reportProblem(input: {
         if (decided && "toAdmin" in decided) await tx.problemReportEvent.create({ data: { reportId: created.id, kind: "TO_ADMIN", data: { reason: decided.toAdmin } } })
         return created
       })
-      if (decided && "fix" in decided && (await startFix({ reportId: report.id, action: decided.fix, trigger: "automatic", actorUserId: userId })).ok) {
-        return { ok: true, outcome: "fixing", reportId: report.id, action: decided.fix }
+      if (decided && "fix" in decided && (await startFix({ reportId: report.id, action: decided.fix, trigger: "automatic", actorUserId: userId, dryRun: decided.dryRun })).ok) {
+        // A dry run is with the server admin as far as the member knows; its job alerts the admins when it hands the report over
+        return decided.dryRun ? { ok: true, outcome: "reported", reportId: report.id } : { ok: true, outcome: "fixing", reportId: report.id, action: decided.fix }
       }
       await queueReportAlert(report.id)
       return { ok: true, outcome: "reported", reportId: report.id }

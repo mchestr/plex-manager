@@ -2,8 +2,9 @@
  * Three Plex reads a swap or a removal makes with the owner token
  * (docs/problem-reports.md, "Swap the copy"):
  *
- * - {@link isPlexItemPlaying}: whether anyone is streaming the item
- *   (`GET /status/sessions`), since an import replaces the file under them;
+ * - {@link isPlexItemPlaying}: whether anyone, or one member, is streaming
+ *   the item (`GET /status/sessions`), since an import replaces the file
+ *   under them, and a member's swap needs a title they watch;
  * - {@link plexEmptiesTrash}: whether Plex empties its trash after each scan
  *   (`GET /:/prefs`, `autoEmptyTrash`), which can bring a removed title back
  *   as a new item without its watch state;
@@ -21,6 +22,7 @@ import "server-only"
 import { z } from "zod"
 
 import { serviceFetch } from "@/lib/connections/http"
+import { matchesSessionUser } from "@/lib/connections/plex-sessions"
 import { ratingKeySchema } from "@/lib/validations/params"
 
 type PlexServer = { url: string; token: string }
@@ -30,7 +32,12 @@ const READ_TIMEOUT_MS = 5000
 const keySchema = z.union([z.number().int().nonnegative(), z.string().regex(/^\d+$/)]).transform(String)
 
 const sessionsSchema = z.looseObject({
-  MediaContainer: z.looseObject({ Metadata: z.array(z.looseObject({ ratingKey: keySchema.optional().catch(undefined) })).optional().catch(undefined) }),
+  MediaContainer: z.looseObject({
+    Metadata: z
+      .array(z.looseObject({ ratingKey: keySchema.optional().catch(undefined), User: z.looseObject({ id: z.union([z.string(), z.number()]).optional() }).optional().catch(undefined) }))
+      .optional()
+      .catch(undefined),
+  }),
 })
 
 const prefsSchema = z.looseObject({
@@ -45,11 +52,11 @@ function read<T>(server: PlexServer, path: string, schema: z.ZodType<T>) {
   return serviceFetch({ service: "Plex", url: `${server.url}${path}`, headers: { "X-Plex-Token": server.token }, schema, timeoutMs: READ_TIMEOUT_MS })
 }
 
-/** Whether a stream of the item is running now. */
-export async function isPlexItemPlaying(server: PlexServer, ratingKey: string): Promise<boolean | null> {
+/** Whether a stream of the item is running now: anyone's, or only `viewer`'s. */
+export async function isPlexItemPlaying(server: PlexServer, ratingKey: string, viewer?: { plexUserId: string; isOwner: boolean }): Promise<boolean | null> {
   const result = await read(server, "/status/sessions", sessionsSchema)
   if (!result.ok) return null
-  return (result.data.MediaContainer.Metadata ?? []).some((session) => session.ratingKey === ratingKey)
+  return (result.data.MediaContainer.Metadata ?? []).some((session) => session.ratingKey === ratingKey && (!viewer || matchesSessionUser(session, viewer)))
 }
 
 /** Whether Plex empties its trash after every scan. */

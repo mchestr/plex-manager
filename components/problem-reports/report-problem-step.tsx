@@ -64,7 +64,16 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
   const transcoded = wholeTitle && selected.lastPlay?.transcoded === true
   const askDevice = problem !== null && asksDevice(problem) && player !== null
   const transcodeTip = problem !== null && showsTranscodeTip(problem) && transcoded
-  const next = consequence(problem, { type: wholeTitle ? selected.type : "episode", transcoded, ...selected.fixers })
+  // The swap offer is for the title the sheet opened, so one episode of a show is the server admin's to swap
+  const next = consequence(problem, {
+    type: wholeTitle ? selected.type : "episode",
+    transcoded,
+    ...selected.fixers,
+    device: askDevice && device ? device : undefined,
+    playedToEnd: wholeTitle ? selected.playedToEnd : null,
+    swap: wholeTitle ? selected.swap : null,
+    matchFixes: selected.matchFixes,
+  })
 
   const noteRequired = problem !== null && needsNote(problem)
   const canSend = problem !== null && (!noteRequired || note.trim() !== "")
@@ -74,7 +83,13 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
   const send = () => {
     if (!problem) return
     startTransition(async () => {
-      const request: SentRequest = { ratingKey: wholeTitle ? selected.ratingKey : episode, problem, note, device: askDevice && device ? device : undefined }
+      const request: SentRequest = {
+        ratingKey: wholeTitle ? selected.ratingKey : episode,
+        problem,
+        note,
+        device: askDevice && device ? device : undefined,
+        swap: next.action === "SWAP",
+      }
       const result = await reportProblem(request)
       if (!result.success) {
         showError(result.error)
@@ -147,9 +162,16 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
         <FieldLabel optional={!noteRequired}>{noteRequired ? "What's wrong?" : "Add a note"}</FieldLabel>
         <Textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={PROBLEM_NOTE_MAX} rows={3} data-testid="report-note" />
       </Field>
-      <p className="text-ui text-muted-foreground" data-testid="report-consequence">
-        {next.line}
-      </p>
+      <div className="flex flex-col gap-1">
+        <p className="text-ui text-muted-foreground" data-testid="report-consequence">
+          {next.line}
+        </p>
+        {next.note && (
+          <p className="text-ui text-foreground" data-testid="report-consequence-note">
+            {next.note}
+          </p>
+        )}
+      </div>
       <div className="flex flex-wrap gap-2">
         <Button variant="ghost" onClick={onBack} data-testid="report-back">
           <Icon icon={icons.back} />

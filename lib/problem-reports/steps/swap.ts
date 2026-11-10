@@ -7,11 +7,13 @@
  *
  * ```
  * start ─ resolve the file, and wait while it plays or downloads (readyToReplace)
+ *   ├─ a member's swap: they're still entitled, and it's in their libraries
  *   ├─ read the quality profile and the bad copy (findBadCopy)
- *   ├─ gate (search cap and breaker) and record, with the bad copy for the audit
+ *   ├─ gate (search cap, breaker, and ./recheck.ts) and record, with the bad copy for the audit
  *   ├─ the interactive search, then the pick (pickCandidate)
  *   │    └─ no other copy, or only lower ones ─► the server admin
- *   ├─ gate the replacement (the breaker) and mark the row replaced
+ *   ├─ a dry run ─► the server admin, with the release it would grab
+ *   ├─ gate the replacement (the breaker, and ./recheck.ts again) and mark the row replaced
  *   └─ grab the pick ─► wait (every 10 minutes, a day)
  * wait ─ the shared check (checkCopy)
  *   ├─ the new copy is in ─► mark the bad copy's grab failed, check the
@@ -31,10 +33,12 @@
 
 import "server-only"
 
+import { getAccessLevel } from "@/lib/access"
 import { getArrQualityProfile } from "@/lib/connections/arr-upgrade"
 import { searchArrReleases } from "@/lib/connections/arr-swap"
 import { grabArrRelease } from "@/lib/connections/arr-writes"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
+import { readMemberItem } from "@/lib/problem-reports/access"
 import { findBadCopy } from "@/lib/problem-reports/bad-copy"
 import { pickCandidate } from "@/lib/problem-reports/candidates"
 import { fixTraits } from "@/lib/problem-reports/fixes"
@@ -42,6 +46,7 @@ import { gateAndRecord, gateReplace } from "@/lib/problem-reports/ledger"
 import type { ResolvedFile } from "@/lib/problem-reports/resolve"
 import { checkAgain, checkCopy, fileTarget, WAIT_MS, watchFor } from "@/lib/problem-reports/steps/copy-wait"
 import { finishReplace, readyToReplace } from "@/lib/problem-reports/steps/replace"
+import { runOf } from "@/lib/problem-reports/steps/run-record"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import type { ProblemReportFixPayload } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
@@ -63,9 +68,18 @@ function searchReleases(resolved: ResolvedFile) {
   return searchArrReleases(resolved.config, resolved.service === "radarr" ? { service: "radarr", movieId: resolved.titleId } : { service: "sonarr", episodeId: resolved.episodeIds[0] })
 }
 
+/** A member's swap runs only while they're entitled and the title is in their libraries (SEC-21). */
+async function memberHasAccess(report: StepReport): Promise<StepOutcome | null> {
+  if ((await getAccessLevel(report.reporterId)) !== "full") return { toAdmin: "NO_ACCESS" }
+  const item = await readMemberItem(report.reporterId, report.plexRatingKey)
+  return item.ok ? null : { toAdmin: item.reason === "UNAVAILABLE" ? "UNAVAILABLE" : "NO_ACCESS" }
+}
+
 async function start(server: PlexServer, report: StepReport, data: ProblemReportFixPayload, now: Date): Promise<StepOutcome> {
   const ready = await readyToReplace(server, report, data, now)
   if ("outcome" in ready) return ready.outcome
+  const refused = data.trigger === "automatic" ? await memberHasAccess(report) : null
+  if (refused) return refused
   const { resolved, guid } = ready
   const service = resolved.service === "radarr" ? "Radarr" : "Sonarr"
   const [profile, bad] = await Promise.all([getArrQualityProfile(service, resolved.config, resolved.qualityProfileId), findBadCopy(resolved)])
@@ -73,11 +87,7 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
 
   const gate = await gateAndRecord(
     {
-      reportId: report.id,
-      runToken: report.runToken,
-      reporterId: report.reporterId,
-      actorUserId: data.actorUserId,
-      trigger: data.trigger,
+      ...runOf(report, data),
       target: fileTarget(resolved),
       action: "SWAP",
       traits: fixTraits("SWAP"),
@@ -91,14 +101,16 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
   if (!releases.success) return { toAdmin: "UNAVAILABLE" }
   const pick = pickCandidate(releases.data, candidateFile(resolved), bad, profile.data.qualityOrder, resolved.service)
   if (!pick.ok) return { toAdmin: pick.reason }
+  // A dry run stops here, with what it would grab, for the server admin to run in one tap
+  if (data.dryRun) return { wouldSwap: { release: pick.release.title } }
 
-  const replacing = await gateReplace({ reportId: report.id, runToken: report.runToken }, now)
-  if (replacing === "BREAKER") return { toAdmin: "BREAKER" }
+  const replacing = await gateReplace({ ...runOf(report, data), action: "SWAP" }, now)
   if (replacing === "NO_RUN") {
     // The first gate wrote the row, so only a deleted row gets here
     logger.warn("The swap's ledger row was missing at its grab", { reportId: report.id, runToken: report.runToken })
     return { toAdmin: "UNAVAILABLE" }
   }
+  if (replacing !== null && replacing !== "ALREADY_REPLACED") return { toAdmin: replacing }
   const grabbed = replacing === "ALREADY_REPLACED" ? null : pick.release
   if (grabbed && !(await grabArrRelease(service, resolved.config, grabbed)).success) return { toAdmin: "GRAB_FAILED" }
 

@@ -13,11 +13,13 @@ import { currentHref, resetUrl } from "@/__tests__/helpers/url-router"
 import { updateProblemReportSettings } from "@/actions/admin/problem-reports"
 import ProblemReportsPage from "@/app/admin/(automations)/problem-reports/page"
 import { assertAdmin } from "@/lib/admin"
-import { getProblemBreaker, getProblemReportSettingsView, listProblemReports, type ProblemReportList } from "@/lib/data/problem-reports"
+import { getProblemBreaker, getProblemReportSettingsView } from "@/lib/data/problem-report-settings"
+import { listProblemReports, type ProblemReportList } from "@/lib/data/problem-reports"
 
 jest.mock("next/navigation", () => require("@/__tests__/helpers/url-router").navigationModule)
 jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
-jest.mock("@/lib/data/problem-reports", () => ({ listProblemReports: jest.fn(), getProblemReportSettingsView: jest.fn(), getProblemBreaker: jest.fn() }))
+jest.mock("@/lib/data/problem-reports", () => ({ listProblemReports: jest.fn() }))
+jest.mock("@/lib/data/problem-report-settings", () => ({ getProblemReportSettingsView: jest.fn(), getProblemBreaker: jest.fn(), getSwapRecycleBins: jest.fn(async () => []) }))
 jest.mock("@/lib/settings/app-settings", () => ({
   getFormat: async () => (await import("@/lib/utils/format")).bindFormat({ timeZone: "America/Chicago", locale: "en-US" }),
 }))
@@ -42,7 +44,7 @@ beforeEach(() => {
   resetUrl("/admin/problem-reports")
   jest.mocked(assertAdmin).mockResolvedValue({ user: { id: "admin-1" } } as never)
   jest.mocked(listProblemReports).mockResolvedValue(LIST)
-  jest.mocked(getProblemReportSettingsView).mockResolvedValue({ enabled: true, lastSaved: null })
+  jest.mocked(getProblemReportSettingsView).mockResolvedValue({ enabled: true, automatic: "OFF", weeklySwaps: 3, titleCooldownDays: 14, dailySwapCap: 10, lastSaved: null })
   jest.mocked(getProblemBreaker).mockResolvedValue(null)
   jest.mocked(updateProblemReportSettings).mockResolvedValue({ success: true, data: null })
 })
@@ -90,16 +92,17 @@ describe("ProblemReportsPage", () => {
     expect(screen.getByTestId("admin-problem-reports-empty")).toHaveTextContent("Nothing needs you")
   })
 
-  it("shows the switch below the list and saves it from Edit", async () => {
+  it("shows the settings below the list once the recycle bins are read, and saves the switch from Edit", async () => {
     const user = userEvent.setup()
     await renderPage()
 
-    expect(screen.getByTestId("settings-problem-reports-summary-enabled")).toHaveTextContent("On")
+    expect(screen.getByTestId("admin-problem-reports-settings-loading")).toBeInTheDocument()
+    expect(await screen.findByTestId("settings-problem-reports-summary-enabled")).toHaveTextContent("On")
     await user.click(screen.getByTestId("settings-problem-reports-edit"))
     await user.click(screen.getByTestId("admin-problem-reports-enabled-toggle"))
     await user.click(screen.getByTestId("settings-problem-reports-save"))
 
-    expect(updateProblemReportSettings).toHaveBeenCalledWith({ enabled: false })
+    expect(updateProblemReportSettings).toHaveBeenCalledWith({ enabled: false, automatic: "OFF", weeklySwaps: 3, titleCooldownDays: 14, dailySwapCap: 10 })
   })
 
   it("keeps the form open with the error when the save is refused", async () => {
@@ -107,7 +110,7 @@ describe("ProblemReportsPage", () => {
     jest.mocked(updateProblemReportSettings).mockResolvedValue({ success: false, code: "INTERNAL", error: "Could not save the problem report settings" })
     await renderPage()
 
-    await user.click(screen.getByTestId("settings-problem-reports-edit"))
+    await user.click(await screen.findByTestId("settings-problem-reports-edit"))
     await user.click(screen.getByTestId("admin-problem-reports-enabled-toggle"))
     await user.click(screen.getByTestId("settings-problem-reports-save"))
 

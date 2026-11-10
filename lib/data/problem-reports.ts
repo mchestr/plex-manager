@@ -1,10 +1,10 @@
 /**
  * The admin Problem reports pages' loaders (docs/problem-reports.md), admins
- * only: the list by filter with each filter's count, one report with its
- * timeline, and the settings card. Reports carry members' words, so the list
- * is audited once per admin and hour (`MEMBER_CONTENT_LISTED`), and a report
- * once per member whose words it shows (`MEMBER_CONTENT_VIEWED`), both with
- * the surface `problem-reports`.
+ * only: the list by filter with each filter's count, and one report with its
+ * timeline; the settings card's are in `lib/data/problem-report-settings`.
+ * Reports carry members' words, so the list is audited once per admin and
+ * hour (`MEMBER_CONTENT_LISTED`), and a report once per member whose words it
+ * shows (`MEMBER_CONTENT_VIEWED`), both with the surface `problem-reports`.
  *
  * @module lib/data/problem-reports
  */
@@ -19,10 +19,8 @@ import type { MediaType, ProblemReportStatus } from "@/lib/generated/prisma/clie
 import { prisma } from "@/lib/prisma"
 import { FIX_ACTIONS, FIX_WORDS, fixesFor, suggestedFix, type FixAction } from "@/lib/problem-reports/fixes"
 import { problemLabel, reportableTypeOf } from "@/lib/problem-reports/taxonomy"
-import { getProblemReportSettings, PROBLEM_REPORT_SETTINGS_ID } from "@/lib/problem-reports/settings"
 import { reportTitle } from "@/lib/problem-reports/title"
-import { AuditEventType, auditMemberListed, auditMemberRead } from "@/lib/security/audit-log"
-import type { LastSaved } from "@/lib/settings/audit-meta"
+import { auditMemberListed, auditMemberRead } from "@/lib/security/audit-log"
 import { plexItemHref } from "@/lib/ui/plex-links"
 
 const personSelect = { id: true, name: true, email: true } as const
@@ -160,27 +158,4 @@ export async function getProblemReport(id: string): Promise<ProblemReportDetail 
     running: report.status === "FIXING" ? runningWords(report.action) : null,
     steps: report.events.map((event) => timelineStep({ ...event, actor: event.actor && person(event.actor) })),
   }
-}
-
-/** When the breaker tripped, while fixes that replace files are paused; null otherwise. */
-export async function getProblemBreaker(): Promise<Date | null> {
-  await assertAdmin()
-  const row = await prisma.problemReportSettings.findUnique({ where: { id: PROBLEM_REPORT_SETTINGS_ID }, select: { breakerTrippedAt: true } })
-  return row?.breakerTrippedAt ?? null
-}
-
-/** The settings card: the switch, and its newest audited save. */
-export async function getProblemReportSettingsView(): Promise<{ enabled: boolean; lastSaved: LastSaved | null }> {
-  await assertAdmin()
-  const [settings, row] = await Promise.all([
-    getProblemReportSettings(),
-    prisma.auditLog.findFirst({
-      where: { type: AuditEventType.PROBLEM_REPORT_SETTINGS_CHANGED },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, actorUserId: true, createdAt: true },
-    }),
-  ])
-  if (!row) return { enabled: settings.enabled, lastSaved: null }
-  const actor = await prisma.user.findUnique({ where: { id: row.actorUserId }, select: { name: true, email: true } })
-  return { enabled: settings.enabled, lastSaved: { at: row.createdAt, by: actor?.name || actor?.email || "an admin", eventId: row.id } }
 }

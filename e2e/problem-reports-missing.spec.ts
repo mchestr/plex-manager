@@ -5,6 +5,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
+import { clearReportLimits } from './helpers/rate-limits';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
 import { MOCK_SERIES, startMockSonarr, type MockEpisode, type MockSonarr } from './mocks/sonarr-server';
 
@@ -87,6 +88,7 @@ test.describe('Problem reports: missing episodes', () => {
   test.beforeAll(async () => {
     [plex, sonarr] = await Promise.all([startStubPlex(), startMockSonarr()]);
     await clearReports();
+    await clearReportLimits();
     await withDb(async (prisma) => {
       originalUrl = (await prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true } }))?.url ?? null;
       await prisma.plexServer.updateMany({ where: { isActive: true }, data: { url: `http://127.0.0.1:${(plex.address() as AddressInfo).port}` } });

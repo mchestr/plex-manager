@@ -15,7 +15,7 @@
 import { randomUUID } from 'node:crypto'
 import { PrismaPg } from '@prisma/adapter-pg'
 
-import { PrismaClient } from '@/lib/generated/prisma/client'
+import { PrismaClient, type ProblemReportSettings } from '@/lib/generated/prisma/client'
 import { queueBreakerAlert } from '@/lib/problem-reports/breaker-alert'
 import { BREAKER_LIMITS, fixTraits } from '@/lib/problem-reports/fixes'
 import { gateAndRecord, gateReplace } from '@/lib/problem-reports/ledger'
@@ -42,13 +42,18 @@ const swap = (reportId: string) => ({
   actorUserId: null,
   trigger: 'automatic' as const,
   target: `radarr:movie:${reportId}`,
+  titleKey: `plex://movie/${reportId}`,
   action: 'SWAP' as const,
   traits: fixTraits('SWAP'),
+  claimedAt: NOW.getTime() - 60_000,
   file: { id: 77, release: 'Heat.1995.1080p.BluRay-BAD' },
 })
 
+/** Members' swaps on, with limits the breaker reaches first. */
+const SWAPS_ON = { automatic: 'ON' as const, automaticSince: new Date('2027-01-01T00:00:00Z'), weeklySwaps: 20, dailySwapCap: 100 }
+
 describePg('the fix ledger on PostgreSQL', (databaseUrl) => {
-  let settingsBefore: { enabled: boolean; breakerTrippedAt: Date | null } | null = null
+  let settingsBefore: ProblemReportSettings | null = null
 
   beforeAll(async () => {
     mockDb = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) })
@@ -56,7 +61,7 @@ describePg('the fix ledger on PostgreSQL', (databaseUrl) => {
     await mockDb.problemReport.createMany({
       data: REPORTS.map((id) => ({ id, reporterId: MEMBER, problem: 'wont_start', plexRatingKey: '555', mediaType: 'MOVIE', title: 'Heat', titleKey: `plex://movie/${id}`, status: 'FIXING' })),
     })
-    settingsBefore = await mockDb.problemReportSettings.findUnique({ where: { id: PROBLEM_REPORT_SETTINGS_ID }, select: { enabled: true, breakerTrippedAt: true } })
+    settingsBefore = await mockDb.problemReportSettings.findUnique({ where: { id: PROBLEM_REPORT_SETTINGS_ID } })
   })
 
   beforeEach(async () => {
@@ -64,8 +69,8 @@ describePg('the fix ledger on PostgreSQL', (databaseUrl) => {
     await mockDb.problemFixLedger.deleteMany({ where: { reportId: { in: REPORTS } } })
     await mockDb.problemReportSettings.upsert({
       where: { id: PROBLEM_REPORT_SETTINGS_ID },
-      create: { id: PROBLEM_REPORT_SETTINGS_ID, enabled: true },
-      update: { breakerTrippedAt: null },
+      create: { id: PROBLEM_REPORT_SETTINGS_ID, enabled: true, ...SWAPS_ON },
+      update: { breakerTrippedAt: null, ...SWAPS_ON },
     })
   })
 
@@ -84,19 +89,19 @@ describePg('the fix ledger on PostgreSQL', (databaseUrl) => {
     await expect(gateAndRecord(swap(report), NOW)).resolves.toBeNull()
     expect(await mockDb.problemFixLedger.findUnique({ where: { id: `${report}:1` }, select: { replacedAt: true } })).toEqual({ replacedAt: null })
 
-    await expect(gateReplace({ reportId: report, runToken: 1 }, NOW)).resolves.toBeNull()
-    await expect(gateReplace({ reportId: report, runToken: 1 }, NOW)).resolves.toBe('ALREADY_REPLACED')
-    await expect(gateReplace({ reportId: report, runToken: 2 }, NOW)).resolves.toBe('NO_RUN')
+    await expect(gateReplace(swap(report), NOW)).resolves.toBeNull()
+    await expect(gateReplace(swap(report), NOW)).resolves.toBe('ALREADY_REPLACED')
+    await expect(gateReplace({ ...swap(report), runToken: 2 }, NOW)).resolves.toBe('NO_RUN')
     expect(await mockDb.problemFixLedger.findUnique({ where: { id: `${report}:1` }, select: { replacedAt: true } })).toEqual({ replacedAt: NOW })
   })
 
   it('lets no more grabs past the breaker when they arrive at once, and trips it once', async () => {
     for (const report of REPORTS) await gateAndRecord(swap(report), NOW)
     const already = BREAKER_LIMITS.hour - 2
-    for (const report of REPORTS.slice(0, already)) await gateReplace({ reportId: report, runToken: 1 }, NOW)
+    for (const report of REPORTS.slice(0, already)) await gateReplace(swap(report), NOW)
 
     const racing = REPORTS.slice(already, already + 4)
-    const results = await Promise.all(racing.map((reportId) => gateReplace({ reportId, runToken: 1 }, NOW)))
+    const results = await Promise.all(racing.map((reportId) => gateReplace(swap(reportId), NOW)))
 
     expect(results.filter((result) => result === null)).toHaveLength(2)
     expect(results.filter((result) => result === 'BREAKER')).toHaveLength(2)

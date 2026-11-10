@@ -11,7 +11,7 @@
  */
 
 import { plainDiscordText } from "@/lib/discord/plain-text"
-import type { FixAction } from "@/lib/problem-reports/fixes"
+import { ASKS_PLAYS, type FixAction } from "@/lib/problem-reports/fixes"
 import { problemLabel } from "@/lib/problem-reports/taxonomy"
 
 const NAME_MAX = 60
@@ -69,7 +69,11 @@ const FIXED_BY: Partial<Record<FixAction, (title: string) => string>> = {
 
 /** A fix's end, in the member's words. */
 function byFix(update: MemberUpdate, title: string): string {
-  if (update.status === "FIXED") return (update.action && FIXED_BY[update.action]?.(title)) || `${title} is fixed.`
+  if (update.status === "FIXED") {
+    const fixed = (update.action && FIXED_BY[update.action]?.(title)) || `${title} is fixed.`
+    // The member who reported it says whether it plays on their reports (`./ask-admin.ts`)
+    return update.own && update.action && ASKS_PLAYS.includes(update.action) ? `${fixed} Does it play? Tell us on your reports.` : fixed
+  }
   const none = `We looked for a better copy of ${title}, but there isn't one right now.`
   return update.own ? `${none} If it still looks poor, you can ask the server admin from your reports.` : none
 }

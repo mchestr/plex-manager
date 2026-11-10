@@ -9,6 +9,7 @@ import { mockReset } from "jest-mock-extended"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { queueBreakerAlert } from "@/lib/problem-reports/breaker-alert"
 import { endLedgerRow, gateAndRecord, gateReplace, hasRunRecord, ledgerId } from "@/lib/problem-reports/ledger"
+import { recheckRun } from "@/lib/problem-reports/recheck"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -17,6 +18,7 @@ jest.mock("@/lib/db/serializable", () => ({
 }))
 jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), recordAuditEvent: jest.fn() }))
 jest.mock("@/lib/problem-reports/breaker-alert", () => ({ queueBreakerAlert: jest.fn() }))
+jest.mock("@/lib/problem-reports/recheck", () => ({ recheckRun: jest.fn() }))
 
 const NOW = new Date("2026-11-09T20:00:00Z")
 const RUN = {
@@ -26,8 +28,10 @@ const RUN = {
   actorUserId: "member-1",
   trigger: "automatic" as const,
   target: "sonarr:series:42",
+  titleKey: "plex://show/the-office",
   action: "LOOK_FOR_MISSING" as const,
   traits: { searches: true, replacesFile: false, changesPlex: false },
+  claimedAt: NOW.getTime() - 60_000,
 }
 
 beforeEach(() => {
@@ -36,6 +40,7 @@ beforeEach(() => {
   prismaMock.problemFixLedger.findUnique.mockResolvedValue(null)
   prismaMock.problemReportSettings.findUnique.mockResolvedValue({ breakerTrippedAt: null } as never)
   prismaMock.problemFixLedger.count.mockResolvedValue(0)
+  jest.mocked(recheckRun).mockResolvedValue(null)
 })
 
 describe("gateAndRecord", () => {
@@ -49,6 +54,7 @@ describe("gateAndRecord", () => {
       data: {
         id: "report-1:2",
         target: "sonarr:series:42",
+        titleKey: "plex://show/the-office",
         action: "LOOK_FOR_MISSING",
         trigger: "automatic",
         reporterId: "member-1",
@@ -69,6 +75,22 @@ describe("gateAndRecord", () => {
     await gateAndRecord({ ...RUN, trigger: "web", actorUserId: "admin-1", action: "REFRESH", traits: { searches: false, replacesFile: false, changesPlex: true } }, NOW)
 
     expect(recordAuditEvent).toHaveBeenCalledWith(AuditEventType.PROBLEM_FIX_RUN, "admin-1", expect.objectContaining({ askedBy: "admin-1", approvedBy: "admin-1", trigger: "web" }), prismaMock)
+  })
+
+  it("checks a swap or a removal again in the transaction, and records nothing it refuses", async () => {
+    jest.mocked(recheckRun).mockResolvedValue("OUT_OF_SWAPS")
+    const swap = { ...RUN, action: "SWAP" as const, dryRun: true }
+
+    await expect(gateAndRecord(swap, NOW)).resolves.toBe("OUT_OF_SWAPS")
+    expect(recheckRun).toHaveBeenCalledWith(prismaMock, { ...swap, id: "report-1:2" }, NOW, "record")
+    expect(prismaMock.problemFixLedger.create).not.toHaveBeenCalled()
+    expect(recordAuditEvent).not.toHaveBeenCalled()
+  })
+
+  it("audits a dry run as one", async () => {
+    await gateAndRecord({ ...RUN, action: "SWAP", traits: { searches: true, replacesFile: true, changesPlex: false }, dryRun: true }, NOW)
+
+    expect(recordAuditEvent).toHaveBeenCalledWith(AuditEventType.PROBLEM_FIX_RUN, "member-1", expect.objectContaining({ action: "SWAP", dryRun: true }), prismaMock)
   })
 
   it("does nothing for a run whose row is there already", async () => {
@@ -135,7 +157,7 @@ describe("gateAndRecord", () => {
 })
 
 describe("gateReplace", () => {
-  const SWAP = { reportId: "report-1", runToken: 2 }
+  const SWAP = { ...RUN, action: "SWAP" as const }
 
   it("marks the swap's row as replacing the file, under the breaker's limits", async () => {
     prismaMock.problemFixLedger.findUnique.mockResolvedValue({ replacedAt: null } as never)
@@ -143,6 +165,15 @@ describe("gateReplace", () => {
     await expect(gateReplace(SWAP, NOW)).resolves.toBeNull()
     expect(prismaMock.problemFixLedger.count).toHaveBeenCalledWith({ where: { replacedAt: { gte: new Date("2026-11-09T19:00:00Z") } } })
     expect(prismaMock.problemFixLedger.update).toHaveBeenCalledWith({ where: { id: "report-1:2" }, data: { replacedAt: NOW } })
+  })
+
+  it("checks the swap again before the grab, and marks nothing it refuses", async () => {
+    prismaMock.problemFixLedger.findUnique.mockResolvedValue({ replacedAt: null } as never)
+    jest.mocked(recheckRun).mockResolvedValue("AUTO_CHANGED")
+
+    await expect(gateReplace(SWAP, NOW)).resolves.toBe("AUTO_CHANGED")
+    expect(recheckRun).toHaveBeenCalledWith(prismaMock, { ...SWAP, id: "report-1:2", dryRun: false }, NOW, "replace")
+    expect(prismaMock.problemFixLedger.update).not.toHaveBeenCalled()
   })
 
   it("does nothing a second time, so a redelivered step grabs once", async () => {

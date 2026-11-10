@@ -3,16 +3,21 @@
  *
  * ```
  * startFix ── the report is open and no fix is running ─► FIXING, runToken + 1, FIX_STARTED
- *   └─ queues PROBLEM_REPORT_FIX { reportId, runToken, step: "start" }   (no queue ─► With the server admin)
+ *   └─ queues PROBLEM_REPORT_FIX { reportId, runToken, step: "start", claimedAt }   (no queue ─► With the server admin)
  * runFixStep, in the job
  *   ├─ another run's token, or the report isn't FIXING ─► stops
- *   ├─ problem reports switched off ─► With the server admin (OFF)
+ *   ├─ problem reports switched off before the run acted ─► With the server admin (OFF)
  *   └─ the fix's step (steps/*) ─► wait again (the job delays itself)
  *                                 ─► FIXED, and each member who reported or follows it is told
  *                                 ─► With the server admin, with the reason
  *                                 ─► no better copy: CLOSED for a member's run, and the
  *                                    members are told; an admin's run goes back to them
+ *                                 ─► a dry run's swap: With the server admin, with the release
  * ```
+ *
+ * Switched off, a run stops at its first step, before it acts; a run past
+ * it (waiting on an import or a search, or a removal about to search for
+ * the file it deleted) keeps going, so what it started is seen through.
  *
  * Every state change is a conditional `updateMany` on the claimed
  * `runToken` and `FIXING`, so a double tap claims one run and a job
@@ -62,8 +67,10 @@ export async function startFix(input: {
   action: FixAction
   trigger: FixTrigger
   actorUserId: string | null
+  /** A member's swap in Dry run (`steps/swap.ts`). */
+  dryRun?: boolean
 }): Promise<{ ok: true; runToken: number } | { ok: false; reason: "NOT_OPEN" | "QUEUE_DOWN" }> {
-  const { reportId, action, trigger, actorUserId } = input
+  const { reportId, action, trigger, actorUserId, dryRun } = input
   const runToken = await prisma.$transaction(async (tx) => {
     const { count } = await tx.problemReport.updateMany({
       where: { id: reportId, activeKey: { not: null }, status: { in: OPEN_FOR_A_FIX } },
@@ -71,24 +78,24 @@ export async function startFix(input: {
     })
     if (count === 0) return null
     const claimed = await tx.problemReport.findUniqueOrThrow({ where: { id: reportId }, select: { runToken: true } })
-    await tx.problemReportEvent.create({ data: { reportId, kind: "FIX_STARTED", actorUserId, data: { action, trigger } } })
+    await tx.problemReportEvent.create({ data: { reportId, kind: "FIX_STARTED", actorUserId, data: { action, trigger, ...(dryRun ? { dryRun } : {}) } } })
     return claimed.runToken
   })
   if (runToken === null) return { ok: false, reason: "NOT_OPEN" }
 
-  const payload: ProblemReportFixPayload = { reportId, runToken, step: "start", trigger, actorUserId }
+  const payload: ProblemReportFixPayload = { reportId, runToken, step: "start", trigger, actorUserId, claimedAt: Date.now(), ...(dryRun ? { dryRun } : {}) }
   const queued = isRedisConfigured() ? await enqueueFromRequest(JOB_TYPES.PROBLEM_REPORT_FIX, payload) : { ok: false as const }
   if (queued.ok) return { ok: true, runToken }
   await handBack({ id: reportId, runToken }, action, "QUEUE_DOWN")
   return { ok: false, reason: "QUEUE_DOWN" }
 }
 
-/** The report back with the server admin, with why; only while this run holds it. */
-async function handBack(run: { id: string; runToken: number }, action: FixAction, reason: ToAdminReason): Promise<boolean> {
+/** The report back with the server admin, with why (and for a dry run, the release it would grab); only while this run holds it. */
+async function handBack(run: { id: string; runToken: number }, action: FixAction, reason: ToAdminReason, release?: string): Promise<boolean> {
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.problemReport.updateMany({ where: { id: run.id, runToken: run.runToken, status: "FIXING" }, data: { status: "WITH_ADMIN" } })
     if (count === 0) return false
-    await tx.problemReportEvent.create({ data: { reportId: run.id, kind: "TO_ADMIN", data: { reason, action } } })
+    await tx.problemReportEvent.create({ data: { reportId: run.id, kind: "TO_ADMIN", data: { reason, action, ...(release ? { release } : {}) } } })
     return true
   })
 }
@@ -141,7 +148,8 @@ export async function runFixStep(data: ProblemReportFixPayload, now = new Date()
   if (!row || row.status !== "FIXING" || row.runToken !== data.runToken || !isFixAction(row.action)) return { done: true }
   const report: StepReport = { ...row, action: row.action }
 
-  const outcome: StepOutcome = (await getProblemReportSettings()).enabled ? await STEPS[report.action](report, data, now) : { toAdmin: "OFF" }
+  const stopped = data.step === "start" && !(await getProblemReportSettings()).enabled
+  const outcome: StepOutcome = stopped ? { toAdmin: "OFF" } : await STEPS[report.action](report, data, now)
   return finish(report, data, outcome, now)
 }
 
@@ -163,8 +171,10 @@ async function finish(report: StepReport, data: ProblemReportFixPayload, outcome
     }
     return { done: true }
   }
-  if (await handBack(report, report.action, outcome.toAdmin)) {
-    await endLedgerRow(report.id, report.runToken, outcome.toAdmin, now)
+  // A dry run's row ends as DRY_RUN, which the swap limits never count
+  const [reason, release] = "wouldSwap" in outcome ? (["DRY_RUN", outcome.wouldSwap.release] as const) : ([outcome.toAdmin, undefined] as const)
+  if (await handBack(report, report.action, reason, release)) {
+    await endLedgerRow(report.id, report.runToken, reason, now)
     // An admin who ran the fix is looking at the report; the others hear of it
     if (data.trigger === "automatic") await queueAdminAlertFromWorker(report.id)
   }

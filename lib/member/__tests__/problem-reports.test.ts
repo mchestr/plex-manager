@@ -13,13 +13,18 @@ import { getActivePlexServerConfig } from '@/lib/connections/plex-config'
 import { recentlyWatched, watchingNow } from '@/lib/member/problem-report-titles'
 import { getReportPageData } from '@/lib/member/problem-reports'
 import { memberLibraryAccess, readMemberItem } from '@/lib/problem-reports/access'
-import { memberLastPlay } from '@/lib/problem-reports/evidence'
+import { readEvidence } from '@/lib/problem-reports/evidence'
+import { memberFixesFor } from '@/lib/problem-reports/member-swap'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/connections/plex', () => ({ getPlexShowEpisodes: jest.fn(), searchPlexMedia: jest.fn() }))
 jest.mock('@/lib/connections/plex-config', () => ({ getActivePlexServerConfig: jest.fn() }))
 jest.mock('@/lib/member/problem-report-titles', () => ({ watchingNow: jest.fn(), recentlyWatched: jest.fn() }))
-jest.mock('@/lib/problem-reports/evidence', () => ({ memberLastPlay: jest.fn() }))
+jest.mock('@/lib/problem-reports/evidence', () => ({ readEvidence: jest.fn() }))
+jest.mock('@/lib/problem-reports/member-swap', () => ({ memberFixesFor: jest.fn() }))
+jest.mock('@/lib/settings/app-settings', () => ({
+  getFormat: async () => (await import('@/lib/utils/format')).bindFormat({ timeZone: 'UTC', locale: 'en-US' }),
+}))
 jest.mock('@/lib/data/active-service', () => ({ getActiveService: jest.fn() }))
 jest.mock('@/lib/problem-reports/access', () => ({
   ...jest.requireActual('@/lib/problem-reports/access'),
@@ -35,12 +40,14 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockReset(prismaMock)
   prismaMock.problemReport.findMany.mockResolvedValue([])
+  prismaMock.problemReportEvent.findMany.mockResolvedValue([])
   prismaMock.user.findUnique.mockResolvedValue({ plexUserId: 'member-plex' } as never)
   jest.mocked(getActivePlexServerConfig).mockResolvedValue(SERVER)
   jest.mocked(memberLibraryAccess).mockResolvedValue({ all: false, sections: new Set(['1']) })
   jest.mocked(watchingNow).mockResolvedValue([])
   jest.mocked(recentlyWatched).mockResolvedValue([])
-  jest.mocked(memberLastPlay).mockResolvedValue(null)
+  jest.mocked(readEvidence).mockResolvedValue({ lastPlay: null, playedToEnd: null })
+  jest.mocked(memberFixesFor).mockResolvedValue({ swap: null, matchFixes: false })
   jest.mocked(getActiveService).mockResolvedValue(null)
 })
 
@@ -64,9 +71,9 @@ describe('getReportPageData', () => {
     const { reports } = await getReportPageData('member-1', {})
 
     expect(reports).toEqual([
-      { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: AT.toISOString() }, canCancel: true, canAsk: false, statusSub: null, note: null },
-      { id: 'followed', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: "You're following it", at: AT.toISOString() }, canCancel: false, canAsk: false, statusSub: null, note: null },
-      { id: 'cancelled', title: 'Heat (1995)', problem: "Won't start", status: 'CLOSED', latest: { words: 'You cancelled it', at: AT.toISOString() }, canCancel: false, canAsk: false, statusSub: 'Cancelled', note: null },
+      { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: AT.toISOString() }, canCancel: true, canAsk: false, askPlays: false, statusSub: null, note: null },
+      { id: 'followed', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: "You're following it", at: AT.toISOString() }, canCancel: false, canAsk: false, askPlays: false, statusSub: null, note: null },
+      { id: 'cancelled', title: 'Heat (1995)', problem: "Won't start", status: 'CLOSED', latest: { words: 'You cancelled it', at: AT.toISOString() }, canCancel: false, canAsk: false, askPlays: false, statusSub: 'Cancelled', note: null },
       {
         id: 'cancelled-followed',
         title: 'Heat (1995)',
@@ -74,7 +81,7 @@ describe('getReportPageData', () => {
         status: 'CLOSED',
         latest: { words: 'The member who reported it cancelled it', at: AT.toISOString() },
         canCancel: false,
-        canAsk: false,
+        canAsk: false, askPlays: false,
         statusSub: 'By the member who reported it',
         note: null,
       },
@@ -94,6 +101,28 @@ describe('getReportPageData', () => {
       { id: 'fixing', words: 'You sent it', statusSub: 'Looking for the episodes' },
       { id: 'found', words: 'The missing episodes are on the server now', statusSub: null },
     ])
+  })
+
+  it("shows a report whose swap is only a dry run as with the server admin", async () => {
+    const report = { problem: 'wont_start', title: 'Heat', year: 1995, showTitle: null, seasonNumber: null, episodeNumber: null, createdAt: AT, memberNote: null, reporterId: 'member-1', action: 'SWAP', events: [] }
+    prismaMock.problemReport.findMany.mockResolvedValue([
+      { ...report, id: 'dry', status: 'FIXING' },
+      { ...report, id: 'real', status: 'FIXING' },
+      { ...report, id: 'sent', status: 'WITH_ADMIN' },
+    ] as never)
+    prismaMock.problemReportEvent.findMany.mockResolvedValue([
+      { reportId: 'dry', data: { action: 'SWAP', trigger: 'automatic', dryRun: true } },
+      { reportId: 'real', data: { action: 'SWAP', trigger: 'web' } },
+    ] as never)
+
+    const { reports } = await getReportPageData('member-1', {})
+
+    expect(reports.map(({ id, status, statusSub }) => ({ id, status, statusSub }))).toEqual([
+      { id: 'dry', status: 'WITH_ADMIN', statusSub: null },
+      { id: 'real', status: 'FIXING', statusSub: 'Swapping the copy' },
+      { id: 'sent', status: 'WITH_ADMIN', statusSub: null },
+    ])
+    expect(prismaMock.problemReportEvent.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { reportId: { in: ['dry', 'real'] }, kind: 'FIX_STARTED' } }))
   })
 
   it('says when a better copy came, or none did, and lets the member who reported it ask the server admin once', async () => {
@@ -120,6 +149,32 @@ describe('getReportPageData', () => {
     ])
   })
 
+  it('asks the member who reported a swapped title whether it plays, for 7 days and until they answer', async () => {
+    jest.useFakeTimers({ now: new Date(AT.getTime() + 6 * 24 * 60 * 60 * 1000), doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] })
+    const report = { problem: 'wont_start', title: 'Heat', year: 1995, showTitle: null, seasonNumber: null, episodeNumber: null, createdAt: AT, memberNote: null, status: 'FIXED' }
+    const fixed = (action: string) => [{ kind: 'FIXED', data: { reason: 'fix', action }, createdAt: AT }]
+    prismaMock.problemReport.findMany.mockResolvedValue([
+      { ...report, id: 'swapped', reporterId: 'member-1', action: 'SWAP', events: fixed('SWAP') },
+      { ...report, id: 'removed', reporterId: 'member-1', action: 'REMOVE_AND_SEARCH', events: fixed('REMOVE_AND_SEARCH') },
+      { ...report, id: 'answered', reporterId: 'member-1', action: 'SWAP', events: [{ kind: 'PLAYS', data: null, createdAt: AT }] },
+      { ...report, id: 'followed', reporterId: 'member-2', action: 'SWAP', events: fixed('SWAP') },
+      { ...report, id: 'better', reporterId: 'member-1', action: 'BETTER_COPY', events: fixed('BETTER_COPY') },
+    ] as never)
+
+    const { reports } = await getReportPageData('member-1', {})
+    expect(reports.map(({ id, askPlays, latest }) => ({ id, askPlays, words: latest.words }))).toEqual([
+      { id: 'swapped', askPlays: true, words: 'A different copy is on the server now' },
+      { id: 'removed', askPlays: true, words: 'A new copy is on the server now' },
+      { id: 'answered', askPlays: false, words: 'You said it plays' },
+      { id: 'followed', askPlays: false, words: 'A different copy is on the server now' },
+      { id: 'better', askPlays: false, words: 'A better copy is on the server now' },
+    ])
+
+    jest.setSystemTime(new Date(AT.getTime() + 8 * 24 * 60 * 60 * 1000))
+    expect((await getReportPageData('member-1', {})).reports[0].askPlays).toBe(false)
+    jest.useRealTimers()
+  })
+
   it("shows the server admin's note to the member who reported it, and only to them", async () => {
     const report = { problem: 'wont_start', title: 'Heat', year: 1995, showTitle: null, seasonNumber: null, episodeNumber: null, createdAt: AT, memberNote: 'Swapped the copy.' }
     prismaMock.problemReport.findMany.mockResolvedValue([
@@ -136,7 +191,7 @@ describe('getReportPageData', () => {
       { id: 'followed', words: 'The server admin fixed it', statusSub: null, note: null },
     ])
     expect(prismaMock.problemReport.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ select: expect.objectContaining({ events: expect.objectContaining({ where: { OR: [{ kind: { in: ['CLOSED', 'FIXED', 'REOPENED'] } }, { kind: 'ALSO_REPORTED', actorUserId: 'member-1' }] } }) }) })
+      expect.objectContaining({ select: expect.objectContaining({ events: expect.objectContaining({ where: { OR: [{ kind: { in: ['CLOSED', 'FIXED', 'REOPENED', 'PLAYS'] } }, { kind: 'ALSO_REPORTED', actorUserId: 'member-1' }] } }) }) })
     )
   })
 
@@ -189,12 +244,39 @@ describe('getReportPageData', () => {
       episodes: [{ ratingKey: '7001', label: 'S1E1: Pilot' }],
       openReport: { id: 'open', problem: 'Episodes are missing', status: 'WITH_ADMIN', since: AT.toISOString(), yours: false },
       lastPlay: null,
+      playedToEnd: null,
       fixers: { radarr: false, sonarr: true },
+      swap: null,
+      matchFixes: false,
     })
     expect(getActiveService).toHaveBeenCalledWith('sonarr')
     expect(getActiveService).toHaveBeenCalledWith('radarr')
-    expect(memberLastPlay).toHaveBeenCalledWith('member-plex', expect.objectContaining({ ratingKey: '6999', type: 'show' }))
+    expect(readEvidence).toHaveBeenCalledWith('member-1', expect.objectContaining({ ratingKey: '6999', type: 'show' }))
+    expect(memberFixesFor).toHaveBeenCalledWith({ userId: 'member-1', item: SHOW, server: SERVER, lastPlay: null }, expect.any(Function), expect.any(Date))
     expect(prismaMock.problemReport.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { activeKey: 'plex://show/office' } }))
+  })
+
+  it("shows another member's open report whose swap is only a dry run as with the server admin", async () => {
+    jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: { ...SHOW, ratingKey: '555', type: 'movie' }, server: SERVER })
+    prismaMock.problemReport.findUnique.mockResolvedValue({ id: 'open', reporterId: 'member-2', problem: 'wont_start', status: 'FIXING', updatedAt: AT, events: [] } as never)
+    prismaMock.problemReportEvent.findMany.mockResolvedValue([{ reportId: 'open', data: { action: 'SWAP', trigger: 'automatic', dryRun: true } }] as never)
+
+    const { selected } = await getReportPageData('member-1', { item: '555' })
+
+    expect(selected).toMatchObject({ openReport: { id: 'open', status: 'WITH_ADMIN' } })
+  })
+
+  it("passes on the member's swap offer and the evidence for a movie", async () => {
+    const offer = { ok: true as const, left: 2, of: 3, nextBack: 'Nov 13' }
+    jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: { ...SHOW, ratingKey: '555', type: 'movie' }, server: SERVER })
+    jest.mocked(readEvidence).mockResolvedValue({ lastPlay: { player: 'Living Room', transcoded: false, at: AT.toISOString() }, playedToEnd: false })
+    jest.mocked(memberFixesFor).mockResolvedValue({ swap: offer, matchFixes: true })
+
+    const { selected } = await getReportPageData('member-1', { item: '555' })
+
+    expect(selected).toMatchObject({ playedToEnd: false, swap: offer, matchFixes: true, lastPlay: { player: 'Living Room' } })
+    const [, formatDay] = jest.mocked(memberFixesFor).mock.calls[0]
+    expect(formatDay(new Date('2026-11-13T12:00:00Z'))).toBe('Nov 13')
   })
 
   it('reads Watching now and Recently watched with the libraries read once', async () => {

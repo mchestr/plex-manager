@@ -63,4 +63,18 @@ export const TO_ADMIN_WORDS: Record<ToAdminReason, string> = {
   MATCH_FAILED: "Plex didn't take the match",
   MATCH_WRONG: "Plex's new match didn't have the right ids within a minute, so Plex was asked to match it back",
   MATCH_STUCK: "Plex's new match didn't have the right ids, and it couldn't be matched back. Check the match in Plex",
+  AUTO_CHANGED: "Members' swaps were turned off or changed after the member asked, so it didn't run",
+  PAUSED: "The server reached today's limit of members' swaps, so it didn't run",
+  NEEDS_APPROVAL: "The member's swaps need your approval. Swap the copy to run it",
+  NOT_PLAYED: "The member hasn't played it in the last 30 days and isn't watching it, so it didn't swap on its own",
+  TITLE_RECENT: "This title was swapped recently, so another swap is up to you",
+  OUT_OF_SWAPS: "The member is out of swaps for now",
+  NOT_ADMIN: "The admin who started the fix isn't an admin any more, so it didn't run",
+  APPROVAL_EXPIRED: "It didn't start within 15 minutes of the tap, so it stopped. Start it again if it's still needed",
+  DRY_RUN: "Dry run: a swap would bring in a different copy. Swap the copy to run it",
+  NO_ACCESS: "The member can't play this title any more, so their swap didn't run",
+  PLAYED_TO_END: "It has played to the end since it was added, so it may be the member's device or connection",
 }
+
+/** A dry run's step, naming the release it would grab. */
+export const wouldSwapWords = (release: string) => `Dry run: a swap would bring in ${release}. Swap the copy to run it`

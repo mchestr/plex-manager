@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { z } from "zod"
 
 import { BreakerBanner } from "@/components/admin/problem-reports/breaker-banner"
@@ -5,9 +6,11 @@ import { ProblemReportSettingsSection } from "@/components/admin/problem-reports
 import { ProblemReportsTable } from "@/components/admin/problem-reports/reports-table"
 import { LastSaved } from "@/components/admin/settings/last-saved"
 import { PageHeader } from "@/components/ui/page-header"
+import { Skeleton } from "@/components/ui/skeleton"
 import { assertAdmin } from "@/lib/admin"
 import { PROBLEM_REPORT_FILTERS } from "@/lib/admin/routes"
-import { getProblemBreaker, getProblemReportSettingsView, listProblemReports } from "@/lib/data/problem-reports"
+import { getProblemBreaker, getProblemReportSettingsView, getSwapRecycleBins } from "@/lib/data/problem-report-settings"
+import { listProblemReports } from "@/lib/data/problem-reports"
 import { getFormat } from "@/lib/settings/app-settings"
 import { parseTableParams } from "@/lib/ui/table-params"
 
@@ -18,9 +21,11 @@ const filterSchema = z.enum(PROBLEM_REPORT_FILTERS).catch("needs-you")
 /**
  * Problem reports, the first tab of Automations (docs/problem-reports.md):
  * the reports by filter from `?status=` (Needs you first), each row opening
- * its report, then the settings card with the feature switch. Turning the
- * feature off keeps every report here. While the breaker is tripped, a
- * banner above the list offers Resume fixes.
+ * its report, then the settings card with the feature switch and members'
+ * swaps. Turning the feature off keeps every report here. While the breaker
+ * is tripped, a banner above the list offers Resume fixes. The card waits
+ * for Radarr's and Sonarr's recycle bins, which On needs, so a slow one
+ * holds up only the card.
  */
 export default async function ProblemReportsPage({ searchParams }: { searchParams: SearchParams }) {
   await assertAdmin()
@@ -44,10 +49,13 @@ export default async function ProblemReportsPage({ searchParams }: { searchParam
       />
       {breaker && <BreakerBanner since={f.dateTime(breaker, { zoneLabel: true })} />}
       <ProblemReportsTable list={list} filter={filter} page={page} pageSize={pageSize} />
-      <ProblemReportSettingsSection
-        enabled={settings.enabled}
-        footerMeta={settings.lastSaved && <LastSaved id="problem-reports" meta={settings.lastSaved} />}
-      />
+      <Suspense fallback={<Skeleton className="h-40 w-full" data-testid="admin-problem-reports-settings-loading" />}>
+        <ProblemReportSettingsSection
+          saved={settings}
+          recycleBins={getSwapRecycleBins()}
+          footerMeta={settings.lastSaved && <LastSaved id="problem-reports" meta={settings.lastSaved} />}
+        />
+      </Suspense>
     </div>
   )
 }
