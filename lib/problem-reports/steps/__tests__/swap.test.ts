@@ -197,6 +197,12 @@ describe("the wait", () => {
     await expect(runSwap(REPORT, waiting(NOW.getTime()), NOW)).resolves.toEqual({ toAdmin: "GRAB_FAILED" })
   })
 
+  it("stops at the first check with nothing downloading when the step ran again past its grab, which may never have gone out", async () => {
+    jest.mocked(checkCopy).mockResolvedValue({ idle: true, config: RADARR, pastDeadline: false })
+
+    await expect(runSwap(REPORT, { ...waiting(), replace: { ...REPLACE, release: null } }, NOW)).resolves.toEqual({ toAdmin: "INTERRUPTED" })
+  })
+
   it("hands the report back without what it waits on", async () => {
     await expect(runSwap(REPORT, { ...waiting(), replace: undefined }, NOW)).resolves.toEqual({ toAdmin: "UNAVAILABLE" })
     expect(checkCopy).not.toHaveBeenCalled()

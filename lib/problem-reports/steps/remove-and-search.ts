@@ -8,9 +8,9 @@
  * ```
  * start ─ resolve the file, and wait while it plays or downloads (readyToReplace)
  *   ├─ read the bad copy (findBadCopy)
- *   ├─ gate (search cap and breaker) and record, replacing at once
+ *   ├─ gate (search cap and breaker) and record, replacing at once ─ its row is there already ─► the server admin
  *   ├─ mark the bad copy's grab failed, so its release is blocklisted ─ fails ─► the server admin; nothing is removed
- *   ├─ delete the file ─ 409, the root folder is missing ─► the server admin, with no retry
+ *   ├─ delete the file ─ fails ─► the server admin, with no retry (a 409: the root folder is missing)
  *   └─► search, a minute later
  * search ─ monitor the title again, then MoviesSearch or EpisodeSearch ─► wait (every 10 minutes, a day)
  * wait ─ the shared check (checkCopy)
@@ -25,9 +25,10 @@
  * the bad copy's download doesn't count while waiting, since marking it
  * failed writes a failed download there.
  *
- * A step that runs again after a crash finds its ledger row. Before the
- * delete it carries on; after it the file is gone, and the report goes back
- * to the server admin, so the file is never deleted twice.
+ * A step that runs again after a crash finds its ledger row and hands the
+ * report back without acting (INTERRUPTED): the file may be deleted already,
+ * and a copy that came in since would read as the bad one, so nothing is
+ * ever deleted twice.
  *
  * @module lib/problem-reports/steps/remove-and-search
  */
@@ -76,11 +77,12 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
     },
     now
   )
-  if (gate !== null && gate !== "ALREADY_RAN") return { toAdmin: gate }
+  if (gate === "ALREADY_RAN") return { toAdmin: "INTERRUPTED" }
+  if (gate !== null) return { toAdmin: gate }
 
   if (bad.grab && !(await failArrGrab(service, resolved.config, bad.grab.id)).success) return { toAdmin: "UNAVAILABLE" }
   const deleted = await deleteArrFile(service, resolved.config, resolved.file.id)
-  if (!deleted.success) return { toAdmin: "conflict" in deleted ? "ROOT_FOLDER_MISSING" : "UNAVAILABLE" }
+  if (!deleted.success) return { toAdmin: "conflict" in deleted ? "ROOT_FOLDER_MISSING" : "DELETE_FAILED" }
 
   return {
     next: {

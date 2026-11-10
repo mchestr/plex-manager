@@ -22,7 +22,9 @@
  * The search counts against the daily cap and the grab against the breaker,
  * each gated in its own serializable transaction. A step that runs again
  * after a crash may search again, but never grabs twice: a row already
- * marked replaced goes to the wait without a grab.
+ * marked replaced goes to the wait without a grab. The crash may have come
+ * before the grab went out, so when that wait's first check finds nothing
+ * downloading, the report goes back to the server admin (INTERRUPTED).
  *
  * @module lib/problem-reports/steps/swap
  */
@@ -42,6 +44,9 @@ import { checkAgain, checkCopy, fileTarget, WAIT_MS, watchFor } from "@/lib/prob
 import { finishReplace, readyToReplace } from "@/lib/problem-reports/steps/replace"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import type { ProblemReportFixPayload } from "@/lib/queue/types"
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("PROBLEM_REPORT_SWAP")
 
 type PlexServer = { url: string; token: string }
 
@@ -89,7 +94,11 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
 
   const replacing = await gateReplace({ reportId: report.id, runToken: report.runToken }, now)
   if (replacing === "BREAKER") return { toAdmin: "BREAKER" }
-  if (replacing === "NO_RUN") return { toAdmin: "UNAVAILABLE" }
+  if (replacing === "NO_RUN") {
+    // The first gate wrote the row, so only a deleted row gets here
+    logger.warn("The swap's ledger row was missing at its grab", { reportId: report.id, runToken: report.runToken })
+    return { toAdmin: "UNAVAILABLE" }
+  }
   const grabbed = replacing === "ALREADY_REPLACED" ? null : pick.release
   if (grabbed && !(await grabArrRelease(service, resolved.config, grabbed)).success) return { toAdmin: "GRAB_FAILED" }
 
@@ -108,6 +117,8 @@ async function wait(server: PlexServer, report: StepReport, data: ProblemReportF
   const check = await checkCopy(watch, data.deadline, now)
   if ("outcome" in check) return check.outcome
   if ("imported" in check) return finishReplace(server, report, check.config, { watch, replace }, { markFailed: true })
+  // A step that ran again past its grab can't say whether the grab went out; one that did would be downloading by now
+  if (replace.release === null) return { toAdmin: "INTERRUPTED" }
   // The grab is in the history at once, so a day with no download means it never started
   return check.pastDeadline ? { toAdmin: "GRAB_FAILED" } : checkAgain(now)
 }

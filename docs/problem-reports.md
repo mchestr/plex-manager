@@ -77,7 +77,7 @@ When the breaker trips, the same admins get one DM saying that fixes that replac
 7. **The wait** checks every 10 minutes for a day, as Look for a better copy does: a new file is the new copy; a stuck or failed download goes back to the server admin, and so does a grab that never shows a download.
 8. **The end:** Plex scans the file's folder, the bad copy's grab is marked failed (`POST /api/v3/history/failed/{id}`), so Radarr or Sonarr blocklists its release, and the app checks the blocklist has it. The timeline says which release came in and whether the old one is on the blocklist. Plex is asked for the item again; when the title came back as a new item, the report keeps its new rating key, found by the guid. Marking a grab failed can make Radarr or Sonarr search again ("Redownload failed"); with the new copy in place, that grabs only an upgrade.
 
-A step that runs again after a crash may search again but never grabs twice: a ledger row already marked replaced goes to the wait.
+A step that runs again after a crash may search again but never grabs twice: a ledger row already marked replaced goes to the wait. The crash may have come before the grab went out, so when the wait's first check, 10 minutes later, finds nothing downloading, the report goes back to the server admin ("The fix was interrupted part way") instead of waiting out the day.
 
 ### Remove the file and search
 
@@ -86,12 +86,12 @@ The confirm says the title is unavailable to everyone until a new copy downloads
 1. It waits to start, and reads the bad copy, as a swap does.
 2. The gate records the run as replacing at once.
 3. The bad copy's grab is marked failed first, so the search can't grab the same release again. When that fails, nothing is removed.
-4. `DELETE /api/v3/moviefile/{id}` or `/api/v3/episodefile/{id}`. A 409 means the file's root folder is missing: the report goes back with that, and nothing retries.
+4. `DELETE /api/v3/moviefile/{id}` or `/api/v3/episodefile/{id}`. When the delete fails, nothing retries, and the report goes back saying so and that a copy from a download has its release on the blocklist by then. A 409 means the file's root folder is missing.
 5. A minute later it monitors the title again (`PUT /api/v3/movie/editor` or `/api/v3/episode/monitor`): with "Unmonitor deleted movies" or "episodes" on, deleting the file unmonitors it a moment later, and an unmonitored title never gets a copy released later. Then `MoviesSearch` or `EpisodeSearch`.
 6. It waits as a better copy does, without counting the bad download's failure in the history. A search that finished and grabbed nothing goes back to the server admin: "The file was removed, and the search found nothing to replace it".
 7. It ends as a swap does, without marking the grab failed again.
 
-A step that runs again after a crash finds its ledger row. Before the delete it carries on; after it, the file is gone, and the report goes back to the server admin, so the file is never deleted twice.
+A step that runs again after a crash finds its ledger row and hands the report back without acting ("The fix was interrupted part way"). The file may be deleted already, and a copy that came in since would read as the bad one, so nothing is ever deleted twice; the server admin checks the title and runs the fix again if it's needed.
 
 ### Fix the Plex match
 

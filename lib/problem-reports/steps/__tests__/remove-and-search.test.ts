@@ -105,11 +105,12 @@ describe("the start", () => {
     expect(deleteArrFile).toHaveBeenCalled()
   })
 
-  it("carries on when the step runs again before its delete: the file is still there", async () => {
+  it("stops when the step runs again after its row was recorded, so it never deletes twice or deletes a copy that came in meanwhile", async () => {
     jest.mocked(gateAndRecord).mockResolvedValue("ALREADY_RAN")
 
-    await expect(runRemoveAndSearch(REPORT, START, NOW)).resolves.toMatchObject({ next: { data: { step: "search" } } })
-    expect(deleteArrFile).toHaveBeenCalledTimes(1)
+    await expect(runRemoveAndSearch(REPORT, START, NOW)).resolves.toEqual({ toAdmin: "INTERRUPTED" })
+    expect(failArrGrab).not.toHaveBeenCalled()
+    expect(deleteArrFile).not.toHaveBeenCalled()
   })
 
   it("removes nothing when the bad copy can't be marked failed, so the search can't grab it again", async () => {
@@ -119,11 +120,12 @@ describe("the start", () => {
     expect(deleteArrFile).not.toHaveBeenCalled()
   })
 
-  it("stops at a 409 from the delete: the root folder is missing, and trying again won't help", async () => {
+  it("stops at a failed delete, after the release was blocklisted: a 409 is a missing root folder, and trying again won't help", async () => {
     jest.mocked(deleteArrFile).mockResolvedValueOnce({ success: false, conflict: true, error: "root folder missing" }).mockResolvedValueOnce({ success: false, error: "down" })
 
     await expect(runRemoveAndSearch(REPORT, START, NOW)).resolves.toEqual({ toAdmin: "ROOT_FOLDER_MISSING" })
-    await expect(runRemoveAndSearch(REPORT, START, NOW)).resolves.toEqual({ toAdmin: "UNAVAILABLE" })
+    await expect(runRemoveAndSearch(REPORT, START, NOW)).resolves.toEqual({ toAdmin: "DELETE_FAILED" })
+    expect(failArrGrab).toHaveBeenCalledTimes(2)
   })
 
   it.each([
