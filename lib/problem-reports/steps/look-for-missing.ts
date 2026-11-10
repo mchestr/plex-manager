@@ -9,12 +9,17 @@
  * wait ─ read them again, for the episodes the run started with
  *   ├─ none missing ─► fixed
  *   ├─ Sonarr has files Plex lacks ─► scan once; still lacking 30 minutes after the scan ─► the server admin
+ *   │    (the scan's 30 minutes count from the scan, so a late one can outlast the search's day by that much)
  *   ├─ still no file ─► wait, until a day after the start ─► the server admin
  *   └─ Sonarr or Plex didn't answer ─► wait, until the deadline
  * ```
  *
- * Nothing is removed. A step that runs again after a crash finds its ledger
- * row and doesn't search or scan twice.
+ * Nothing is removed. The run has one ledger row, written at the start: a
+ * scan in the wait belongs to it, and needs no gate of its own, since a scan
+ * neither searches nor replaces a file. A step that runs again after a crash
+ * finds its row and doesn't search or scan twice, so a crash between the
+ * record and the search means no search goes out, and the report goes back
+ * to the server admin as not found after a day.
  *
  * @module lib/problem-reports/steps/look-for-missing
  */

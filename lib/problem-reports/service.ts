@@ -146,7 +146,8 @@ export async function reportProblem(input: {
   const checked = missing ?? betterCopy
   const decided: Decided = !checked ? null : checked.startsFix ? { fix: missing ? "LOOK_FOR_MISSING" : "BETTER_COPY" } : { toAdmin: checked.reason }
   // The player question is asked only for some playback problems, about the player of the member's last play of
-  // the title. An answer is kept only then, so it is always about the player in this event's evidence.
+  // the title. An answer is kept only then, so it is about the player in this event's evidence, unless the member
+  // started the title on another player between opening the sheet and sending it.
   const answers = device && asksDevice(problem) && evidence.lastPlay?.player ? { device, evidence } : { evidence }
   for (let attempt = 1; attempt <= CREATE_ATTEMPTS; attempt++) {
     try {
