@@ -3,8 +3,13 @@
  * item (TS 7.4 Copies, 7.5). Pure and client-safe.
  *
  * - A copy is one Plex movie or show row with its section, title key and ids.
- * - The item's ids are the union of the copies' ids. Two copies with two
- *   values for one id kind make the item `conflicted` (`conflictingIds`).
+ * - The copies of one title are the copies that share a TMDB, TVDB or IMDb
+ *   id, also through a third copy (`groupCopies`). A 4K copy on a legacy
+ *   agent with only an IMDb id joins the 1080p copy with TMDB and IMDb ids,
+ *   so its plays and Keep forever marks count for the one item.
+ * - The item's ids are the union of the copies' ids, and its title key comes
+ *   from them. Two copies with two values for one id kind make the item
+ *   `conflicted` (`conflictingIds`).
  * - Labels are the union of every copy's `Label[].tag` values, in lower case
  *   (integrations-r3-3): a share filter applies to each copy's section, so
  *   the union hides more and never less.
@@ -90,7 +95,7 @@ export function toTitleCopy(sectionId: string, row: TitleRow, kind: GuidKind): T
 }
 
 /** The ids of every copy, and whether two copies disagree on one id kind. */
-export function mergeIds(copies: readonly TitleCopy[]): { ids: PlexIds; conflict: boolean } {
+export function mergeIds(copies: readonly Pick<TitleCopy, "ids" | "conflict">[]): { ids: PlexIds; conflict: boolean } {
   const ids: PlexIds = {}
   let conflict = false
   for (const copy of copies) {
@@ -110,9 +115,54 @@ export function unionLabels(copies: readonly TitleCopy[]): string[] {
   return [...new Set(copies.flatMap((copy) => copy.labels))].sort()
 }
 
-/** The copies grouped by title key, in first-seen order. */
-export function groupByTitle<C extends { titleKey: string }>(copies: Iterable<C>): Map<string, C[]> {
+/** The id kinds that join two copies into one title. A `plex://` guid alone joins nothing, as it makes no title key. */
+const JOIN_KINDS = ["tmdb", "tvdb", "imdb"] as const
+
+type GroupedCopy = Pick<TitleCopy, "ratingKey" | "ids" | "conflict">
+
+/**
+ * The copies grouped into titles: copies that share an id of
+ * {@link JOIN_KINDS}, directly or through other copies, form one group. Each
+ * group is keyed by the title key of its merged ids (`mergeIds`), so a copy
+ * with only an IMDb id joins the copy that also has the TMDB id under
+ * `tmdb:`. Groups and their copies keep the first-seen order.
+ */
+export function groupCopies<C extends GroupedCopy>(copies: Iterable<C>, level: GuidKind): Map<string, C[]> {
+  const list = [...copies]
+  const root = list.map((_, i) => i)
+  const find = (i: number): number => {
+    let at = i
+    while (root[at] !== at) {
+      root[at] = root[root[at]]
+      at = root[at]
+    }
+    return at
+  }
+  const firstOf = new Map<string, number>()
+  list.forEach((copy, i) => {
+    for (const kind of JOIN_KINDS) {
+      const value = copy.ids[kind]
+      if (value === undefined) continue
+      const id = `${kind}:${String(value).toLowerCase()}`
+      const first = firstOf.get(id)
+      if (first === undefined) firstOf.set(id, i)
+      else {
+        const [a, b] = [find(i), find(first)]
+        // The smaller index stays the root, so a group's root is its first copy
+        if (a !== b) root[Math.max(a, b)] = Math.min(a, b)
+      }
+    }
+  })
+  const members = new Map<number, C[]>()
+  list.forEach((copy, i) => members.set(find(i), [...(members.get(find(i)) ?? []), copy]))
   const groups = new Map<string, C[]>()
-  for (const copy of copies) groups.set(copy.titleKey, [...(groups.get(copy.titleKey) ?? []), copy])
+  for (const group of members.values()) groups.set(titleKey(level, mergeIds(group).ids, group[0].ratingKey), group)
   return groups
+}
+
+/** The title key of each copy's group (`groupCopies`), by rating key. */
+export function titleKeysOf(copies: Iterable<GroupedCopy>, level: GuidKind): Map<string, string> {
+  const keys = new Map<string, string>()
+  for (const [key, group] of groupCopies(copies, level)) for (const copy of group) keys.set(copy.ratingKey, key)
+  return keys
 }

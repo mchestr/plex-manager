@@ -93,6 +93,14 @@ describe("copies and the managed copy", () => {
     expect(item.arr).toMatchObject({ id: 50, fileId: 77 })
   })
 
+  it("joins a legacy agent 4K copy with only an IMDb id to the item of its 1080p copy (correctness review C-01)", () => {
+    const legacy = plexRow({ ratingKey: "552", guid: "com.plexapp.agents.imdb://tt0000005?lang=en", Guid: [],
+      Media: [{ Part: [{ file: "/data/movies4k/An Invented Movie (2020)/a.mkv" }] }] })
+    const items = assemble([["3", legacy], ["1", plexRow({ Guid: [{ id: "tmdb://5" }, { id: "imdb://tt0000005" }] })]], [record({ imdbId: "tt0000005" })])
+    expect(items.map((item) => [item.key, item.match.state])).toEqual([["movie:tmdb:5", "matched"]])
+    expect(items[0].copies).toEqual([{ ratingKey: "501", sectionId: "1" }, { ratingKey: "552", sectionId: "3" }])
+  })
+
   it("gives noPlexFile for a copy with no file", () => {
     expect(assemble([["1", plexRow({ Media: [] })]])[0].match).toEqual({ state: "notManaged", cause: "noPlexFile", by: "tmdb" })
   })

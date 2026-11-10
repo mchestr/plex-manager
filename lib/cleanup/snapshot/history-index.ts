@@ -36,7 +36,7 @@
  * @module lib/cleanup/snapshot/history-index
  */
 
-import { type TitleCopy, wholeOrNull } from "@/lib/cleanup/identity/copies"
+import { type TitleCopy, titleKeysOf, wholeOrNull } from "@/lib/cleanup/identity/copies"
 import { seasonNumberOf, type ShowStore } from "@/lib/cleanup/identity/episodes"
 import { stripLang } from "@/lib/cleanup/identity/guids"
 import { itemKey, seasonItemKey } from "@/lib/cleanup/identity/keys"
@@ -86,17 +86,22 @@ function addGuid<V>(map: Map<string, V>, guid: string | null, value: V): void {
 export function buildHistoryMaps(movies: Iterable<TitleCopy>, store: ShowStore): HistoryMaps {
   const maps: HistoryMaps = { movieByKey: new Map(), movieByGuid: new Map(), episodeByKey: new Map(), episodeByGuid: new Map(),
     seasonByKey: new Map(), showByKey: new Map() }
-  for (const movie of movies) {
-    const key = itemKey("movie", movie.titleKey)
+  // The item keys of the copy groups, as the assembly makes them (`groupCopies`)
+  const movieList = [...movies]
+  const movieKeys = titleKeysOf(movieList, "movie")
+  const showKeys = titleKeysOf(store.shows.values(), "show")
+  for (const movie of movieList) {
+    const key = itemKey("movie", movieKeys.get(movie.ratingKey) ?? movie.titleKey)
     maps.movieByKey.set(movie.ratingKey, key)
     addGuid(maps.movieByGuid, movie.guid, key)
   }
-  for (const show of store.shows.values()) maps.showByKey.set(show.ratingKey, itemKey("show", show.titleKey))
+  const showTitleKey = (show: TitleCopy) => showKeys.get(show.ratingKey) ?? show.titleKey
+  for (const show of store.shows.values()) maps.showByKey.set(show.ratingKey, itemKey("show", showTitleKey(show)))
   const ref = (showRatingKey: string, n: number | null): EpisodeRef | null => {
     const show = store.shows.get(showRatingKey)
     if (!show) return null
-    return { showKey: itemKey("show", show.titleKey), seasonKey: n !== null && n >= 1 ? seasonItemKey(show.titleKey, n) : null, episodeKey: null,
-      special: n === 0 }
+    const key = showTitleKey(show)
+    return { showKey: itemKey("show", key), seasonKey: n !== null && n >= 1 ? seasonItemKey(key, n) : null, episodeKey: null, special: n === 0 }
   }
   for (const season of store.seasons.values()) {
     const found = ref(season.showRatingKey, season.index)

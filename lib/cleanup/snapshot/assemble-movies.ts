@@ -26,7 +26,7 @@
 
 import { arrRoot, type ArrView, isImportListed, tagLabelsOf } from "@/lib/cleanup/identity/arr"
 import {
-  epochOf, groupByTitle, mergeIds, newest, sumSizes, type TitleCopy, toTitleCopy, unionLabels, wholeOrNull,
+  epochOf, groupCopies, mergeIds, newest, sumSizes, type TitleCopy, toTitleCopy, unionLabels, wholeOrNull,
 } from "@/lib/cleanup/identity/copies"
 import { itemKey } from "@/lib/cleanup/identity/keys"
 import { matchToArr, withArrIds } from "@/lib/cleanup/identity/match"
@@ -121,5 +121,5 @@ function movieItem(titleKey: string, copies: readonly MovieCopy[], radarr: ArrVi
 
 /** The movie items of every movie copy, by item key. */
 export function assembleMovies(copies: Iterable<MovieCopy>, radarr: ArrView<RadarrMovie>): SnapshotItem[] {
-  return [...groupByTitle(copies)].map(([titleKey, group]) => movieItem(titleKey, group, radarr)).sort((a, b) => (a.key < b.key ? -1 : 1))
+  return [...groupCopies(copies, "movie")].map(([titleKey, group]) => movieItem(titleKey, group, radarr)).sort((a, b) => (a.key < b.key ? -1 : 1))
 }

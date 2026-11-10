@@ -77,6 +77,16 @@ describe("buildHistoryMaps", () => {
     expect(maps.episodeByKey.has("499")).toBe(true)
   })
 
+  it("maps a legacy agent copy with only an IMDb id to the one item of its title (correctness review C-01)", () => {
+    const hd = toMovieCopy("1", plexMovieRow.parse({ ratingKey: "100", title: "B", guid: "plex://movie/b", Guid: [{ id: "tmdb://55" }, { id: "imdb://tt0000055" }],
+      Media: [{ Part: [{ file: "/data/movies/B/b.mkv", size: 1 }] }] }))
+    const uhd = toMovieCopy("3", plexMovieRow.parse({ ratingKey: "300", title: "B", guid: "com.plexapp.agents.imdb://tt0000055?lang=en", Guid: [],
+      Media: [{ Part: [{ file: "/data/movies4k/B/b.mkv", size: 1 }] }] }))
+    const index = createHistoryIndex(buildHistoryMaps([hd, uhd], { shows: new Map(), seasons: new Map(), episodes: new Map() }))
+    index.add([row({ rating_key: 300, started: 1_760_000_000, stopped: 1_760_006_000, guid: "com.plexapp.agents.imdb://tt0000055?lang=en" })])
+    expect(index.playsOf({ key: "movie:tmdb:55", level: "movie", episodeCount: null }).lastCountedAt).toBe(1_760_000_000)
+  })
+
   it("leaves out rows of a show that the listing did not hold", () => {
     const { movies, store } = library()
     store.seasons.set("399", toSeasonCopy("2", plexSeasonRow.parse({ ratingKey: "399", parentRatingKey: "999", index: 1 })))

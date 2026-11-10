@@ -27,7 +27,7 @@
  */
 
 import { arrRoot, type ArrView, isImportListed, tagLabelsOf } from "@/lib/cleanup/identity/arr"
-import { epochOf, groupByTitle, mergeIds, newest, sumSizes, type TitleCopy, unionLabels, wholeOrNull } from "@/lib/cleanup/identity/copies"
+import { epochOf, groupCopies, mergeIds, newest, sumSizes, type TitleCopy, unionLabels, wholeOrNull } from "@/lib/cleanup/identity/copies"
 import { type EpisodeCopy, indexShows, type SeasonCopy, type ShowIndex, showParts, type ShowStore } from "@/lib/cleanup/identity/episodes"
 import { itemKey, seasonItemKey } from "@/lib/cleanup/identity/keys"
 import { matchToArr, withArrIds } from "@/lib/cleanup/identity/match"
@@ -144,7 +144,7 @@ function showAssembly(titleKey: string, copies: readonly TitleCopy[], store: Sho
 export function assembleShows(store: ShowStore, sonarr: ArrView<SonarrSeries>): ShowAssembly {
   const out: ShowAssembly = { shows: [], seasons: [], onDisk: new Map() }
   const index = indexShows(store)
-  for (const [titleKey, copies] of groupByTitle(store.shows.values())) showAssembly(titleKey, copies, store, index, sonarr, out)
+  for (const [titleKey, copies] of groupCopies(store.shows.values(), "show")) showAssembly(titleKey, copies, store, index, sonarr, out)
   out.shows.sort(byKey)
   out.seasons.sort(byKey)
   return out
