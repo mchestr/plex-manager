@@ -45,6 +45,10 @@ export const JOB_TYPES = {
   INACTIVITY_NOTICE: "members:notice",
   // The admins' Discord alert about a member's new problem reports (lib/queue/jobs/problem-report-notify.ts)
   PROBLEM_REPORT_NOTIFY: "problem-report:notify",
+  // One run of a problem report's fix, which waits by delaying itself (lib/queue/jobs/problem-report-fix.ts)
+  PROBLEM_REPORT_FIX: "problem-report:fix",
+  // One member's DM when a report they made or follow is fixed or closed (lib/queue/jobs/problem-report-update.ts)
+  PROBLEM_REPORT_UPDATE: "problem-report:update",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -85,6 +89,8 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.EMAIL_TEST]: "Test email",
   [JOB_TYPES.INACTIVITY_NOTICE]: "Inactivity email",
   [JOB_TYPES.PROBLEM_REPORT_NOTIFY]: "Problem report alert",
+  [JOB_TYPES.PROBLEM_REPORT_FIX]: "Problem report fix",
+  [JOB_TYPES.PROBLEM_REPORT_UPDATE]: "Problem report update",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
   [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
@@ -117,6 +123,8 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.EMAIL_TEST,
   JOB_TYPES.INACTIVITY_NOTICE,
   JOB_TYPES.PROBLEM_REPORT_NOTIFY,
+  JOB_TYPES.PROBLEM_REPORT_FIX,
+  JOB_TYPES.PROBLEM_REPORT_UPDATE,
 ] as const satisfies readonly JobType[]
 
 /** A job's label, or its raw name for a type this build does not know. */
@@ -136,6 +144,27 @@ type JobTrigger = "manual" | "scheduled" | "admin"
 /**
  * Payload for syncing a single user's watchlist
  */
+/**
+ * One run of a problem report's fix (lib/problem-reports/run.ts). The job
+ * delays itself between steps, and the step and what it waits for travel in
+ * the payload.
+ */
+export interface ProblemReportFixPayload {
+  reportId: string
+  /** The report's `runToken` when this run was claimed; a newer run stops this one. */
+  runToken: number
+  step: "start" | "wait"
+  trigger: "automatic" | "web" | "mcp"
+  /** Who asked: the reporter for an automatic run, else the admin. */
+  actorUserId: string | null
+  /** The Sonarr episode ids the run waits for, once it has started. */
+  targets?: number[]
+  /** When the run gives up waiting, in epoch milliseconds. */
+  deadline?: number
+  /** When the run last asked Plex to scan for files Sonarr has, in epoch milliseconds. */
+  scannedAt?: number
+}
+
 export interface WatchlistSyncUserPayload {
   userId: string
   triggeredBy: JobTrigger
@@ -416,6 +445,11 @@ interface JobPayloads {
   [JOB_TYPES.INACTIVITY_NOTICE]: { noticeId: string }
   /** A new report; the job alerts about every report of that member still waiting for an alert. */
   [JOB_TYPES.PROBLEM_REPORT_NOTIFY]: { reportId: string }
+  /** The run (`runToken`) and the step it is on; lib/problem-reports/run.ts reads everything else when it runs. */
+  [JOB_TYPES.PROBLEM_REPORT_FIX]: ProblemReportFixPayload
+  /** The member to tell, and the state the report reached. */
+  /** `resolvedAt` is when it was fixed or closed, as ISO: a report that reopens and ends again is a new DM. */
+  [JOB_TYPES.PROBLEM_REPORT_UPDATE]: { reportId: string; userId: string; status: "FIXED" | "CLOSED"; resolvedAt: string }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
@@ -474,6 +508,9 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   [JOB_TYPES.INACTIVITY_NOTICE]: { deduplication: (data) => `members:notice:${data.noticeId}` },
   // Deduplication, not a job id: a report sent back to the admins later can be alerted again
   [JOB_TYPES.PROBLEM_REPORT_NOTIFY]: { deduplication: (data) => `problem-report:notify:${data.reportId}` },
+  // Job ids, kept while BullMQ keeps the finished job (24 hours): a run, or a member's DM about one state, happens once
+  [JOB_TYPES.PROBLEM_REPORT_FIX]: { jobId: (data) => `problem-report:fix:${data.reportId}:${data.runToken}` },
+  [JOB_TYPES.PROBLEM_REPORT_UPDATE]: { jobId: (data) => `problem-report:update:${data.reportId}:${data.userId}:${data.status}:${data.resolvedAt}` },
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
   [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },
   [JOB_TYPES.REWIND_GENERATE_USER]: { fromCaller: "the RewindGeneration id" },

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useState, useTransition } from "react"
 
 import { reportProblem } from "@/actions/problem-reports"
+import type { SentOutcome } from "@/components/problem-reports/report-sent"
 import { StepHeading } from "@/components/problem-reports/step-heading"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -37,7 +38,7 @@ interface ReportProblemStepProps {
   selected: SelectedTitle
   kind: ProblemKind
   onBack: () => void
-  onSent: (joined: boolean) => void
+  onSent: (sent: SentOutcome) => void
 }
 
 /**
@@ -61,6 +62,8 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
   const askDevice = problem !== null && asksDevice(problem) && player !== null && episode === WHOLE_SHOW
   const transcodeTip = problem !== null && showsTranscodeTip(problem) && selected.lastPlay?.transcoded === true
 
+  // Sonarr is read first for missing episodes, so the button says what happens when it can look
+  const looksForMissing = problem === "missing_episodes" && selected.looksForMissing
   const noteRequired = problem !== null && needsNote(problem)
   const canSend = problem !== null && (!noteRequired || note.trim() !== "")
   const episodes = kind !== "episodes" && selected.episodes?.length ? selected.episodes : null
@@ -75,7 +78,7 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
         showError(result.error)
         return
       }
-      onSent(result.data.joined)
+      onSent(result.data)
     })
   }
 
@@ -143,7 +146,9 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
         <Textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={PROBLEM_NOTE_MAX} rows={3} data-testid="report-note" />
       </Field>
       <p className="text-ui text-muted-foreground" data-testid="report-consequence">
-        The server admin will take a look. We'll message you when it's done.
+        {looksForMissing
+          ? "We'll check which episodes are missing and look for them. Nothing is removed."
+          : "The server admin will take a look. We'll message you when it's done."}
       </p>
       <div className="flex flex-wrap gap-2">
         <Button variant="ghost" onClick={onBack} data-testid="report-back">
@@ -151,7 +156,7 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
           Back
         </Button>
         <Button onClick={send} disabled={!canSend} loading={pending} loadingLabel="Sending" data-testid="report-send">
-          Send to the server admin
+          {looksForMissing ? "Look for them" : "Send to the server admin"}
         </Button>
       </div>
     </div>

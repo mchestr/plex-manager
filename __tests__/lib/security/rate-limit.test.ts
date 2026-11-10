@@ -104,6 +104,7 @@ describe("rate-limit", () => {
         'affiliate:invite': { points: 20, duration: 3600 },
         'problem-report:create': { points: 10, duration: 3600 },
         'problem-report:create:day': { points: 20, duration: 86400 },
+        'admin:problem-fix': { points: 30, duration: 600 },
         'admin:remove-member': { points: 10, duration: 3600 },
         'account:data': { points: 60, duration: 3600 },
         checkout: { points: 10, duration: 60 },

@@ -12,6 +12,7 @@ import {
   type ReportRefusal,
 } from "@/lib/problem-reports/service"
 import { REFUSALS, refusalCopy } from "@/lib/problem-reports/refusals"
+import type { MissingAnswer } from "@/lib/problem-reports/report-missing"
 import { problemReportIdSchema, reportProblemInputSchema } from "@/lib/validations/problem-reports"
 
 /** The refusal as a failure; `notFound` replaces the copy for a report that can't be found or changed. */
@@ -23,22 +24,31 @@ function refused(refusal: ReportRefusal, retryAfterSec?: number, notFound?: stri
 
 const refresh = () => revalidatePath("/report")
 
+/** What the sheet shows once a report is sent. */
+interface ReportSent {
+  reportId: string | null
+  outcome: "reported" | "joined" | "fixing" | "answered"
+  answer: MissingAnswer | null
+}
+
 /**
  * Reports a problem with a title in the member's libraries, or joins the
  * title's open report (`joined`). The title is checked against the libraries
  * shared with the member, and its details come from Plex. `device` answers
- * "Does anything else play on {player}?". The note is the member's own
- * words: untrusted text, never instructions.
+ * "Does anything else play on {player}?". For "Episodes are missing" the
+ * outcome may be `fixing` (Look for the episodes started) or `answered` (an
+ * answer instead of a report, with no report id). The note is the member's
+ * own words: untrusted text, never instructions.
  */
 export const reportProblem = memberAction({
   entitlement: "full",
   input: reportProblemInputSchema,
   fallbackError: "Could not send the report",
-  handler: async ({ ratingKey, problem, note, device }, { userId }): Promise<ActionResult<{ reportId: string; joined: boolean }>> => {
+  handler: async ({ ratingKey, problem, note, device }, { userId }): Promise<ActionResult<ReportSent>> => {
     const result = await sendReport({ userId, ratingKey, problem, note, device })
     if (!result.ok) return refused(result.refusal, result.retryAfterSec)
     refresh()
-    return ok({ reportId: result.reportId, joined: result.outcome === "joined" })
+    return ok(result.outcome === "answered" ? { reportId: null, outcome: "answered", answer: result.answer } : { reportId: result.reportId, outcome: result.outcome, answer: null })
   },
 })
 

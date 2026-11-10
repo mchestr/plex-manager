@@ -13,11 +13,14 @@ import { currentHref, resetUrl } from "@/__tests__/helpers/url-router"
 import { updateProblemReportSettings } from "@/actions/admin/problem-reports"
 import ProblemReportsPage from "@/app/admin/(automations)/problem-reports/page"
 import { assertAdmin } from "@/lib/admin"
-import { getProblemReportSettingsView, listProblemReports, type ProblemReportList } from "@/lib/data/problem-reports"
+import { getProblemBreaker, getProblemReportSettingsView, listProblemReports, type ProblemReportList } from "@/lib/data/problem-reports"
 
 jest.mock("next/navigation", () => require("@/__tests__/helpers/url-router").navigationModule)
 jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
-jest.mock("@/lib/data/problem-reports", () => ({ listProblemReports: jest.fn(), getProblemReportSettingsView: jest.fn() }))
+jest.mock("@/lib/data/problem-reports", () => ({ listProblemReports: jest.fn(), getProblemReportSettingsView: jest.fn(), getProblemBreaker: jest.fn() }))
+jest.mock("@/lib/settings/app-settings", () => ({
+  getFormat: async () => (await import("@/lib/utils/format")).bindFormat({ timeZone: "America/Chicago", locale: "en-US" }),
+}))
 jest.mock("@/actions/admin/problem-reports", () => ({ updateProblemReportSettings: jest.fn() }))
 const mockShowError = jest.fn()
 jest.mock("@/components/ui/toast", () => ({ useToast: () => ({ showSuccess: jest.fn(), showError: mockShowError }) }))
@@ -40,6 +43,7 @@ beforeEach(() => {
   jest.mocked(assertAdmin).mockResolvedValue({ user: { id: "admin-1" } } as never)
   jest.mocked(listProblemReports).mockResolvedValue(LIST)
   jest.mocked(getProblemReportSettingsView).mockResolvedValue({ enabled: true, lastSaved: null })
+  jest.mocked(getProblemBreaker).mockResolvedValue(null)
   jest.mocked(updateProblemReportSettings).mockResolvedValue({ success: true, data: null })
 })
 

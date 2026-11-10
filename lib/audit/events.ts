@@ -169,6 +169,8 @@ const AUDIT_EVENTS: Record<AuditEventName, EventWords> = {
 
   PROBLEM_REPORT_CLOSED: { label: "Problem report closed", category: "problems" },
   PROBLEM_SWAP_APPROVAL_CHANGED: { label: "Swap approval changed", category: "problems" },
+  PROBLEM_FIX_RUN: { label: "Problem report fix run", category: "problems" },
+  PROBLEM_BREAKER_RESUMED: { label: "Problem report fixes resumed", category: "problems" },
 
   CONFIG_CHANGED: { label: "Settings changed", category: "settings" },
   SERVER_TIMEZONE_CHANGED: { label: "Server time zone changed", category: "settings" },

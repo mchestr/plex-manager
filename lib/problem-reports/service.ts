@@ -32,6 +32,13 @@
  * words only, never who else reported. A new report also queues the admins'
  * Discord alert (`queueReportAlert`); a join adds to a report they know of.
  *
+ * "Episodes are missing" is about a show, so an episode's report is filed on
+ * its show, and Sonarr and Plex are read first (`decideMissingForMember`):
+ * an episode that hasn't aired, or seasons that aren't monitored, get an
+ * answer and no report; episodes to scan or search for start Look for the
+ * episodes on the new report (`startFix`) instead of alerting the admins;
+ * anything else goes to them with a `TO_ADMIN` event that says why.
+ *
  * ## Cancel
  *
  * Only the reporter, and only while nothing has run on the report (status
@@ -51,9 +58,12 @@ import type { PlexItemMetadata } from "@/lib/connections/plex"
 import { inSerializable } from "@/lib/db/serializable"
 import { prisma } from "@/lib/prisma"
 import { isUniqueConflict } from "@/lib/prisma-errors"
-import { readMemberItem } from "@/lib/problem-reports/access"
+import { readMemberItem, type MemberItem } from "@/lib/problem-reports/access"
 import { queueReportAlert } from "@/lib/problem-reports/alerts"
 import { readEvidence, type Evidence } from "@/lib/problem-reports/evidence"
+import { decideMissingForMember, type MemberMissingDecision, type MissingAnswer } from "@/lib/problem-reports/report-missing"
+import { startFix } from "@/lib/problem-reports/run"
+import { queueMemberUpdates } from "@/lib/problem-reports/updates"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
 import { asksDevice, needsNote, PROBLEMS, REPORTABLE_MEDIA_TYPES, type ProblemCode, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { titleKeyOf } from "@/lib/problem-reports/title"
@@ -140,10 +150,21 @@ async function joinOpenReport(where: { activeKey: string } | { id: string }, use
   })
 }
 
+/** What a report led to: a new report (with a fix running, or with the server admin), a join, or an answer instead. */
+export type ReportOutcome =
+  | { ok: true; outcome: "reported" | "joined" | "fixing"; reportId: string }
+  | { ok: true; outcome: "answered"; reportId: null; answer: MissingAnswer }
+
+/** The title a problem is about: for "Episodes are missing", an episode's show. */
+async function reportedTitle(userId: string, problem: ProblemCode, member: Extract<MemberItem, { ok: true }>): Promise<MemberItem> {
+  if (problem !== "missing_episodes" || member.item.type !== "episode") return member
+  return member.item.grandparentRatingKey ? readMemberItem(userId, member.item.grandparentRatingKey) : { ok: false, reason: "NOT_FOUND" }
+}
+
 /**
  * Reports a problem with a title, or joins the title's open report.
  *
- * @returns `reported` with the new report, `joined` with the open one, or the refusal
+ * @returns `reported` with the new report, `fixing` when a fix started on it, `joined` with the open one, `answered` with no report, or the refusal
  */
 export async function reportProblem(input: {
   userId: string
@@ -151,16 +172,21 @@ export async function reportProblem(input: {
   problem: ProblemCode
   note: string | null
   device?: DeviceAnswer
-}): Promise<{ ok: true; outcome: "reported" | "joined"; reportId: string } | Refused> {
+}): Promise<ReportOutcome | Refused> {
   const { userId, problem, note, device } = input
   // Before the rate limits, so a missing note doesn't spend them
   if (needsNote(problem) && !note) return refuse("NOTE_REQUIRED")
   const refused = await admit(userId)
   if (refused) return refused
 
-  const member = await readMemberItem(userId, input.ratingKey)
+  const picked = await readMemberItem(userId, input.ratingKey)
+  if (!picked.ok) return refuse(picked.reason)
+  if (PROBLEMS[problem].kind === "episodes" && picked.item.type === "movie") return refuse("WRONG_KIND")
+  const member = await reportedTitle(userId, problem, picked)
   if (!member.ok) return refuse(member.reason)
-  if (PROBLEMS[problem].kind === "episodes" && member.item.type === "movie") return refuse("WRONG_KIND")
+
+  const decided: MemberMissingDecision | null = problem === "missing_episodes" ? await decideMissingForMember(member.server, member.item, new Date()) : null
+  if (decided && "answer" in decided) return { ok: true, outcome: "answered", reportId: null, answer: decided.answer }
 
   const { titleKey, ...title } = titleFields(member.item)
   const evidence = await readEvidence(userId, member.item)
@@ -178,8 +204,12 @@ export async function reportProblem(input: {
         await tx.problemReportEvent.create({
           data: { reportId: created.id, kind: "REPORTED", actorUserId: userId, data: { problem, ...answers } },
         })
+        if (decided && !decided.startsFix) await tx.problemReportEvent.create({ data: { reportId: created.id, kind: "TO_ADMIN", data: { reason: decided.reason } } })
         return created
       })
+      if (decided?.startsFix && (await startFix({ reportId: report.id, action: "LOOK_FOR_MISSING", trigger: "automatic", actorUserId: userId })).ok) {
+        return { ok: true, outcome: "fixing", reportId: report.id }
+      }
       await queueReportAlert(report.id)
       return { ok: true, outcome: "reported", reportId: report.id }
     } catch (error) {
@@ -218,5 +248,8 @@ export async function cancelProblemReport({ userId, reportId }: { userId: string
     await tx.problemReportEvent.create({ data: { reportId, kind: "CLOSED", actorUserId: userId, data: { reason: "cancelled" } } })
     return true
   })
-  return cancelled ? { ok: true } : refuse("NOT_FOUND")
+  if (!cancelled) return refuse("NOT_FOUND")
+  // The members who followed it hear that it closed; the reporter cancelled it
+  await queueMemberUpdates(reportId, "CLOSED", { except: userId, from: "request" })
+  return { ok: true }
 }

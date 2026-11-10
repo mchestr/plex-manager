@@ -1,7 +1,8 @@
 /**
- * A show's episodes, for choosing one: `GET <url>/library/metadata/<show>/allLeaves`
- * with the owner token. Only numbered episodes (a season and an episode
- * number), in season and episode order.
+ * A show's episodes, for choosing one and for comparing them with Sonarr's:
+ * `GET <url>/library/metadata/<show>/allLeaves` with the owner token. Only
+ * numbered episodes (a season and an episode number), in season and episode
+ * order, each with its files' paths as Plex sees them.
  *
  * @module
  */
@@ -18,6 +19,10 @@ const episodeSchema = z.looseObject({
   title: z.string().catch(""),
   parentIndex: z.number().int().optional().catch(undefined),
   index: z.number().int().optional().catch(undefined),
+  Media: z
+    .array(z.looseObject({ Part: z.array(z.looseObject({ file: z.string() })).optional().catch(undefined) }))
+    .optional()
+    .catch(undefined),
 })
 
 const leavesSchema = z.looseObject({
@@ -30,6 +35,8 @@ export interface PlexEpisode {
   title: string
   seasonNumber: number
   episodeNumber: number
+  /** Every file of every version, as Plex sees the paths; server-side only. */
+  files: string[]
 }
 
 /**
@@ -54,7 +61,15 @@ export async function getPlexShowEpisodes(
 
   const episodes = (result.data.MediaContainer.Metadata ?? []).flatMap((item) =>
     item.ratingKey && item.parentIndex !== undefined && item.index !== undefined
-      ? [{ ratingKey: item.ratingKey, title: item.title, seasonNumber: item.parentIndex, episodeNumber: item.index }]
+      ? [
+          {
+            ratingKey: item.ratingKey,
+            title: item.title,
+            seasonNumber: item.parentIndex,
+            episodeNumber: item.index,
+            files: (item.Media ?? []).flatMap((media) => media.Part ?? []).map((part) => part.file),
+          },
+        ]
       : []
   )
   episodes.sort((a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber)
