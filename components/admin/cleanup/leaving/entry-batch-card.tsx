@@ -97,7 +97,7 @@ export function EntryBatchCard({ batch, paused }: EntryBatchCardProps) {
         open={dialog === "put"}
         onOpenChange={(open) => setDialog(open ? "put" : null)}
         title={`Put ${items} in Leaving soon?`}
-        description={`The entry check held these new matches of ${batch.ruleName}. They get a leave date of ${f.dayKey(batch.leaveOn, "day-month-short")}, and members can see and keep them. Nothing is deleted now.`}
+        description={`The entry check held these new matches of ${batch.ruleName}. They get a leave date of ${f.dayKey(batch.leaveOn, "short")}, and members can see and keep them. Nothing is deleted now.`}
         confirmLabel={`Put ${items} in Leaving soon`}
         pendingLabel="Putting"
         action={put}

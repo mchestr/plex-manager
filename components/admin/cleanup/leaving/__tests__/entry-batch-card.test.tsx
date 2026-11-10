@@ -48,7 +48,7 @@ describe("EntryBatchCard", () => {
     await user.click(screen.getByTestId(`${BASE}-put`))
     const dialog = await screen.findByTestId("admin-cleanup-entry-dialog")
     expect(within(dialog).getByRole("heading", { name: "Put 52 seasons in Leaving soon?" })).toBeInTheDocument()
-    expect(dialog).toHaveTextContent("The entry check held these new matches of Old seasons nobody plays. They get a leave date of Dec 8, and members can see and keep them.")
+    expect(dialog).toHaveTextContent("The entry check held these new matches of Old seasons nobody plays. They get a leave date of Dec 8, 2026, and members can see and keep them.")
     expect(dialog).toHaveTextContent("Nothing is deleted now.")
     await user.click(screen.getByTestId("admin-cleanup-entry-confirm"))
     expect(approveCleanupEntryBatch).toHaveBeenCalledWith({ batchId: "entry-rule-2", count: 52, keysHash: HASH_B, excludeKeys: [], reviewedAt: REVIEWED_AT })
