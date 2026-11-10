@@ -39,4 +39,14 @@ describe("adminAlertText", () => {
       "\\@everyone \\[click\\]\\(https\\://evil.example\\) reported a problem with \\*\\*Heat\\*\\*: Won't start.\n<https://plex.example.com/admin/problem-reports/r1>"
     )
   })
+
+  it("stays under Discord's 2,000 characters for the worst digest", () => {
+    const longBase = `https://${"a".repeat(80)}.example.com`
+    const reports = Array.from({ length: 6 }, (_, index) => report(`c${"x".repeat(23)}${index}`, "*".repeat(300), "wrong_details"))
+
+    const text = adminAlertText("_".repeat(200), reports, longBase)
+
+    expect(longBase).toHaveLength(100)
+    expect(text.length).toBeLessThan(2000)
+  })
 })

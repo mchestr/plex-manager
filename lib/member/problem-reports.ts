@@ -74,7 +74,10 @@ function latestWords(event: { kind: string; data: unknown } | undefined, own: bo
   if (event?.kind === "FIXED") return { words: "The server admin fixed it", statusSub: null }
   const closed = event?.kind === "CLOSED" ? closedEventDataSchema.safeParse(event.data) : null
   if (closed?.success && closed.data.reason === "admin") return { words: "The server admin closed it", statusSub: "By the server admin" }
-  if (closed?.success) return { words: own ? "You cancelled it" : "Cancelled", statusSub: "Cancelled" }
+  if (closed?.success) {
+    // A follower didn't cancel it, so say who did without naming them
+    return own ? { words: "You cancelled it", statusSub: "Cancelled" } : { words: "The member who reported it cancelled it", statusSub: "By the member who reported it" }
+  }
   return { words: own ? "You sent it" : "You're following it", statusSub: null }
 }
 

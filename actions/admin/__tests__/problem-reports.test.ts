@@ -125,13 +125,22 @@ describe("setSwapsNeedApproval", () => {
 
     await expect(setSwapsNeedApproval({ userId: "member-1", needsApproval: true })).resolves.toEqual({ success: true, data: null })
 
-    expect(prismaMock.user.updateMany).toHaveBeenCalledWith({ where: { id: "member-1" }, data: { swapsNeedApproval: true } })
+    expect(prismaMock.user.updateMany).toHaveBeenCalledWith({ where: { id: "member-1", swapsNeedApproval: false }, data: { swapsNeedApproval: true } })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.PROBLEM_SWAP_APPROVAL_CHANGED, "admin-1", { targetUserId: "member-1", needsApproval: true })
     expect(revalidatePath).toHaveBeenCalledWith("/admin/users/member-1")
   })
 
+  it("writes no audit row when the toggle already has that value", async () => {
+    prismaMock.user.updateMany.mockResolvedValue({ count: 0 })
+    prismaMock.user.findUnique.mockResolvedValue({ id: "member-1" } as never)
+
+    await expect(setSwapsNeedApproval({ userId: "member-1", needsApproval: true })).resolves.toEqual({ success: true, data: null })
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
   it("reports a member that is not there, without an audit row", async () => {
     prismaMock.user.updateMany.mockResolvedValue({ count: 0 })
+    prismaMock.user.findUnique.mockResolvedValue(null)
 
     await expect(setSwapsNeedApproval({ userId: "member-1", needsApproval: false })).resolves.toMatchObject({ success: false, code: "NOT_FOUND" })
     expect(logAuditEvent).not.toHaveBeenCalled()

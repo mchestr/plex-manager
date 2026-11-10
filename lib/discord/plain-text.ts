@@ -7,11 +7,13 @@
  * 1. Format characters (bidi controls, zero-width spaces) are dropped, so the
  *    text can't reorder or hide what comes after it.
  * 2. Line breaks, tabs and runs of spaces become one space: one line.
- * 3. It is cut to `max` characters, with an ellipsis.
- * 4. Every character Discord reads as markup is escaped with a backslash:
+ * 3. Every character Discord reads as markup is escaped with a backslash:
  *    formatting, quotes and headings, masked links (`[...](...)`), the colon
  *    of a bare link, mentions, channels and timestamps (`<@...>`, `<t:...>`).
- *    Discord hides the backslashes.
+ *    Discord's markdown hides a backslash before any character that isn't a
+ *    letter, a digit or a space.
+ * 4. It is cut to at most `max` characters, backslashes included, with an
+ *    ellipsis, and never between a backslash and its character.
  *
  * @example
  * ```ts
@@ -23,11 +25,17 @@
 
 const FORMAT = /\p{Cf}/gu
 const SPACES = /[\p{Cc}\p{Zl}\p{Zp}\s]+/gu
-const MARKUP = /[\\*_~`|<>#\-[\]()@:]/g
+const MARKUP = /[\\*_~`|<>#\-[\]()@:]/
 
-/** The text as one escaped line of at most `max` characters, before escaping. */
+/** The text as one escaped line of at most `max` characters. */
 export function plainDiscordText(text: string, max: number): string {
-  const flat = Array.from(text.replace(FORMAT, "").replace(SPACES, " ").trim())
-  const cut = flat.length > max ? `${flat.slice(0, max - 1).join("").trimEnd()}…` : flat.join("")
-  return cut.replace(MARKUP, "\\$&")
+  const pieces = Array.from(text.replace(FORMAT, "").replace(SPACES, " ").trim(), (char) => (MARKUP.test(char) ? `\\${char}` : char))
+  const whole = pieces.join("")
+  if (whole.length <= max) return whole
+  let kept = ""
+  for (const piece of pieces) {
+    if (kept.length + piece.length > max - 1) break
+    kept += piece
+  }
+  return `${kept.trimEnd()}…`
 }

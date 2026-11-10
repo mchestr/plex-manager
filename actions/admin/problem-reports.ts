@@ -88,8 +88,12 @@ export const setSwapsNeedApproval = adminAction({
   input: z.object({ userId: userIdSchema, needsApproval: z.boolean() }),
   fallbackError: "Could not update the member",
   handler: async ({ userId, needsApproval }, { userId: actorId }) => {
-    const updated = await prisma.user.updateMany({ where: { id: userId }, data: { swapsNeedApproval: needsApproval } })
-    if (updated.count === 0) return fail("NOT_FOUND", "User not found")
+    // Only a change is written and audited, like the settings above
+    const changed = await prisma.user.updateMany({ where: { id: userId, swapsNeedApproval: !needsApproval }, data: { swapsNeedApproval: needsApproval } })
+    if (changed.count === 0) {
+      const member = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
+      return member ? ok(null) : fail("NOT_FOUND", "User not found")
+    }
 
     logAuditEvent(AuditEventType.PROBLEM_SWAP_APPROVAL_CHANGED, actorId, { targetUserId: userId, needsApproval })
     revalidatePath(userDetail(userId))

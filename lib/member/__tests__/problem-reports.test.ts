@@ -48,6 +48,14 @@ describe('getReportPageData', () => {
       { ...report, id: 'own', reporterId: 'member-1', events: [] },
       { ...report, id: 'followed', reporterId: 'member-2', events: [{ kind: 'ALSO_REPORTED', data: {}, createdAt: AT }] },
       { ...report, id: 'cancelled', reporterId: 'member-1', status: 'CLOSED', events: [{ kind: 'CLOSED', data: { reason: 'cancelled' }, createdAt: AT }] },
+      {
+        ...report,
+        id: 'cancelled-followed',
+        reporterId: 'member-2',
+        status: 'CLOSED',
+        // The newest step, as the query takes it: the reporter's cancel after this member followed
+        events: [{ kind: 'CLOSED', data: { reason: 'cancelled' }, createdAt: AT }],
+      },
     ] as never)
 
     const { reports } = await getReportPageData('member-1', {})
@@ -56,6 +64,16 @@ describe('getReportPageData', () => {
       { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: AT.toISOString() }, canCancel: true, statusSub: null, note: null },
       { id: 'followed', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: "You're following it", at: AT.toISOString() }, canCancel: false, statusSub: null, note: null },
       { id: 'cancelled', title: 'Heat (1995)', problem: "Won't start", status: 'CLOSED', latest: { words: 'You cancelled it', at: AT.toISOString() }, canCancel: false, statusSub: 'Cancelled', note: null },
+      {
+        id: 'cancelled-followed',
+        title: 'Heat (1995)',
+        problem: "Won't start",
+        status: 'CLOSED',
+        latest: { words: 'The member who reported it cancelled it', at: AT.toISOString() },
+        canCancel: false,
+        statusSub: 'By the member who reported it',
+        note: null,
+      },
     ])
   })
 

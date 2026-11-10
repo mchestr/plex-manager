@@ -15,10 +15,14 @@
  * ```
  *
  * So a member's reports reach the admins at most once an hour: the first at
- * once, and the ones in the next hour together when it ends. A send that
- * fails for every admin, other than 50007, releases the claim and throws, so
- * one of the three attempts can retry it; a send that reached one admin keeps
- * the claim, so no admin is told twice.
+ * once, and the ones in the next hour together when it ends. Everything that
+ * reads the database or the environment runs before the claim, so only the
+ * text and the sends follow it. A send that fails for every admin, other
+ * than 50007, releases the claim and throws, so one of the three attempts can
+ * retry it; a send that reached one admin keeps the claim, so no admin is
+ * told twice, and an admin whose DM failed then is not told. A worker that
+ * stops between the claim and the sends loses that alert; the Automations
+ * badge still counts the reports.
  *
  * @module lib/queue/jobs/problem-report-notify
  */
@@ -49,7 +53,10 @@ type NotifySkip = "NOT_WITH_ADMIN" | "ALREADY_SENT" | "BOT_DISABLED" | "NO_ADMIN
 
 type ReportAlertResult = { sent: number } | { skipped: NotifySkip }
 
-const skipped = (reason: NotifySkip): ReportAlertResult => ({ skipped: reason })
+function skipped(reportId: string, reason: NotifySkip): ReportAlertResult {
+  logger.info("Skipped a problem report alert", { reportId, reason })
+  return { skipped: reason }
+}
 
 const CLAIMED_SELECT = { id: true, problem: true, title: true, year: true, showTitle: true, seasonNumber: true, episodeNumber: true } as const
 
@@ -80,16 +87,19 @@ async function claimReports(reporterId: string, now: Date): Promise<Claim> {
 export async function processProblemReportNotify(job: NotifyJob, token?: string): Promise<ReportAlertResult> {
   const { reportId } = job.data
   const report = await prisma.problemReport.findUnique({ where: { id: reportId }, select: { status: true, alertedAt: true, reporterId: true } })
-  if (!report || report.status !== "WITH_ADMIN") return skipped("NOT_WITH_ADMIN")
-  if (report.alertedAt) return skipped("ALREADY_SENT")
-  if (!(await isDiscordBotEnabled())) return skipped("BOT_DISABLED")
+  if (!report || report.status !== "WITH_ADMIN") return skipped(reportId, "NOT_WITH_ADMIN")
+  if (report.alertedAt) return skipped(reportId, "ALREADY_SENT")
+  if (!(await isDiscordBotEnabled())) return skipped(reportId, "BOT_DISABLED")
   const admins = (
     await prisma.user.findMany({
       where: { isAdmin: true, disabledAt: null, discordConnection: { is: { revokedAt: null } } },
       select: { id: true, discordConnection: { select: { discordUserId: true } } },
     })
   ).flatMap((admin) => (admin.discordConnection ? [{ id: admin.id, discordUserId: admin.discordConnection.discordUserId }] : []))
-  if (admins.length === 0) return skipped("NO_ADMINS")
+  if (admins.length === 0) return skipped(reportId, "NO_ADMINS")
+  // Before the claim: a claim that a throw leaves behind would make every retry skip as ALREADY_SENT
+  const reporter = await prisma.user.findUnique({ where: { id: report.reporterId }, select: { name: true } })
+  const baseUrl = getBaseUrl()
 
   const now = new Date()
   const claim = await claimReports(report.reporterId, now)
@@ -97,14 +107,13 @@ export async function processProblemReportNotify(job: NotifyJob, token?: string)
     await job.moveToDelayed(claim.waitUntil, token)
     throw new DelayedError()
   }
-  if (claim.reports.length === 0) return skipped("ALREADY_SENT")
+  if (claim.reports.length === 0) return skipped(reportId, "ALREADY_SENT")
   const ids = claim.reports.map((claimed) => claimed.id)
 
-  const reporter = await prisma.user.findUnique({ where: { id: report.reporterId }, select: { name: true } })
   const content = adminAlertText(
     reporter?.name ?? null,
     claim.reports.map((claimed) => ({ id: claimed.id, title: reportTitle(claimed), problem: claimed.problem })),
-    getBaseUrl()
+    baseUrl
   )
   const signal = AbortSignal.any([AbortSignal.timeout(SEND_LIMIT_MS), shutdownSignal])
   let sent = 0
@@ -127,7 +136,7 @@ export async function processProblemReportNotify(job: NotifyJob, token?: string)
     await prisma.problemReport.updateMany({ where: { id: { in: ids }, alertedAt: now }, data: { alertedAt: null } })
     throw failure
   }
-  if (sent === 0) return skipped("DMS_CLOSED")
+  if (sent === 0) return skipped(reportId, "DMS_CLOSED")
   logger.info("Sent the problem report alert", { reportId, reports: ids.length, admins: sent })
   return { sent }
 }
