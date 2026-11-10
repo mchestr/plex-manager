@@ -40,19 +40,20 @@ export const problemReportIdSchema = z.string().min(1).max(100)
 const DEVICE_ANSWERS = ["others_play", "nothing_plays", "not_tried"] as const
 export type DeviceAnswer = (typeof DEVICE_ANSWERS)[number]
 
-/** `reportProblem`'s input. */
+/** `reportProblem`'s input. `toAdmin` files it for the server admin without the app's own checks, after an answer the member didn't accept. */
 export const reportProblemInputSchema = z.object({
   ratingKey: ratingKeySchema,
   problem: problemCodeSchema,
   note: problemNoteSchema,
   device: z.enum(DEVICE_ANSWERS).optional(),
+  toAdmin: z.boolean().optional(),
 })
 
 /** An `ALSO_REPORTED` event's data: a second member's problem and note, or nothing for a follow. */
 export const alsoReportedDataSchema = z.looseObject({ problem: z.string().optional(), note: z.string().nullable().optional() })
 
-/** A `CLOSED` event's data: why the report closed. */
-export const closedEventDataSchema = z.object({ reason: z.enum(["cancelled", "admin"]) })
+/** A `CLOSED` event's data: why the report closed. `no_better_copy` is a member's Look for a better copy that found none. */
+export const closedEventDataSchema = z.object({ reason: z.enum(["cancelled", "admin", "no_better_copy"]) })
 
 const fixActionSchema = z.enum(FIX_ACTIONS)
 
@@ -70,6 +71,14 @@ const TO_ADMIN_REASONS = [
   "BREAKER",
   "NO_SONARR",
   "NOT_IN_SONARR",
+  "NO_RADARR",
+  "NOT_IN_RADARR",
+  "NO_IDS",
+  "NO_FILE",
+  "SEVERAL_VERSIONS",
+  "MULTI_PART",
+  "SPECIAL",
+  "UNMONITORED",
   "UNAVAILABLE",
   "NOTHING_MISSING",
   "NOT_ON_SERVER",
@@ -79,6 +88,13 @@ const TO_ADMIN_REASONS = [
   "PLEX_DIDNT_ADD",
   "REFRESHED",
   "REFRESH_FAILED",
+  "TRANSCODED",
+  "NO_UPGRADE",
+  "NO_BETTER_COPY",
+  "SEARCH_FAILED",
+  "IMPORT_BLOCKED",
+  "DOWNLOAD_FAILED",
+  "STILL_DOWNLOADING",
 ] as const
 export type ToAdminReason = (typeof TO_ADMIN_REASONS)[number]
 

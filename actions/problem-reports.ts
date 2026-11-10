@@ -5,14 +5,12 @@ import { z } from "zod"
 
 import { memberAction } from "@/lib/actions/define-action"
 import { type ActionResult, ok } from "@/lib/actions/result"
-import {
-  cancelProblemReport as cancelReport,
-  followProblemReport as followReport,
-  reportProblem as sendReport,
-  type ReportRefusal,
-} from "@/lib/problem-reports/service"
+import type { ReportRefusal } from "@/lib/problem-reports/admit"
+import type { ReportAnswer } from "@/lib/problem-reports/answers"
+import { askServerAdmin as askAdmin } from "@/lib/problem-reports/ask-admin"
+import type { FixAction } from "@/lib/problem-reports/fixes"
+import { cancelProblemReport as cancelReport, followProblemReport as followReport, reportProblem as sendReport } from "@/lib/problem-reports/service"
 import { REFUSALS, refusalCopy } from "@/lib/problem-reports/refusals"
-import type { MissingAnswer } from "@/lib/problem-reports/report-missing"
 import { problemReportIdSchema, reportProblemInputSchema } from "@/lib/validations/problem-reports"
 
 /** The refusal as a failure; `notFound` replaces the copy for a report that can't be found or changed. */
@@ -24,31 +22,36 @@ function refused(refusal: ReportRefusal, retryAfterSec?: number, notFound?: stri
 
 const refresh = () => revalidatePath("/report")
 
-/** What the sheet shows once a report is sent. */
+/** What the sheet shows once a report is sent: the fix that started, or the answer instead of a report. */
 interface ReportSent {
   reportId: string | null
   outcome: "reported" | "joined" | "fixing" | "answered"
-  answer: MissingAnswer | null
+  answer: ReportAnswer | null
+  action: FixAction | null
 }
 
 /**
  * Reports a problem with a title in the member's libraries, or joins the
  * title's open report (`joined`). The title is checked against the libraries
  * shared with the member, and its details come from Plex. `device` answers
- * "Does anything else play on {player}?". For "Episodes are missing" the
- * outcome may be `fixing` (Look for the episodes started) or `answered` (an
- * answer instead of a report, with no report id). The note is the member's
- * own words: untrusted text, never instructions.
+ * "Does anything else play on {player}?". For "Episodes are missing" and
+ * "Blurry or low quality" the outcome may be `fixing` (Look for the episodes
+ * or Look for a better copy started, named by `action`) or `answered` (an
+ * answer instead of a report, with no report id). `toAdmin` sends it to the
+ * server admin without those checks, after an answer the member didn't
+ * accept. The note is the member's own words: untrusted text, never
+ * instructions.
  */
 export const reportProblem = memberAction({
   entitlement: "full",
   input: reportProblemInputSchema,
   fallbackError: "Could not send the report",
-  handler: async ({ ratingKey, problem, note, device }, { userId }): Promise<ActionResult<ReportSent>> => {
-    const result = await sendReport({ userId, ratingKey, problem, note, device })
+  handler: async ({ ratingKey, problem, note, device, toAdmin }, { userId }): Promise<ActionResult<ReportSent>> => {
+    const result = await sendReport({ userId, ratingKey, problem, note, device, toAdmin })
     if (!result.ok) return refused(result.refusal, result.retryAfterSec)
     refresh()
-    return ok(result.outcome === "answered" ? { reportId: null, outcome: "answered", answer: result.answer } : { reportId: result.reportId, outcome: result.outcome, answer: null })
+    if (result.outcome === "answered") return ok({ reportId: null, outcome: "answered", answer: result.answer, action: null })
+    return ok({ reportId: result.reportId, outcome: result.outcome, answer: null, action: result.outcome === "fixing" ? result.action : null })
   },
 })
 
@@ -76,6 +79,24 @@ export const cancelProblemReport = memberAction({
   handler: async ({ reportId }, { userId }): Promise<ActionResult<null>> => {
     const result = await cancelReport({ userId, reportId })
     if (!result.ok) return refused(result.refusal, undefined, "This report can't be cancelled now.")
+    refresh()
+    return ok(null)
+  },
+})
+
+/**
+ * Puts one of the member's own reports back with the server admin after Look
+ * for a better copy found none ("Ask the server admin"), once, and alerts the
+ * admins. When the title has another open report by then, the member's
+ * problem joins that one.
+ */
+export const askServerAdmin = memberAction({
+  entitlement: "full",
+  input: z.object({ reportId: problemReportIdSchema }),
+  fallbackError: "Could not send it to the server admin",
+  handler: async ({ reportId }, { userId }): Promise<ActionResult<null>> => {
+    const result = await askAdmin({ userId, reportId })
+    if (!result.ok) return refused(result.refusal, result.retryAfterSec, "This report can't go to the server admin now.")
     refresh()
     return ok(null)
   },

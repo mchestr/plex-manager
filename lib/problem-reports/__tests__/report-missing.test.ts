@@ -13,7 +13,7 @@ jest.mock("@/lib/problem-reports/steps/missing-state", () => ({ readMissingState
 
 const NOW = new Date("2026-11-09T20:00:00Z")
 const SERVER = { url: "http://plex.local:32400", token: "owner-token" }
-const SHOW = { ratingKey: "6999", type: "show", title: "The Office", ids: { tvdb: 73244, tmdb: 2316 }, parts: [], locations: [] }
+const SHOW = { ratingKey: "6999", type: "show", title: "The Office", ids: { tvdb: 73244, tmdb: 2316 }, media: [], locations: [] }
 const ok = (decision: object) => ({ ok: true, sonarr: { name: "Sonarr", url: "u", apiKey: "k" }, show: SHOW, seriesId: 42, decision }) as never
 
 beforeEach(() => {

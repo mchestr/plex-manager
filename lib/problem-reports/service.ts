@@ -6,7 +6,7 @@
  *
  * 1. The switch must be on and the member entitled (`full`).
  * 2. Each report or follow spends `problem-report:create` (10 an hour) and
- *    `problem-report:create:day` (20 a day) for the member.
+ *    `problem-report:create:day` (20 a day) for the member (`admit`).
  * 3. The title must be in a library shared with the member (SEC-21,
  *    `readMemberItem`). Its type and display fields come from Plex, never
  *    from input.
@@ -16,9 +16,7 @@
  *    event, written after the failed transaction, not inside it. A report
  *    that closes in between is tried once more as a new one.
  *
- * A member's `ALSO_REPORTED` event is written once: the same problem and
- * note again, or a second follow, writes nothing. The join reads and writes
- * in one serializable transaction, so a double tap writes one event.
+ * A member's `ALSO_REPORTED` event is written once (`joinOpenReport`).
  * Following checks the title against the member's libraries too.
  *
  * Each report records what the member answered to "Does anything else play
@@ -39,6 +37,15 @@
  * episodes on the new report (`startFix`) instead of alerting the admins;
  * anything else goes to them with a `TO_ADMIN` event that says why.
  *
+ * "Blurry or low quality" about a movie or an episode reads the evidence,
+ * the file and its quality profile first (`decideBetterCopyForMember`): a
+ * file the profile counts as good enough gets an answer and no report; one it
+ * would upgrade starts Look for a better copy; anything else, a converted
+ * play included, goes to the admins with why.
+ *
+ * `toAdmin` skips both checks, for a member who saw an answer and sends the
+ * report anyway.
+ *
  * ## Cancel
  *
  * Only the reporter, and only while nothing has run on the report (status
@@ -53,52 +60,27 @@
 
 import "server-only"
 
-import { hasEntitlement } from "@/lib/actions/entitlement"
 import type { PlexItemMetadata } from "@/lib/connections/plex"
-import { inSerializable } from "@/lib/db/serializable"
 import { prisma } from "@/lib/prisma"
 import { isUniqueConflict } from "@/lib/prisma-errors"
 import { readMemberItem, type MemberItem } from "@/lib/problem-reports/access"
+import { admit, refuse, type Refused } from "@/lib/problem-reports/admit"
 import { queueReportAlert } from "@/lib/problem-reports/alerts"
-import { readEvidence, type Evidence } from "@/lib/problem-reports/evidence"
-import { decideMissingForMember, type MemberMissingDecision, type MissingAnswer } from "@/lib/problem-reports/report-missing"
+import type { ReportAnswer } from "@/lib/problem-reports/answers"
+import { readEvidence } from "@/lib/problem-reports/evidence"
+import type { FixAction } from "@/lib/problem-reports/fixes"
+import { joinOpenReport } from "@/lib/problem-reports/join"
+import { decideBetterCopyForMember } from "@/lib/problem-reports/report-better-copy"
+import { decideMissingForMember } from "@/lib/problem-reports/report-missing"
 import { startFix } from "@/lib/problem-reports/run"
 import { queueMemberUpdates } from "@/lib/problem-reports/updates"
-import { getProblemReportSettings } from "@/lib/problem-reports/settings"
 import { asksDevice, needsNote, PROBLEMS, REPORTABLE_MEDIA_TYPES, type ProblemCode, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { titleKeyOf } from "@/lib/problem-reports/title"
-import { consume } from "@/lib/security/rate-limit"
-import { alsoReportedDataSchema, type DeviceAnswer } from "@/lib/validations/problem-reports"
+import type { DeviceAnswer, ToAdminReason } from "@/lib/validations/problem-reports"
 
-/** Why a report, follow or cancel was refused. */
-export type ReportRefusal =
-  | "OFF"
-  | "NOT_ENTITLED"
-  | "RATE_LIMITED"
-  | "NOT_FOUND"
-  | "UNAVAILABLE"
-  | "NOTE_REQUIRED"
-  | "WRONG_KIND"
-
-type Refused = { ok: false; refusal: ReportRefusal; retryAfterSec?: number }
-
-const LIMITS = ["problem-report:create", "problem-report:create:day"] as const
 const CANCELLABLE = ["SENT", "WITH_ADMIN"] as const
 /** Inserts tried: one, and one more when the open report it collided with closed before the join. */
 const CREATE_ATTEMPTS = 2
-
-const refuse = (refusal: ReportRefusal): Refused => ({ ok: false, refusal })
-
-/** The switch, entitlement and both rate limits, in that order. */
-async function admit(userId: string): Promise<Refused | null> {
-  if (!(await getProblemReportSettings()).enabled) return refuse("OFF")
-  if (!(await hasEntitlement(userId, "full"))) return refuse("NOT_ENTITLED")
-  for (const name of LIMITS) {
-    const spent = await consume(name, userId)
-    if (!spent.ok) return { ok: false, refusal: "RATE_LIMITED", retryAfterSec: spent.retryAfterSec }
-  }
-  return null
-}
 
 /** The report's title fields, from Plex. */
 function titleFields(item: PlexItemMetadata) {
@@ -114,46 +96,14 @@ function titleFields(item: PlexItemMetadata) {
   }
 }
 
-/** What a member adds to an open report: a problem, note, device answer and evidence, or nothing when they only follow it. */
-type AlsoReported = { problem?: ProblemCode; note?: string | null; device?: DeviceAnswer; evidence?: Evidence }
-
-/** Whether the member already said this on the report: as its reporter, or in an `ALSO_REPORTED` event. */
-function alreadySaid(
-  report: { reporterId: string; problem: string; note: string | null; events: { data: unknown }[] },
-  userId: string,
-  said: AlsoReported
-): boolean {
-  if (said.problem === undefined) return report.reporterId === userId || report.events.length > 0
-  const same = (problem: string | undefined, note: string | null | undefined) => problem === said.problem && (note ?? null) === (said.note ?? null)
-  if (report.reporterId === userId && same(report.problem, report.note)) return true
-  return report.events.some((event) => {
-    const data = alsoReportedDataSchema.safeParse(event.data)
-    return data.success && same(data.data.problem, data.data.note)
-  })
-}
-
-/**
- * Adds an `ALSO_REPORTED` event to an open report, once, in one serializable
- * transaction. The report's id, or null when it isn't open.
- */
-async function joinOpenReport(where: { activeKey: string } | { id: string }, userId: string, said: AlsoReported): Promise<string | null> {
-  return inSerializable(async (tx) => {
-    const report = await tx.problemReport.findFirst({
-      where: { ...where, activeKey: "activeKey" in where ? where.activeKey : { not: null } },
-      select: { id: true, reporterId: true, problem: true, note: true, events: { where: { kind: "ALSO_REPORTED", actorUserId: userId }, select: { data: true } } },
-    })
-    if (!report) return null
-    if (!alreadySaid(report, userId, said)) {
-      await tx.problemReportEvent.create({ data: { reportId: report.id, kind: "ALSO_REPORTED", actorUserId: userId, data: said } })
-    }
-    return report.id
-  })
-}
-
 /** What a report led to: a new report (with a fix running, or with the server admin), a join, or an answer instead. */
 export type ReportOutcome =
-  | { ok: true; outcome: "reported" | "joined" | "fixing"; reportId: string }
-  | { ok: true; outcome: "answered"; reportId: null; answer: MissingAnswer }
+  | { ok: true; outcome: "reported" | "joined"; reportId: string }
+  | { ok: true; outcome: "fixing"; reportId: string; action: FixAction }
+  | { ok: true; outcome: "answered"; reportId: null; answer: ReportAnswer }
+
+/** What the app's own checks decided before the report is saved: a fix to start, or why it goes to the admins. */
+type Decided = { fix: FixAction } | { toAdmin: ToAdminReason } | null
 
 /** The title a problem is about: for "Episodes are missing", an episode's show. */
 async function reportedTitle(userId: string, problem: ProblemCode, member: Extract<MemberItem, { ok: true }>): Promise<MemberItem> {
@@ -172,8 +122,9 @@ export async function reportProblem(input: {
   problem: ProblemCode
   note: string | null
   device?: DeviceAnswer
+  toAdmin?: boolean
 }): Promise<ReportOutcome | Refused> {
-  const { userId, problem, note, device } = input
+  const { userId, problem, note, device, toAdmin = false } = input
   // Before the rate limits, so a missing note doesn't spend them
   if (needsNote(problem) && !note) return refuse("NOTE_REQUIRED")
   const refused = await admit(userId)
@@ -185,11 +136,15 @@ export async function reportProblem(input: {
   const member = await reportedTitle(userId, problem, picked)
   if (!member.ok) return refuse(member.reason)
 
-  const decided: MemberMissingDecision | null = problem === "missing_episodes" ? await decideMissingForMember(member.server, member.item, new Date()) : null
-  if (decided && "answer" in decided) return { ok: true, outcome: "answered", reportId: null, answer: decided.answer }
+  const missing = problem === "missing_episodes" && !toAdmin ? await decideMissingForMember(member.server, member.item, new Date()) : null
+  if (missing && "answer" in missing) return { ok: true, outcome: "answered", reportId: null, answer: missing.answer }
 
   const { titleKey, ...title } = titleFields(member.item)
   const evidence = await readEvidence(userId, member.item)
+  const betterCopy = problem === "blurry" && !toAdmin && member.item.type !== "show" ? await decideBetterCopyForMember(member.server, member.item.ratingKey, evidence) : null
+  if (betterCopy && "answer" in betterCopy) return { ok: true, outcome: "answered", reportId: null, answer: betterCopy.answer }
+  const checked = missing ?? betterCopy
+  const decided: Decided = !checked ? null : checked.startsFix ? { fix: missing ? "LOOK_FOR_MISSING" : "BETTER_COPY" } : { toAdmin: checked.reason }
   // The player question is asked only for some playback problems, about the player of the member's last play of
   // the title. An answer is kept only then, so it is always about the player in this event's evidence.
   const answers = device && asksDevice(problem) && evidence.lastPlay?.player ? { device, evidence } : { evidence }
@@ -203,11 +158,11 @@ export async function reportProblem(input: {
         await tx.problemReportEvent.create({
           data: { reportId: created.id, kind: "REPORTED", actorUserId: userId, data: { problem, ...answers } },
         })
-        if (decided && !decided.startsFix) await tx.problemReportEvent.create({ data: { reportId: created.id, kind: "TO_ADMIN", data: { reason: decided.reason } } })
+        if (decided && "toAdmin" in decided) await tx.problemReportEvent.create({ data: { reportId: created.id, kind: "TO_ADMIN", data: { reason: decided.toAdmin } } })
         return created
       })
-      if (decided?.startsFix && (await startFix({ reportId: report.id, action: "LOOK_FOR_MISSING", trigger: "automatic", actorUserId: userId })).ok) {
-        return { ok: true, outcome: "fixing", reportId: report.id }
+      if (decided && "fix" in decided && (await startFix({ reportId: report.id, action: decided.fix, trigger: "automatic", actorUserId: userId })).ok) {
+        return { ok: true, outcome: "fixing", reportId: report.id, action: decided.fix }
       }
       await queueReportAlert(report.id)
       return { ok: true, outcome: "reported", reportId: report.id }

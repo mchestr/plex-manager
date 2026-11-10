@@ -70,6 +70,17 @@ describe("processProblemReportUpdate", () => {
     expect(sendDiscordDirectMessage).not.toHaveBeenCalled()
   })
 
+  it("tells the member a better copy came, and that none did", async () => {
+    prismaMock.problemReport.findUnique
+      .mockResolvedValueOnce({ ...REPORT, title: "Heat", year: 1995, events: [{ kind: "FIXED", data: { reason: "fix", action: "BETTER_COPY" } }] } as never)
+      .mockResolvedValueOnce({ ...REPORT, status: "CLOSED", title: "Heat", year: 1995, events: [{ kind: "CLOSED", data: { reason: "no_better_copy" } }] } as never)
+
+    await processProblemReportUpdate(job())
+    await processProblemReportUpdate(job({ reportId: "report-1", userId: "member-1", status: "CLOSED" }))
+    expect(jest.mocked(sendDiscordDirectMessage).mock.calls[0][1]).toMatch(/^A better copy of Heat \\\(1995\\\) is on the server now\./)
+    expect(jest.mocked(sendDiscordDirectMessage).mock.calls[1][1]).toMatch(/^We looked for a better copy of Heat \\\(1995\\\), but there isn't one right now\. If it still/)
+  })
+
   it("tells a follower the member who made it cancelled it", async () => {
     prismaMock.problemReport.findUnique.mockResolvedValue({ ...REPORT, status: "CLOSED", events: [{ kind: "CLOSED", data: { reason: "cancelled" } }] } as never)
 

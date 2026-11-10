@@ -18,7 +18,7 @@ import { recentlyWatched, watchingNow, type TitleResult } from "@/lib/member/pro
 import { prisma } from "@/lib/prisma"
 import { memberLibraryAccess, readMemberItem, type LibraryAccess } from "@/lib/problem-reports/access"
 import { memberLastPlay, type LastPlay } from "@/lib/problem-reports/evidence"
-import { FIX_ACTIONS, FIX_WORDS } from "@/lib/problem-reports/fixes"
+import { FIX_ACTIONS, FIX_WORDS, type FixAction } from "@/lib/problem-reports/fixes"
 import { searchMemberTitles } from "@/lib/problem-reports/search"
 import { problemLabel, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { reportTitle, titleKeyOf } from "@/lib/problem-reports/title"
@@ -41,6 +41,8 @@ export interface ReportRow {
   /** The latest event in words, and when: "You sent it", "You cancelled it", "The server admin fixed it". */
   latest: { words: string; at: string }
   canCancel: boolean
+  /** "Ask the server admin": the member's own report, closed because Look for a better copy found none. */
+  canAsk: boolean
   /** The status badge's second line: why a closed report closed. */
   statusSub: string | null
   /** The server admin's note, for the member who reported it once it is fixed or closed; plain text. */
@@ -58,8 +60,8 @@ export interface SelectedTitle {
   openReport: { id: string; problem: string; status: ProblemReportStatus; since: string; yours: boolean } | null
   /** The member's last play of it, which names the player the sheet asks about. */
   lastPlay: LastPlay | null
-  /** Whether "Episodes are missing" reads Sonarr and looks for them: a show or episode, with Sonarr set up. */
-  looksForMissing: boolean
+  /** Which fixers are set up, for what the send button says (`consequence`). */
+  fixers: { radarr: boolean; sonarr: boolean }
 }
 
 export interface ReportPageData {
@@ -72,14 +74,23 @@ export interface ReportPageData {
   selected: SelectedTitle | { error: string } | null
 }
 
+/** What a fix that worked did, in the member's words. */
+const FIXED_WORDS: Record<FixAction, string> = {
+  BETTER_COPY: "A better copy is on the server now",
+  LOOK_FOR_MISSING: "The missing episodes are on the server now",
+  REFRESH: "The details are refreshed",
+}
+
 /** The latest step in the member's words, and why a closed report closed. */
 function latestWords(event: { kind: string; data: unknown } | undefined, own: boolean): { words: string; statusSub: string | null } {
   if (event?.kind === "FIXED") {
-    const byFix = fixedEventDataSchema.safeParse(event.data).data?.reason === "fix"
-    return { words: byFix ? "The missing episodes are on the server now" : "The server admin fixed it", statusSub: null }
+    const fixed = fixedEventDataSchema.safeParse(event.data).data
+    return { words: fixed?.reason === "fix" && fixed.action ? FIXED_WORDS[fixed.action] : "The server admin fixed it", statusSub: null }
   }
+  if (event?.kind === "REOPENED") return { words: own ? "You sent it to the server admin" : "It's with the server admin now", statusSub: null }
   const closed = event?.kind === "CLOSED" ? closedEventDataSchema.safeParse(event.data) : null
   if (closed?.success && closed.data.reason === "admin") return { words: "The server admin closed it", statusSub: "By the server admin" }
+  if (closed?.success && closed.data.reason === "no_better_copy") return { words: "We looked, but there's no better copy right now", statusSub: "No better copy right now" }
   if (closed?.success) {
     // A follower didn't cancel it, so say who did without naming them
     return own ? { words: "You cancelled it", statusSub: "Cancelled" } : { words: "The member who reported it cancelled it", statusSub: "By the member who reported it" }
@@ -97,7 +108,7 @@ export async function listMemberReports(userId: string): Promise<ReportRow[]> {
       id: true, reporterId: true, problem: true, status: true, title: true, year: true, showTitle: true, seasonNumber: true,
       episodeNumber: true, createdAt: true, memberNote: true, action: true,
       events: {
-        where: { OR: [{ kind: { in: ["CLOSED", "FIXED"] } }, { kind: "ALSO_REPORTED", actorUserId: userId }] },
+        where: { OR: [{ kind: { in: ["CLOSED", "FIXED", "REOPENED"] } }, { kind: "ALSO_REPORTED", actorUserId: userId }] },
         orderBy: { createdAt: "desc" },
         take: 1,
         select: { kind: true, data: true, createdAt: true },
@@ -116,6 +127,7 @@ export async function listMemberReports(userId: string): Promise<ReportRow[]> {
       status: row.status,
       latest: { words, at: (event?.createdAt ?? row.createdAt).toISOString() },
       canCancel: own && CANCELLABLE.has(row.status),
+      canAsk: own && row.status === "CLOSED" && event?.kind === "CLOSED" && closedEventDataSchema.safeParse(event.data).data?.reason === "no_better_copy",
       statusSub: fixing ? FIX_WORDS[fixing].running : statusSub,
       // Written for the member who reported it; followers see the status only
       note: own ? row.memberNote : null,
@@ -132,7 +144,7 @@ async function selectTitle(userId: string, plexUserId: string | null, ratingKey:
   const member = await readMemberItem(userId, ratingKey)
   if (!member.ok) return { error: member.reason === "UNAVAILABLE" ? UNAVAILABLE : NOT_IN_LIBRARIES }
   const { item, server } = member
-  const [episodes, open, lastPlay, sonarr] = await Promise.all([
+  const [episodes, open, lastPlay, sonarr, radarr] = await Promise.all([
     item.type === "show" ? getPlexShowEpisodes(server, item.ratingKey) : null,
     prisma.problemReport.findUnique({
       where: { activeKey: titleKeyOf(item) },
@@ -140,6 +152,7 @@ async function selectTitle(userId: string, plexUserId: string | null, ratingKey:
     }),
     memberLastPlay(plexUserId, item),
     getActiveService("sonarr"),
+    getActiveService("radarr"),
   ])
   return {
     ratingKey: item.ratingKey,
@@ -152,7 +165,7 @@ async function selectTitle(userId: string, plexUserId: string | null, ratingKey:
       ? { id: open.id, problem: problemLabel(open.problem), status: open.status, since: open.updatedAt.toISOString(), yours: open.reporterId === userId || open.events.length > 0 }
       : null,
     lastPlay,
-    looksForMissing: item.type !== "movie" && sonarr !== null,
+    fixers: { radarr: radarr !== null, sonarr: sonarr !== null },
   }
 }
 

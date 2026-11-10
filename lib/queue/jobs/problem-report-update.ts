@@ -34,10 +34,14 @@ type UpdateJob = Pick<Job<JobPayloadMap[typeof JOB_TYPES.PROBLEM_REPORT_UPDATE]>
 
 type UpdateSkip = "CHANGED" | "BOT_DISABLED" | "NOT_LINKED" | "DMS_CLOSED"
 
-/** Who ended the report, from its last FIXED or CLOSED event. */
-function endedBy(event: { kind: string; data: unknown } | undefined): MemberUpdate["by"] {
-  if (event?.kind === "FIXED") return fixedEventDataSchema.safeParse(event.data).data?.reason === "fix" ? "fix" : "admin"
-  return closedEventDataSchema.safeParse(event?.data).data?.reason === "cancelled" ? "reporter" : "admin"
+/** Who ended the report, and with which fix, from its last FIXED or CLOSED event. */
+function endedBy(event: { kind: string; data: unknown } | undefined): Pick<MemberUpdate, "by" | "action"> {
+  if (event?.kind === "FIXED") {
+    const fixed = fixedEventDataSchema.safeParse(event.data).data
+    return fixed?.reason === "fix" ? { by: "fix", action: fixed.action } : { by: "admin" }
+  }
+  const reason = closedEventDataSchema.safeParse(event?.data).data?.reason
+  return reason === "cancelled" ? { by: "reporter" } : reason === "no_better_copy" ? { by: "fix", action: "BETTER_COPY" } : { by: "admin" }
 }
 
 /** Sends one member's update; see the module comment. @internal */
@@ -67,7 +71,7 @@ export async function processProblemReportUpdate(job: UpdateJob, token?: string)
   }
 
   const own = report.reporterId === userId
-  const text = memberUpdateText({ own, status, by: endedBy(report.events[0]), title: reportTitle(report), hasNote: report.memberNote !== null }, getBaseUrl())
+  const text = memberUpdateText({ own, status, ...endedBy(report.events[0]), title: reportTitle(report), hasNote: report.memberNote !== null }, getBaseUrl())
   try {
     await sendDiscordDirectMessage(discord.discordUserId, text, AbortSignal.any([AbortSignal.timeout(SEND_LIMIT_MS), shutdownSignal]))
   } catch (error) {

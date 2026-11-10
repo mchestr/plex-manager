@@ -55,7 +55,7 @@ describePg('reportProblem on PostgreSQL', (databaseUrl) => {
     jest.mocked(readMemberItem).mockResolvedValue({
       ok: true,
       server: SERVER,
-      item: { ratingKey: '555', type: 'movie', title: 'Heat', year: 1995, guid: GUID, ids: {}, librarySectionId: '1', parts: [], locations: [] },
+      item: { ratingKey: '555', type: 'movie', title: 'Heat', year: 1995, guid: GUID, ids: {}, librarySectionId: '1', media: [], locations: [] },
     })
   })
 

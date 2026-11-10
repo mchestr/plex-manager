@@ -9,8 +9,9 @@
 
 import { getServerSession } from 'next-auth'
 
-import { cancelProblemReport, followProblemReport, reportProblem } from '@/actions/problem-reports'
+import { askServerAdmin, cancelProblemReport, followProblemReport, reportProblem } from '@/actions/problem-reports'
 import { hasEntitlement } from '@/lib/actions/entitlement'
+import * as askAdmin from '@/lib/problem-reports/ask-admin'
 import * as service from '@/lib/problem-reports/service'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
@@ -25,6 +26,7 @@ jest.mock('@/lib/problem-reports/service', () => ({
   followProblemReport: jest.fn(),
   cancelProblemReport: jest.fn(),
 }))
+jest.mock('@/lib/problem-reports/ask-admin', () => ({ askServerAdmin: jest.fn() }))
 
 const REPORT_ID = 'c0ffee00000000000000000000'
 
@@ -47,7 +49,7 @@ describe('reportProblem', () => {
 
     await expect(reportProblem({ ratingKey: '555', problem: 'wont_start' })).resolves.toEqual({
       success: true,
-      data: { reportId: REPORT_ID, outcome: 'joined', answer: null },
+      data: { reportId: REPORT_ID, outcome: 'joined', answer: null, action: null },
     })
     expect(service.reportProblem).toHaveBeenCalledWith(expect.objectContaining({ userId: 'member-1', ratingKey: '555', problem: 'wont_start', note: null }))
   })
@@ -58,8 +60,18 @@ describe('reportProblem', () => {
 
     await expect(reportProblem({ ratingKey: '6999', problem: 'missing_episodes' })).resolves.toEqual({
       success: true,
-      data: { reportId: null, outcome: 'answered', answer },
+      data: { reportId: null, outcome: 'answered', answer, action: null },
     })
+  })
+
+  it('says which fix started, and passes on a report the member sends anyway', async () => {
+    jest.mocked(service.reportProblem).mockResolvedValue({ ok: true, outcome: 'fixing', reportId: REPORT_ID, action: 'BETTER_COPY' })
+
+    await expect(reportProblem({ ratingKey: '555', problem: 'blurry', toAdmin: true })).resolves.toEqual({
+      success: true,
+      data: { reportId: REPORT_ID, outcome: 'fixing', answer: null, action: 'BETTER_COPY' },
+    })
+    expect(service.reportProblem).toHaveBeenCalledWith(expect.objectContaining({ problem: 'blurry', toAdmin: true }))
   })
 
   it('says when the member can report again after a rate limit', async () => {
@@ -103,6 +115,32 @@ describe('cancelProblemReport', () => {
       success: false,
       code: 'NOT_FOUND',
       error: "This report can't be cancelled now.",
+    })
+  })
+})
+
+describe('askServerAdmin', () => {
+  it('puts the report back with the server admin', async () => {
+    jest.mocked(askAdmin.askServerAdmin).mockResolvedValue({ ok: true, reportId: REPORT_ID })
+
+    await expect(askServerAdmin({ reportId: REPORT_ID })).resolves.toEqual({ success: true, data: null })
+    expect(askAdmin.askServerAdmin).toHaveBeenCalledWith({ userId: 'member-1', reportId: REPORT_ID })
+  })
+
+  it('needs an active membership, since the admins are alerted', async () => {
+    jest.mocked(hasEntitlement).mockResolvedValue(false)
+
+    await expect(askServerAdmin({ reportId: REPORT_ID })).resolves.toMatchObject({ success: false, code: 'NOT_ENTITLED' })
+    expect(askAdmin.askServerAdmin).not.toHaveBeenCalled()
+  })
+
+  it("says a report that can't go back to the server admin can't now", async () => {
+    jest.mocked(askAdmin.askServerAdmin).mockResolvedValue({ ok: false, refusal: 'NOT_FOUND' })
+
+    await expect(askServerAdmin({ reportId: REPORT_ID })).resolves.toEqual({
+      success: false,
+      code: 'NOT_FOUND',
+      error: "This report can't go to the server admin now.",
     })
   })
 })

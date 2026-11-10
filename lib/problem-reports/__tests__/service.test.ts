@@ -13,6 +13,7 @@ import { Prisma } from '@/lib/generated/prisma/client'
 import { readMemberItem } from '@/lib/problem-reports/access'
 import { queueReportAlert } from '@/lib/problem-reports/alerts'
 import { readEvidence } from '@/lib/problem-reports/evidence'
+import { decideBetterCopyForMember } from '@/lib/problem-reports/report-better-copy'
 import { decideMissingForMember } from '@/lib/problem-reports/report-missing'
 import { startFix } from '@/lib/problem-reports/run'
 import { cancelProblemReport, followProblemReport, reportProblem } from '@/lib/problem-reports/service'
@@ -23,6 +24,7 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 jest.mock('@/lib/problem-reports/access', () => ({ readMemberItem: jest.fn() }))
 jest.mock('@/lib/problem-reports/evidence', () => ({ readEvidence: jest.fn() }))
 jest.mock('@/lib/problem-reports/alerts', () => ({ queueReportAlert: jest.fn() }))
+jest.mock('@/lib/problem-reports/report-better-copy', () => ({ decideBetterCopyForMember: jest.fn() }))
 jest.mock('@/lib/problem-reports/report-missing', () => ({ decideMissingForMember: jest.fn() }))
 jest.mock('@/lib/problem-reports/run', () => ({ startFix: jest.fn() }))
 jest.mock('@/lib/problem-reports/updates', () => ({ queueMemberUpdates: jest.fn() }))
@@ -45,7 +47,7 @@ const EPISODE: PlexItemMetadata = {
   showTitle: 'The Office',
   seasonNumber: 1,
   episodeNumber: 1,
-  parts: [],
+  media: [],
   locations: [],
 }
 const MOVIE: PlexItemMetadata = { ...EPISODE, ratingKey: '555', type: 'movie', title: 'Heat', year: 1995, guid: 'plex://movie/heat', showTitle: undefined, seasonNumber: undefined, episodeNumber: undefined }
@@ -65,6 +67,7 @@ beforeEach(() => {
   jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: EPISODE, server: SERVER })
   prismaMock.problemReport.create.mockResolvedValue({ id: 'report-1' } as never)
   jest.mocked(readEvidence).mockResolvedValue(EVIDENCE)
+  jest.mocked(decideBetterCopyForMember).mockResolvedValue({ startsFix: false, reason: 'NO_RADARR' })
 })
 
 describe('reportProblem', () => {
@@ -305,7 +308,7 @@ describe('reportProblem for missing episodes', () => {
   it("files an episode's report on its show and starts Look for the episodes instead of alerting the admins", async () => {
     jest.mocked(decideMissingForMember).mockResolvedValue({ startsFix: true })
 
-    expect(await missing()).toEqual({ ok: true, outcome: 'fixing', reportId: 'report-1' })
+    expect(await missing()).toEqual({ ok: true, outcome: 'fixing', reportId: 'report-1', action: 'LOOK_FOR_MISSING' })
     expect(readMemberItem).toHaveBeenLastCalledWith('member-1', '6999')
     expect(decideMissingForMember).toHaveBeenCalledWith(SERVER, SHOW, expect.any(Date))
     expect(prismaMock.problemReport.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ plexRatingKey: '6999', titleKey: 'plex://show/office' }) }))
@@ -329,11 +332,62 @@ describe('reportProblem for missing episodes', () => {
     expect(startFix).not.toHaveBeenCalled()
   })
 
+  it('files it for the admins without reading Sonarr when the member sends it anyway', async () => {
+    expect(await reportProblem({ userId: 'member-1', ratingKey: '7001', problem: 'missing_episodes', note: null, toAdmin: true })).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
+    expect(decideMissingForMember).not.toHaveBeenCalled()
+    expect(queueReportAlert).toHaveBeenCalledWith('report-1')
+  })
+
   it("refuses an episode whose show it can't find", async () => {
     jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: { ...EPISODE, grandparentRatingKey: undefined }, server: SERVER })
 
     expect(await missing()).toEqual({ ok: false, refusal: 'NOT_FOUND' })
     expect(decideMissingForMember).not.toHaveBeenCalled()
+  })
+})
+
+describe('reportProblem for a blurry title', () => {
+  const SHOW: PlexItemMetadata = { ...EPISODE, ratingKey: '6999', type: 'show', title: 'The Office', guid: 'plex://show/office' }
+  const blurry = (overrides: Partial<Parameters<typeof reportProblem>[0]> = {}) => reportProblem({ userId: 'member-1', ratingKey: '555', problem: 'blurry', note: null, ...overrides })
+
+  beforeEach(() => {
+    jest.mocked(readMemberItem).mockImplementation(async (_userId, ratingKey) => ({ ok: true, item: ratingKey === '6999' ? SHOW : MOVIE, server: SERVER }))
+    jest.mocked(startFix).mockResolvedValue({ ok: true, runToken: 1 })
+  })
+
+  it('starts Look for a better copy when the profile wants one, instead of alerting the admins', async () => {
+    jest.mocked(decideBetterCopyForMember).mockResolvedValue({ startsFix: true })
+
+    expect(await blurry()).toEqual({ ok: true, outcome: 'fixing', reportId: 'report-1', action: 'BETTER_COPY' })
+    expect(decideBetterCopyForMember).toHaveBeenCalledWith(SERVER, '555', EVIDENCE)
+    expect(startFix).toHaveBeenCalledWith({ reportId: 'report-1', action: 'BETTER_COPY', trigger: 'automatic', actorUserId: 'member-1' })
+    expect(queueReportAlert).not.toHaveBeenCalled()
+  })
+
+  it('answers that this is the best copy the server keeps, and files nothing', async () => {
+    jest.mocked(decideBetterCopyForMember).mockResolvedValue({ answer: { kind: 'BEST_COPY' } })
+
+    expect(await blurry()).toEqual({ ok: true, outcome: 'answered', reportId: null, answer: { kind: 'BEST_COPY' } })
+    expect(prismaMock.problemReport.create).not.toHaveBeenCalled()
+  })
+
+  it("sends it to the admins with why when the app can't look", async () => {
+    jest.mocked(decideBetterCopyForMember).mockResolvedValue({ startsFix: false, reason: 'TRANSCODED' })
+
+    expect(await blurry()).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({ data: { reportId: 'report-1', kind: 'TO_ADMIN', data: { reason: 'TRANSCODED' } } })
+    expect(queueReportAlert).toHaveBeenCalledWith('report-1')
+  })
+
+  it('files it for the admins without checking when the member sends it anyway', async () => {
+    expect(await blurry({ toAdmin: true })).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
+    expect(decideBetterCopyForMember).not.toHaveBeenCalled()
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves a whole show to the admins, since a show has no file', async () => {
+    expect(await blurry({ ratingKey: '6999' })).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
+    expect(decideBetterCopyForMember).not.toHaveBeenCalled()
   })
 })
 

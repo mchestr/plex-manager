@@ -7,13 +7,13 @@ import { useState } from "react"
 import { ReportAlready } from "@/components/problem-reports/report-already"
 import { ReportKindStep } from "@/components/problem-reports/report-kind-step"
 import { ReportProblemStep } from "@/components/problem-reports/report-problem-step"
-import { ReportSent, type SentOutcome } from "@/components/problem-reports/report-sent"
+import { ReportSent, type SentOutcome, type SentRequest } from "@/components/problem-reports/report-sent"
 import { StepHeading } from "@/components/problem-reports/step-heading"
 import { Sheet, SheetContent, SheetDescription, SheetHeader } from "@/components/ui/sheet"
 import type { SelectedTitle } from "@/lib/member/problem-reports"
 import type { ProblemKind } from "@/lib/problem-reports/taxonomy"
 
-type Step = { at: "already" } | { at: "kind" } | { at: "problem"; kind: ProblemKind } | { at: "sent"; sent: SentOutcome }
+type Step = { at: "already" } | { at: "kind" } | { at: "problem"; kind: ProblemKind } | { at: "sent"; sent: SentOutcome; request: SentRequest }
 
 interface ReportSheetProps {
   selected: SelectedTitle | { error: string }
@@ -58,10 +58,13 @@ export function ReportSheet({ selected, closeHref }: ReportSheetProps) {
                 selected={selected}
                 kind={step.kind}
                 onBack={() => setStep({ at: "kind" })}
-                onSent={(sent) => setStep({ at: "sent", sent })}
+                onSent={(sent, request) => setStep({ at: "sent", sent, request })}
               />
             )}
-            {step.at === "sent" && <ReportSent sent={step.sent} onDone={close} />}
+            {step.at === "sent" && (
+              // A new outcome is a new step, so its heading takes focus
+              <ReportSent key={step.sent.outcome} sent={step.sent} request={step.request} onSent={(sent) => setStep({ ...step, sent })} onDone={close} />
+            )}
           </>
         )}
       </SheetContent>

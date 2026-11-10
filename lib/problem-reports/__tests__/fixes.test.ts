@@ -34,13 +34,18 @@ describe("the fixes for a report", () => {
   it("points a problem to its fix when it is one that runs", () => {
     expect(suggestedFix("missing_episodes")).toBe("LOOK_FOR_MISSING")
     expect(suggestedFix("wrong_details")).toBe("REFRESH")
+    expect(suggestedFix("blurry")).toBe("BETTER_COPY")
     expect(suggestedFix("wont_start")).toBeNull()
     expect(suggestedFix("retired_code")).toBeNull()
   })
 
-  it("offers Look for the episodes only for shows and episodes", () => {
-    expect(fixesFor("movie")).toEqual(["REFRESH"])
+  it("offers Look for the episodes only for shows and episodes, and Look for a better copy only for a title with a file", () => {
+    expect(fixesFor("movie")).toEqual(["BETTER_COPY", "REFRESH"])
     expect(fixesFor("show")).toEqual(["LOOK_FOR_MISSING", "REFRESH"])
-    expect(fixesFor("episode")).toEqual(["LOOK_FOR_MISSING", "REFRESH"])
+    expect(fixesFor("episode")).toEqual(["BETTER_COPY", "LOOK_FOR_MISSING", "REFRESH"])
+  })
+
+  it("counts Look for a better copy as a search, not as a file replacement", () => {
+    expect(fixTraits("BETTER_COPY")).toEqual({ searches: true, replacesFile: false })
   })
 })

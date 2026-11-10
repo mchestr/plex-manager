@@ -6,18 +6,30 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { cancelProblemReport } from '@/actions/problem-reports'
+import { askServerAdmin, cancelProblemReport } from '@/actions/problem-reports'
 import { ReportList } from '@/components/problem-reports/report-list'
 import type { ReportRow } from '@/lib/member/problem-reports'
 
-jest.mock('@/actions/problem-reports', () => ({ cancelProblemReport: jest.fn() }))
+jest.mock('@/actions/problem-reports', () => ({ cancelProblemReport: jest.fn(), askServerAdmin: jest.fn() }))
 const mockShowSuccess = jest.fn()
-jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: mockShowSuccess, showError: jest.fn() }) }))
+const mockShowError = jest.fn()
+jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }) }))
 
 const ROWS: ReportRow[] = [
-  { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: '2026-11-09T15:00:00.000Z' }, canCancel: true, statusSub: null, note: null },
-  { id: 'followed', title: 'Up (2009)', problem: 'Buffers a lot', status: 'WITH_ADMIN', latest: { words: "You're following it", at: '2026-11-08T15:00:00.000Z' }, canCancel: false, statusSub: null, note: null },
-  { id: 'closed', title: 'Alien (1979)', problem: 'Blurry or low quality', status: 'CLOSED', latest: { words: 'You cancelled it', at: '2026-11-07T15:00:00.000Z' }, canCancel: false, statusSub: 'Cancelled', note: null },
+  { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: '2026-11-09T15:00:00.000Z' }, canCancel: true, canAsk: false, statusSub: null, note: null },
+  { id: 'followed', title: 'Up (2009)', problem: 'Buffers a lot', status: 'WITH_ADMIN', latest: { words: "You're following it", at: '2026-11-08T15:00:00.000Z' }, canCancel: false, canAsk: false, statusSub: null, note: null },
+  { id: 'closed', title: 'Alien (1979)', problem: 'Blurry or low quality', status: 'CLOSED', latest: { words: 'You cancelled it', at: '2026-11-07T15:00:00.000Z' }, canCancel: false, canAsk: false, statusSub: 'Cancelled', note: null },
+  {
+    id: 'none',
+    title: 'Heat (1995)',
+    problem: 'Blurry or low quality',
+    status: 'CLOSED',
+    latest: { words: "We looked, but there's no better copy right now", at: '2026-11-06T15:00:00.000Z' },
+    canCancel: false,
+    canAsk: true,
+    statusSub: 'No better copy right now',
+    note: null,
+  },
   {
     id: 'answered',
     title: 'Dune (2021)',
@@ -25,6 +37,7 @@ const ROWS: ReportRow[] = [
     status: 'CLOSED',
     latest: { words: 'The server admin closed it', at: '2026-11-06T15:00:00.000Z' },
     canCancel: false,
+    canAsk: false,
     statusSub: 'By the server admin',
     note: 'This is the only copy.\nA better one comes out in March.',
   },
@@ -65,6 +78,29 @@ describe('ReportList', () => {
 
     expect(cancelProblemReport).toHaveBeenCalledWith({ reportId: 'own' })
     expect(mockShowSuccess).toHaveBeenCalledWith('Report cancelled')
+  })
+
+  it('asks the server admin about a report that found no better copy', async () => {
+    const user = userEvent.setup()
+    jest.mocked(askServerAdmin).mockResolvedValue({ success: true, data: null })
+    render(<ReportList rows={ROWS} />)
+
+    expect(screen.getByTestId('report-row-status-none')).toHaveTextContent('No better copy right now')
+    expect(screen.queryByTestId('report-ask-own')).not.toBeInTheDocument()
+    await user.click(screen.getByTestId('report-ask-none'))
+
+    expect(askServerAdmin).toHaveBeenCalledWith({ reportId: 'none' })
+    expect(mockShowSuccess).toHaveBeenCalledWith('Sent to the server admin')
+  })
+
+  it("says why a report couldn't go to the server admin", async () => {
+    const user = userEvent.setup()
+    jest.mocked(askServerAdmin).mockResolvedValue({ success: false, code: 'NOT_FOUND', error: "This report can't go to the server admin now." })
+    render(<ReportList rows={ROWS} />)
+
+    await user.click(screen.getByTestId('report-ask-none'))
+
+    expect(mockShowError).toHaveBeenCalledWith("This report can't go to the server admin now.")
   })
 
   it('says when there are no reports', () => {

@@ -94,6 +94,9 @@ const TRANSCODE_TIP: ReadonlySet<ProblemCode> = new Set(["blurry", "glitches"])
 /** Every code, for `z.enum`. */
 export const PROBLEM_CODES = Object.keys(PROBLEMS) as [ProblemCode, ...ProblemCode[]]
 
+/** Whether a stored or sent code is one the taxonomy still has. */
+export const isProblemCode = (value: string): value is ProblemCode => Object.hasOwn(PROBLEMS, value)
+
 /** The problems of one kind, in order. */
 export function problemsOf(kind: ProblemKind): { code: ProblemCode; label: string }[] {
   return PROBLEM_CODES.filter((code) => PROBLEMS[code].kind === kind).map((code) => ({ code, label: PROBLEMS[code].label }))

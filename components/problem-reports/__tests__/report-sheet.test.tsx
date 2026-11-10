@@ -17,7 +17,7 @@ jest.mock('@/actions/problem-reports', () => ({ reportProblem: jest.fn(), follow
 const mockShowError = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showError: mockShowError, showSuccess: jest.fn() }) }))
 
-const MOVIE: SelectedTitle = { ratingKey: '555', type: 'movie', title: 'Heat (1995)', episodes: null, openReport: null, lastPlay: null, looksForMissing: false }
+const MOVIE: SelectedTitle = { ratingKey: '555', type: 'movie', title: 'Heat (1995)', episodes: null, openReport: null, lastPlay: null, fixers: { radarr: false, sonarr: false } }
 const SHOW: SelectedTitle = {
   ratingKey: '6999',
   type: 'show',
@@ -25,7 +25,7 @@ const SHOW: SelectedTitle = {
   episodes: [{ ratingKey: '7001', label: 'S1E1: Pilot' }],
   openReport: null,
   lastPlay: null,
-  looksForMissing: false,
+  fixers: { radarr: false, sonarr: false },
 }
 
 beforeEach(() => {
@@ -36,7 +36,7 @@ beforeEach(() => {
 describe('ReportSheet', () => {
   it('sends a problem to the server admin from the two steps', async () => {
     const user = userEvent.setup()
-    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-1', outcome: 'reported', answer: null } })
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-1', outcome: 'reported', answer: null, action: null } })
     render(<ReportSheet selected={MOVIE} closeHref="/report?q=heat" />)
 
     expect(screen.getByTestId('report-sheet-title')).toHaveTextContent('Heat (1995)')
@@ -71,7 +71,7 @@ describe('ReportSheet', () => {
 
   it("reports a show's episode, and Back returns to step 1", async () => {
     const user = userEvent.setup()
-    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-2', outcome: 'joined', answer: null } })
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-2', outcome: 'joined', answer: null, action: null } })
     render(<ReportSheet selected={SHOW} closeHref="/report" />)
 
     expect(screen.getByTestId('report-kind-episodes')).toBeInTheDocument()
@@ -91,7 +91,7 @@ describe('ReportSheet', () => {
 
   it("asks whether anything else plays on the member's player, and sends the answer", async () => {
     const user = userEvent.setup()
-    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-3', outcome: 'reported', answer: null } })
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-3', outcome: 'reported', answer: null, action: null } })
     render(<ReportSheet selected={{ ...MOVIE, lastPlay: { player: 'Living Room', transcoded: false, at: '2026-11-08T20:00:00.000Z' } }} closeHref="/report" />)
 
     await user.click(screen.getByTestId('report-kind-playback'))
@@ -107,7 +107,7 @@ describe('ReportSheet', () => {
 
   it("asks about a show's player for the whole show only, since another episode's last play may differ", async () => {
     const user = userEvent.setup()
-    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-4', outcome: 'reported', answer: null } })
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-4', outcome: 'reported', answer: null, action: null } })
     render(<ReportSheet selected={{ ...SHOW, lastPlay: { player: 'Living Room', transcoded: false, at: '2026-11-08T20:00:00.000Z' } }} closeHref="/report" />)
 
     await user.click(screen.getByTestId('report-kind-playback'))
@@ -124,8 +124,8 @@ describe('ReportSheet', () => {
 
   it("looks for missing episodes, and says a fix started", async () => {
     const user = userEvent.setup()
-    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-5', outcome: 'fixing', answer: null } })
-    render(<ReportSheet selected={{ ...SHOW, looksForMissing: true }} closeHref="/report" />)
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-5', outcome: 'fixing', answer: null, action: 'LOOK_FOR_MISSING' } })
+    render(<ReportSheet selected={{ ...SHOW, fixers: { radarr: false, sonarr: true } }} closeHref="/report" />)
 
     await user.click(screen.getByTestId('report-kind-episodes'))
     await user.click(within(screen.getByTestId('report-problem-missing_episodes')).getByText('Episodes are missing'))
@@ -141,9 +141,9 @@ describe('ReportSheet', () => {
     const user = userEvent.setup()
     jest.mocked(reportProblem).mockResolvedValueOnce({
       success: true,
-      data: { reportId: null, outcome: 'answered', answer: { kind: 'NOT_ON_SERVER', seasons: [3], requestHref: 'https://requests.example.com/tv/2316' } },
+      data: { reportId: null, outcome: 'answered', answer: { kind: 'NOT_ON_SERVER', seasons: [3], requestHref: 'https://requests.example.com/tv/2316' }, action: null },
     })
-    render(<ReportSheet selected={{ ...SHOW, looksForMissing: true }} closeHref="/report" />)
+    render(<ReportSheet selected={{ ...SHOW, fixers: { radarr: false, sonarr: true } }} closeHref="/report" />)
 
     await user.click(screen.getByTestId('report-kind-episodes'))
     await user.click(within(screen.getByTestId('report-problem-missing_episodes')).getByText('Episodes are missing'))
@@ -157,9 +157,9 @@ describe('ReportSheet', () => {
     const user = userEvent.setup()
     jest.mocked(reportProblem).mockResolvedValueOnce({
       success: true,
-      data: { reportId: null, outcome: 'answered', answer: { kind: 'NOT_AIRED', season: 2, episode: 6, airsAt: '2026-11-14T20:00:00Z' } },
+      data: { reportId: null, outcome: 'answered', answer: { kind: 'NOT_AIRED', season: 2, episode: 6, airsAt: '2026-11-14T20:00:00Z' }, action: null },
     })
-    render(<ReportSheet selected={{ ...SHOW, looksForMissing: true }} closeHref="/report" />)
+    render(<ReportSheet selected={{ ...SHOW, fixers: { radarr: false, sonarr: true } }} closeHref="/report" />)
 
     await user.click(screen.getByTestId('report-kind-episodes'))
     await user.click(within(screen.getByTestId('report-problem-missing_episodes')).getByText('Episodes are missing'))
@@ -169,15 +169,68 @@ describe('ReportSheet', () => {
     expect(screen.queryByTestId('report-request')).not.toBeInTheDocument()
   })
 
-  it('explains a converted play for a blurry picture, and asks nothing about the device', async () => {
+  it('explains a converted play for a blurry picture, asks nothing about the device, and sends it to the server admin', async () => {
     const user = userEvent.setup()
-    render(<ReportSheet selected={{ ...MOVIE, lastPlay: { player: 'Phone', transcoded: true, at: '2026-11-08T20:00:00.000Z' } }} closeHref="/report" />)
+    const selected = { ...MOVIE, fixers: { radarr: true, sonarr: true }, lastPlay: { player: 'Phone', transcoded: true, at: '2026-11-08T20:00:00.000Z' } }
+    render(<ReportSheet selected={selected} closeHref="/report" />)
 
     await user.click(screen.getByTestId('report-kind-picture'))
     await user.click(within(screen.getByTestId('report-problem-blurry')).getByText('Blurry or low quality'))
 
     expect(screen.getByTestId('report-transcode-tip')).toHaveTextContent('Your Plex app converted this video while you watched')
     expect(screen.queryByTestId('report-device')).not.toBeInTheDocument()
+    expect(screen.getByTestId('report-consequence')).toHaveTextContent('Still blurry with the quality set to Maximum? Send it to the server admin.')
+    expect(screen.getByTestId('report-send')).toHaveTextContent('Send to the server admin')
+  })
+
+  it('looks for a better copy of a movie Radarr has, and says it started', async () => {
+    const user = userEvent.setup()
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-6', outcome: 'fixing', answer: null, action: 'BETTER_COPY' } })
+    render(<ReportSheet selected={{ ...MOVIE, fixers: { radarr: true, sonarr: false } }} closeHref="/report" />)
+
+    await user.click(screen.getByTestId('report-kind-picture'))
+    await user.click(within(screen.getByTestId('report-problem-blurry')).getByText('Blurry or low quality'))
+    expect(screen.getByTestId('report-consequence')).toHaveTextContent("We'll look for a better copy. If there isn't one, nothing changes.")
+    expect(screen.getByTestId('report-send')).toHaveTextContent('Look for a better copy')
+    await user.click(screen.getByTestId('report-send'))
+
+    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '555', problem: 'blurry', note: '' })
+    expect(await screen.findByTestId('report-step-heading')).toHaveTextContent('Looking for a better copy')
+    expect(screen.getByTestId('report-sent-line')).toHaveTextContent("We'll look for a better copy now. The one you have keeps playing")
+  })
+
+  it("looks for a better copy of one of a show's episodes, never of the whole show", async () => {
+    const user = userEvent.setup()
+    render(<ReportSheet selected={{ ...SHOW, fixers: { radarr: false, sonarr: true } }} closeHref="/report" />)
+
+    await user.click(screen.getByTestId('report-kind-picture'))
+    await user.click(within(screen.getByTestId('report-problem-blurry')).getByText('Blurry or low quality'))
+    expect(screen.getByTestId('report-send')).toHaveTextContent('Send to the server admin')
+    await user.click(screen.getByTestId('report-episode-trigger'))
+    await user.click(await screen.findByTestId('report-episode-option-7001'))
+
+    expect(screen.getByTestId('report-send')).toHaveTextContent('Look for a better copy')
+  })
+
+  it('says the file is the best copy the server keeps, and sends it to the server admin anyway when asked', async () => {
+    const user = userEvent.setup()
+    jest
+      .mocked(reportProblem)
+      .mockResolvedValueOnce({ success: true, data: { reportId: null, outcome: 'answered', answer: { kind: 'BEST_COPY' }, action: null } })
+      .mockResolvedValueOnce({ success: true, data: { reportId: 'report-7', outcome: 'reported', answer: null, action: null } })
+    render(<ReportSheet selected={{ ...MOVIE, fixers: { radarr: true, sonarr: false } }} closeHref="/report" />)
+
+    await user.click(screen.getByTestId('report-kind-picture'))
+    await user.click(within(screen.getByTestId('report-problem-blurry')).getByText('Blurry or low quality'))
+    await user.type(screen.getByTestId('report-note'), 'Soft all through')
+    await user.click(screen.getByTestId('report-send'))
+
+    expect(await screen.findByTestId('report-sent-line')).toHaveTextContent('This is the best copy the server keeps.')
+    await user.click(screen.getByTestId('report-send-anyway'))
+
+    expect(reportProblem).toHaveBeenLastCalledWith({ ratingKey: '555', problem: 'blurry', note: 'Soft all through', toAdmin: true })
+    expect(await screen.findByTestId('report-sent-line')).toHaveTextContent('The server admin will take a look.')
+    expect(screen.queryByTestId('report-send-anyway')).not.toBeInTheDocument()
   })
 
   it('shows a refusal and stays on the step', async () => {
