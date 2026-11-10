@@ -2,14 +2,17 @@ import { mockReset } from 'jest-mock-extended'
 
 import { buildConfig, buildPlexServer, buildUser } from '@/__tests__/helpers/factories'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { memberSeesLeavingSoon } from '@/lib/data/leaving-soon'
 import { getAppShellData, initialsFor } from '@/lib/member/shell'
 import { requestRewindCardModel, type RewindCardModel } from '@/lib/rewind/home-card'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/brand', () => ({ serverName: jest.fn().mockResolvedValue('Northfield Plex') }))
 jest.mock('@/lib/rewind/home-card', () => ({ requestRewindCardModel: jest.fn() }))
+jest.mock('@/lib/data/leaving-soon', () => ({ memberSeesLeavingSoon: jest.fn() }))
 
 const cardModel = jest.mocked(requestRewindCardModel)
+const seesLeavingSoon = jest.mocked(memberSeesLeavingSoon)
 const settings = { timeZone: 'America/Chicago', locale: 'en-US' }
 const model = (state: RewindCardModel['state'], archive: RewindCardModel['archive'] = []): RewindCardModel => ({
   state,
@@ -21,8 +24,9 @@ const model = (state: RewindCardModel['state'], archive: RewindCardModel['archiv
 type Integration = Awaited<ReturnType<typeof prismaMock.discordIntegration.findUnique>>
 type Connection = Awaited<ReturnType<typeof prismaMock.discordConnection.findUnique>>
 
-function setup({ card = null as RewindCardModel | null, discord = 'off' as 'off' | 'on' | 'linked' } = {}) {
+function setup({ card = null as RewindCardModel | null, discord = 'off' as 'off' | 'on' | 'linked', leavingSoon = false as boolean | null } = {}) {
   cardModel.mockResolvedValue(card)
+  seesLeavingSoon.mockResolvedValue(leavingSoon)
   prismaMock.user.findUnique.mockResolvedValue(buildUser({ name: 'Theo Marsh', email: 'theo@example.com' }))
   prismaMock.discordIntegration.findUnique.mockResolvedValue(
     (discord === 'off' ? null : { isEnabled: true, clientId: 'id', clientSecret: 'secret' }) as Integration
@@ -79,6 +83,22 @@ describe('getAppShellData', () => {
 
     prismaMock.user.findUnique.mockResolvedValue(buildUser({ timezone: 'America/Los_Angeles' }))
     expect((await getAppShellData({ id: 'u1', isAdmin: false })).timeZoneUnset).toBe(false)
+  })
+})
+
+describe('getAppShellData leaving soon', () => {
+  it('asks with the shell budget of 300 ms, and shows the item right after Home for true', async () => {
+    setup({ leavingSoon: true, card: model({ kind: 'generating', year: 2026 }) })
+    await expect(labels()).resolves.toEqual(['Home', 'Leaving soon', 'Rewind 2026', 'Help'])
+    expect(seesLeavingSoon).toHaveBeenCalledWith('u1', 300)
+  })
+
+  it.each([
+    ['false', false],
+    ['null (plex.tv did not answer in time)', null],
+  ] as const)('hides the item for %s', async (_label, leavingSoon) => {
+    setup({ leavingSoon })
+    await expect(labels()).resolves.toEqual(['Home', 'Help'])
   })
 })
 

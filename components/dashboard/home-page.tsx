@@ -2,6 +2,7 @@ import { Suspense } from "react"
 
 import { AnnouncementsCard } from "@/components/dashboard/announcements-card"
 import { HelpCard } from "@/components/dashboard/help-card"
+import { LeavingSoonRow, LeavingSoonRowSkeleton } from "@/components/dashboard/leaving-soon-row"
 import { MembershipLinkCard } from "@/components/dashboard/membership-link-card"
 import { NewOnRow, NewOnRowSkeleton } from "@/components/dashboard/new-on-row"
 import { QuickLinks } from "@/components/dashboard/quick-links"
@@ -18,9 +19,10 @@ interface HomePageProps {
 
 /**
  * The signed-in home (P10.21), in the order of `home.html`: the greeting, the
- * RewindCard, announcements, the "New on" poster row (Plex members, P10.12),
- * quick links, watchlist sync, request limits, membership and help. Two columns from `lg`; below it one column in
- * reading order. Nothing on it animates forever (UI-15).
+ * RewindCard, announcements, the "Leaving soon" row (media cleanup, UX 9.3),
+ * the "New on" poster row (Plex members, P10.12), quick links, watchlist
+ * sync, request limits, membership and help. Two columns from `lg`; below it
+ * one column in reading order. Nothing on it animates forever (UI-15).
  */
 export async function HomePage({ userId, isAdmin }: HomePageProps) {
   // The layout's nav reads the same card model, so this is a cache hit (P6.9)
@@ -42,6 +44,12 @@ export async function HomePage({ userId, isAdmin }: HomePageProps) {
                 <RewindCard {...rewindCard} />
               </div>
             )}
+            <div className="order-3 min-w-0 empty:hidden lg:order-none">
+              {/* Its own boundary: a slow plex.tv never holds up home, and with nothing to show it renders nothing */}
+              <Suspense fallback={<LeavingSoonRowSkeleton />}>
+                <LeavingSoonRow userId={userId} serverName={data.serverName} format={data.format} />
+              </Suspense>
+            </div>
             {data.service === "plex" && (
               <div className="order-3 min-w-0 empty:hidden lg:order-none">
                 {/* Its own boundary: a slow or unreachable Plex never holds up home */}
