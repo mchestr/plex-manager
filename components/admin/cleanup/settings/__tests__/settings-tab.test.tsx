@@ -62,7 +62,7 @@ describe("SettingsTab", () => {
 
     await user.click(screen.getByTestId("settings-cleanup-defaults-edit"))
     await user.click(screen.getByTestId("settings-cleanup-members-edit"))
-    expect(screen.queryByTestId("settings-cleanup-defaults-form")).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByTestId("settings-cleanup-defaults-form")).not.toBeInTheDocument())
     expect(screen.getByTestId("settings-cleanup-members-form")).toBeInTheDocument()
 
     const event = new Event("beforeunload", { cancelable: true })

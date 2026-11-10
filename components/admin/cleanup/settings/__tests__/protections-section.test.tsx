@@ -230,7 +230,7 @@ describe("ProtectionsSection edit", () => {
     await waitFor(() => expect(screen.getByTestId("settings-cleanup-protections-cancel")).toBeEnabled())
     await user.click(screen.getByTestId("settings-cleanup-protections-cancel"))
     await user.click(await screen.findByRole("button", { name: /^Discard/ }))
-    expect(screen.queryByTestId("settings-cleanup-protections-form")).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByTestId("settings-cleanup-protections-form")).not.toBeInTheDocument())
     await edit(user)
     expect(screen.getByTestId("cleanup-protections-g8-enabled")).toHaveAttribute("aria-checked", "true")
   })

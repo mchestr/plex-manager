@@ -5,7 +5,7 @@
  * valid `returnTo` (TS 12.7 item 10), a hyphenated rule id too.
  */
 
-import { act, render, screen, within } from "@testing-library/react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { previewCleanupProtectionImpact } from "@/actions/admin/cleanup-preview"
@@ -149,7 +149,7 @@ describe("FeatureSection edit", () => {
     expect(updateCleanupSettings).toHaveBeenCalledWith({ section: "cleanup-feature", values: { enabled: false } })
     expect(mockShowSuccess).toHaveBeenCalledWith("Settings saved")
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-    expect(screen.queryByTestId("settings-cleanup-feature-form")).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByTestId("settings-cleanup-feature-form")).not.toBeInTheDocument())
   })
 
   it("keeps the form open with the refusal in a toast", async () => {
@@ -173,7 +173,7 @@ describe("FeatureSection edit", () => {
 
     await user.click(screen.getByTestId("settings-cleanup-feature-edit"))
     await user.click(screen.getByTestId("settings-cleanup-feature-cancel"))
-    expect(screen.queryByTestId("settings-cleanup-feature-form")).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByTestId("settings-cleanup-feature-form")).not.toBeInTheDocument())
 
     await user.click(screen.getByTestId("settings-cleanup-feature-edit"))
     await user.click(checkbox())
