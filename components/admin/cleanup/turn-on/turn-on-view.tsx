@@ -75,10 +75,14 @@ export function TurnOnView({ data, redis }: TurnOnViewProps) {
           <DryRunsCard data={data} f={f} />
           <LargestTable data={data} />
         </div>
-        {/* Taller than the window at 900 px: the column scrolls inside itself, so the button is always reachable */}
-        <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto" data-testid="admin-cleanup-turn-on-side">
-          <ReadyChecks checks={data.checks} ctx={ctx} idBase={idBase} />
-          <TurnOnPanel data={data} state={state} redis={redis} idBase={idBase} day={day} />
+        {/* Sticky at 16 px and never taller than the window: only the Ready card scrolls, so both cards, the button and its note stay whole (UX 4.6) */}
+        <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)]" data-testid="admin-cleanup-turn-on-side">
+          <div className="flex min-h-0 flex-col lg:overflow-y-auto" data-slot="turn-on-ready-scroll">
+            <ReadyChecks checks={data.checks} ctx={ctx} idBase={idBase} />
+          </div>
+          <div className="shrink-0">
+            <TurnOnPanel data={data} state={state} redis={redis} idBase={idBase} day={day} />
+          </div>
         </div>
       </div>
     </div>

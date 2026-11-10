@@ -136,6 +136,20 @@ test.describe('Admin media cleanup: turn on a rule', () => {
     await expect(why).toBeFocused();
   });
 
+  test('at 1440 x 900 the side column shows both cards, the button and its note whole, without an inner scroll (UX 4.6)', async ({ adminPage: page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openTurnOn(page, DRY.id);
+    const side = page.getByTestId('admin-cleanup-turn-on-side');
+    await expect(side).toBeVisible();
+    // The column itself never scrolls: nothing of the button's card is cut off
+    expect(await side.evaluate((el) => el.scrollHeight <= el.clientHeight + 1)).toBe(true);
+    const column = await side.boundingBox();
+    for (const id of ['admin-cleanup-turn-on-confirm', 'admin-cleanup-turn-on-confirm-note', 'admin-cleanup-turn-on-cancel']) {
+      const box = await page.getByTestId(id).boundingBox();
+      expect(Boolean(column && box && box.y >= column.y && box.y + box.height <= column.y + column.height + 1)).toBe(true);
+    }
+  });
+
   test('Automatic reasons: the first batch above 10 % and a live rule with no dry run', async ({ adminPage: page }) => {
     await openTurnOn(page, DRY.id, 'automatic');
 
