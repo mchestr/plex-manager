@@ -199,6 +199,8 @@ describe('the media cleanup tools', () => {
     const source = readFileSync(join(ROOT, 'lib/mcp/server.ts'), 'utf8')
     expect(source).toContain('Turning a cleanup rule on and approving a deletion batch need a person on the admin pages: no tool does them.')
     expect(source).toContain('Ask a person to check each cleanup change that a tool marks destructive.')
+    // An Automatic rule deletes with no review page (security review S-04)
+    expect(source).toContain('A rule that is already Automatic deletes its new matches at the end of their grace period with no review page')
     // Both coverage lists, the read-only one and the full one
     expect(source.split('media cleanup (rules, previews, Leaving soon').length - 1).toBe(2)
   })

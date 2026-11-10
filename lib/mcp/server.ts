@@ -58,6 +58,7 @@ const TOOL_FAILED = "The tool failed. Check the server log for its request id."
  */
 const CLEANUP_HUMAN_STEPS = [
   "Turning a cleanup rule on and approving a deletion batch need a person on the admin pages: no tool does them.",
+  "A rule that is already Automatic deletes its new matches at the end of their grace period with no review page, so a tool that widens such a rule, approves its entry batch or turns a protection off can lead to deletions.",
   "Ask a person to check each cleanup change that a tool marks destructive.",
 ]
 

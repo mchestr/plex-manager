@@ -515,6 +515,13 @@ entry batch, save settings, resume, and change an exclusion end
 (`DESTRUCTIVE_ACTIONS` in `lib/mcp/action-tools.ts`). A read-only token gets
 only the reads.
 
+A rule that is already Automatic needs no review page to delete. A full
+token can save a wider definition of such a rule, run all rules, approve
+its entry batch, or turn a global protection off. The nightly run then
+deletes the new matches at the end of their grace period (at least 7
+days for Automatic). Members can Keep the titles in that time, and each
+change has its audit row. Ask a person to check these changes.
+
 ## Limits
 
 | Limit | Value |
