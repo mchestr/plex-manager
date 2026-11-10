@@ -90,7 +90,7 @@ The confirm says the title is unavailable to everyone until a new copy downloads
 6. It waits as a better copy does, without counting the bad download's failure in the history. A search that finished and grabbed nothing goes back to the server admin: "The file was removed, and the search found nothing to replace it".
 7. It ends as a swap does, without marking the grab failed again.
 
-A step that runs again after a crash finds its ledger row and hands the report back without acting ("The fix was interrupted part way"). The file may be deleted already, and a copy that came in since would read as the bad one, so nothing is ever deleted twice; the server admin checks the title and runs the fix again if it's needed.
+A first step that runs again after a crash finds its ledger row and hands the report back without acting ("The fix was interrupted part way"). The file may be deleted already, and a copy that came in since would read as the bad one, so nothing is ever deleted twice; the server admin checks the title and runs the fix again if it's needed. The search step can run twice after a crash, which searches twice and deletes nothing.
 
 ### The file a fix acts on
 
