@@ -174,11 +174,15 @@ describe("recovery, reconcile and the plan (steps 2 to 4)", () => {
     await expect(candidatesToday(new Date(NOW))).resolves.toEqual([MOVIE.key])
   })
 
-  it("holds every candidate and stops when Overseerr failed in the prepare step (step 5.4)", async () => {
+  it("holds every candidate as planned and stops when Overseerr failed in the prepare step (step 5.4, TS 10.1 rule 6)", async () => {
+    items.set(`id-${MOVIE_2.key}`, row(MOVIE_2))
     mockPre.prepareChecks.mockResolvedValue(null)
-    prismaMock.cleanupItem.updateMany.mockResolvedValue({ count: 1 })
+    // A Postpone committed on the second row after the plan: its hold write matches no row
+    prismaMock.cleanupItem.updateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 })
     await expect(actStep(input())).resolves.toMatchObject({ outcome: "blocked", held: 1, blocks: [{ code: "sourceFailed", service: "overseerr" }] })
-    expect(prismaMock.cleanupItem.updateMany).toHaveBeenCalledWith({ where: { id: { in: [`id-${MOVIE.key}`] } }, data: { holdCode: "sourceFailed:overseerr" } })
+    for (const key of [MOVIE.key, MOVIE_2.key]) {
+      expect(prismaMock.cleanupItem.updateMany).toHaveBeenCalledWith({ where: { id: `id-${key}`, updatedAt: UPDATED }, data: { holdCode: "sourceFailed:overseerr" } })
+    }
     expect(mockPre.prepareChecks).toHaveBeenCalledWith(services, { oldestSince: Date.parse("2026-01-01T00:00:00.000Z"), g9: true, signal: undefined })
   })
 })

@@ -143,8 +143,10 @@ export async function actStep(input: ActInput): Promise<ActResult> {
   const prepared = await prepareChecks(services, { oldestSince: Math.min(...planned.map((row) => sinceOf(row, takenAt))),
     g9: ctx.settings.options.protections.g9.enabled, signal: input.signal })
   if (!prepared) {
-    const { count } = await prisma.cleanupItem.updateMany({ where: { id: { in: planned.map((row) => row.id) } }, data: { holdCode: "sourceFailed:overseerr" } })
-    return { ...result, outcome: "blocked", held: count, blocks: [...result.blocks, { code: "sourceFailed", service: "overseerr" }] }
+    // Each hold matches the row as planned (TS 10.1 rule 6): a Postpone that committed meanwhile keeps its cleared hold
+    let held = 0
+    for (const row of planned) held += (await updateRow(row, { holdCode: "sourceFailed:overseerr" })).count
+    return { ...result, outcome: "blocked", held, blocks: [...result.blocks, { code: "sourceFailed", service: "overseerr" }] }
   }
   const env: Env = { input, ctx, now, blocks, blocked, basis: new Map(rules.map((r) => [r.id, `${r.revision}:${hash}`])), compiled: new Map(),
     evals: new Map([[hash, ctx.evaluation]]), groups: new Map(), result,
