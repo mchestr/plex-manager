@@ -56,6 +56,7 @@ function editorData(overrides: Partial<CleanupEditorData["rule"]> = {}): Cleanup
     ],
     requesterOptions: [{ userId: "u1", name: "Robin Vale", status: "member", requests: 4 }],
     options: { automaticMinGraceDays: 7, defaults: { graceDays: 30, importListExclusion: true } },
+    importListCount: { movie: 169, show: 0 },
     zone: "UTC",
     initialPreview: buildPreview(),
   }

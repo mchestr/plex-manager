@@ -166,6 +166,18 @@ describe("the pickers", () => {
   })
 })
 
+describe("the import list count", () => {
+  it("counts the movies and shows whose arr record came from an import list, and is null without library data", async () => {
+    const listed = <T extends ReturnType<typeof movie>>(item: T): T => ({ ...item, arr: item.arr ? { ...item.arr, importList: true } : item.arr })
+    jest.mocked(loadNewestSnapshot).mockResolvedValue(snapshotOf([listed(movie(1, 5)), listed(movie(2, 5)), movie(3, 5), listed(show(1, 10))], { facts: FACTS }))
+
+    expect((await getCleanupRuleEditor({ level: "movie" }, AT))?.importListCount).toEqual({ movie: 2, show: 1 })
+
+    jest.mocked(loadNewestSnapshot).mockResolvedValue(null)
+    expect((await getCleanupRuleEditor({ level: "movie" }, AT))?.importListCount).toBeNull()
+  })
+})
+
 describe("the requester options", () => {
   beforeEach(() => {
     const shown = show(1, 10, { requests: [request("100"), request("200")] })

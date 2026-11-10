@@ -46,6 +46,7 @@ const DATA: CleanupEditorData = {
   globalProtections: [],
   requesterOptions: [],
   options: { automaticMinGraceDays: 7, defaults: { graceDays: 30, importListExclusion: true } },
+  importListCount: null,
   zone: "UTC",
   initialPreview: buildPreview(),
 }

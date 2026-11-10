@@ -92,6 +92,8 @@ export interface CleanupEditorData {
   /** Audited (`cleanup-requesters`). */
   requesterOptions: RequesterOption[]
   options: Pick<CleanupOptions, "automaticMinGraceDays" | "defaults">
+  /** The movies and shows of the newest library data whose arr record came from an import list (UX 5.5, 8.4 hint). Null with no library data. */
+  importListCount: { movie: number; show: number } | null
   /** The server zone, for the computed dates (UX 8.4). */
   zone: string
   initialPreview: PreviewResponse

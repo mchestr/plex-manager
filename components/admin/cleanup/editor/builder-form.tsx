@@ -243,6 +243,7 @@ export function BuilderForm(props: BuilderFormProps) {
             minGrace={editorData.options.automaticMinGraceDays}
             zone={editorData.zone}
             error={thenError}
+            importListCount={draft.level === "season" ? null : editorData.importListCount?.[draft.level]}
             onThen={(then) => dispatch({ type: "setThen", then })}
             openRequest={thenRequest}
           />

@@ -18,7 +18,8 @@ const THEN: RuleThen = { graceDays: 30, action: "movie.delete", importListExclus
 const onThen = jest.fn()
 let open: (name: "grace" | "action") => void = () => {}
 
-function Harness({ start = THEN, level = "movie", mode = "dryRun", error = null }: { start?: Partial<RuleThen>; level?: Level; mode?: Mode; error?: string | null }) {
+function Harness({ start = THEN, level = "movie", mode = "dryRun", error = null, importListCount }: { start?: Partial<RuleThen>; level?: Level; mode?: Mode
+  error?: string | null; importListCount?: number | null }) {
   const [then, setThen] = useState(start)
   const [request, setRequest] = useState<{ name: "grace" | "action" } | null>(null)
   open = (name) => setRequest({ name })
@@ -30,6 +31,7 @@ function Harness({ start = THEN, level = "movie", mode = "dryRun", error = null 
       minGrace={7}
       zone="UTC"
       error={error}
+      importListCount={importListCount}
       openRequest={request}
       onThen={(patch) => {
         onThen(patch)
@@ -65,6 +67,14 @@ describe("ThenFieldset", () => {
     ])
     expect(tid("admin-cleanup-then-plex-link")).toHaveAttribute("href", "/admin/cleanup?tab=settings&section=cleanup-plex")
     expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("names how many titles came from an import list in the exclusion hint (UX 5.5)", () => {
+    const { unmount } = render(<Harness importListCount={169} />)
+    expect(screen.getByRole("checkbox")).toHaveAccessibleDescription("Import lists do not download the movie again. 169 movies here came from an import list.")
+    unmount()
+    render(<Harness importListCount={1} start={{ ...THEN, action: "show.delete" }} level="show" />)
+    expect(screen.getByRole("checkbox")).toHaveAccessibleDescription("Import lists do not download the show again. 1 show here came from an import list.")
   })
 
   it("changes the grace period with a chip, and with Other", async () => {

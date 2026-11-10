@@ -24,7 +24,7 @@ import { requesterOptions } from "@/lib/cleanup/screens/editor/requesters"
 import { blankStart, type CleanupEditorInput, recipeStart } from "@/lib/cleanup/screens/editor/start"
 import { setUpServices } from "@/lib/cleanup/screens/settings/feature"
 import { readCleanupSettingsRow, serverZone } from "@/lib/cleanup/settings"
-import { loadNewestSnapshot } from "@/lib/cleanup/snapshot/cache"
+import { loadNewestSnapshot, type SnapshotLevel } from "@/lib/cleanup/snapshot/cache"
 import type { CleanupEditorData } from "@/lib/cleanup/types/screens"
 import { prisma } from "@/lib/prisma"
 import { auditMemberListed } from "@/lib/security/audit-log"
@@ -35,6 +35,8 @@ export type { CleanupEditorInput } from "@/lib/cleanup/screens/editor/start"
 
 const RULE_SELECT = { id: true, name: true, mode: true, revision: true, definition: true, turnedOnAt: true, stats: true } as const
 const isMode = (value: string): value is Mode => (MODES as readonly string[]).includes(value)
+/** The items of a level whose arr record carries an import list tag. */
+const fromImportList = (level: SnapshotLevel | null) => level?.items.filter((item) => item.arr?.importList === true).length ?? 0
 
 const readRule = (ruleId: string) => prisma.cleanupRule.findUnique({ where: { id: ruleId }, select: RULE_SELECT })
 type SavedRule = NonNullable<Awaited<ReturnType<typeof readRule>>>
@@ -87,6 +89,7 @@ export async function getCleanupRuleEditor(input: CleanupEditorInput, now: Date 
     globalProtections: editorGlobalProtections(level, options),
     requesterOptions: requesters,
     options: { automaticMinGraceDays: options.automaticMinGraceDays, defaults: options.defaults },
+    importListCount: snapshot ? { movie: fromImportList(snapshot.levels.movie), show: fromImportList(snapshot.levels.show) } : null,
     zone,
     initialPreview,
   }

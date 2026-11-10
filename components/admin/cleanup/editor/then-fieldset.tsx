@@ -17,7 +17,7 @@ import { Token } from "@/components/ui/token"
 import { cleanup } from "@/lib/admin/routes"
 import { ACTION_LABELS } from "@/lib/cleanup/action-words"
 import { automaticGraceMessage } from "@/lib/cleanup/editor/errors"
-import { durationWords, NOUNS } from "@/lib/cleanup/fields/words"
+import { durationWords, NOUNS, nounWord } from "@/lib/cleanup/fields/words"
 import { useFormat } from "@/lib/format-context"
 import { addDays } from "@/lib/ui/date-range"
 import { icons } from "@/lib/ui/icons"
@@ -50,6 +50,8 @@ interface ThenFieldsetProps {
   zone: string
   /** A save error of a Then part. */
   error?: string | null
+  /** The titles of the level that came from an import list, for the exclusion hint (UX 5.5). Null or 0: the hint leaves the count out. */
+  importListCount?: number | null
   onThen: (patch: Partial<RuleThen>) => void
   /** An error link to Then opens the grace or the action list (UX 7.9). A new object opens it once. */
   openRequest?: { name: "grace" | "action" } | null
@@ -64,7 +66,7 @@ interface ThenFieldsetProps {
  * Automatic floor error, and the three info lines: Plex visibility, the first
  * leave date and the mode.
  */
-export function ThenFieldset({ then, level, mode, minGrace, zone, error, onThen, openRequest }: ThenFieldsetProps) {
+export function ThenFieldset({ then, level, mode, minGrace, zone, error, importListCount, onThen, openRequest }: ThenFieldsetProps) {
   const ids = useId()
   const f = useFormat()
   const [now] = useState(() => Date.now())
@@ -190,6 +192,7 @@ export function ThenFieldset({ then, level, mode, minGrace, zone, error, onThen,
             <Label htmlFor={`${ids}-exclusion-box`}>Add an import list exclusion</Label>
             <p id={`${ids}-exclusion`} className="text-label text-muted-foreground">
               Import lists do not download the {NOUNS[level][0]} again.
+              {importListCount ? ` ${f.number(importListCount)} ${nounWord(importListCount, level)} here came from an import list.` : ""}
             </p>
           </div>
         </div>
