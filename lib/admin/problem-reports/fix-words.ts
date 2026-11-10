@@ -61,6 +61,6 @@ export const TO_ADMIN_WORDS: Record<ToAdminReason, string> = {
   NO_MATCH: "Plex's agent found nothing for the title Radarr or Sonarr has",
   WOULD_MERGE: "Another item in the library already has the right match, so matching would merge the two",
   MATCH_FAILED: "Plex didn't take the match",
-  MATCH_WRONG: "Plex's new match didn't have the right ids within a minute, so it was matched back",
+  MATCH_WRONG: "Plex's new match didn't have the right ids within a minute, so Plex was asked to match it back",
   MATCH_STUCK: "Plex's new match didn't have the right ids, and it couldn't be matched back. Check the match in Plex",
 }

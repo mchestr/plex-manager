@@ -107,13 +107,17 @@ describe("the start", () => {
     expect(matchPlexItem).not.toHaveBeenCalled()
   })
 
-  it("takes the first result when Radarr or Sonarr has no year for the title", async () => {
+  it("takes only a result with the title when Radarr or Sonarr has no year for it", async () => {
     jest.mocked(checkMatch).mockResolvedValue({ ...MOVIE_DIFFERS, expected: { ...MOVIE_DIFFERS.expected, year: null } })
     const other = { guid: "plex://movie/other", name: "Other", year: 2001 }
-    jest.mocked(searchPlexMatches).mockResolvedValue([other])
-
+    jest.mocked(searchPlexMatches).mockResolvedValue([other, HEAT])
     await runFixMatch(REPORT, START, NOW)
-    expect(matchPlexItem).toHaveBeenCalledWith(SERVER, "555", other)
+    expect(matchPlexItem).toHaveBeenCalledWith(SERVER, "555", HEAT)
+
+    jest.mocked(matchPlexItem).mockClear()
+    jest.mocked(searchPlexMatches).mockResolvedValue([other])
+    await expect(runFixMatch(REPORT, START, NOW)).resolves.toEqual({ toAdmin: "NO_MATCH" })
+    expect(matchPlexItem).not.toHaveBeenCalled()
   })
 
   it("leaves Plex alone when another item already has the match, since matching would merge the two", async () => {
