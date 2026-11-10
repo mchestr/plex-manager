@@ -21,7 +21,7 @@ import { batchPageOf, parseHistoryParams, parseLeavingParams, parseListParams, p
 import { readPeople } from "@/lib/cleanup/screens/leaving/people"
 import { displayPlan, goesByItself } from "@/lib/cleanup/screens/leaving/plan"
 import { DELETED_RULE, ruleNamer } from "@/lib/cleanup/screens/leaving/rules"
-import { arrServiceOf, failureWords, holdWords } from "@/lib/cleanup/screens/leaving/words"
+import { arrServiceOf, holdWords } from "@/lib/cleanup/screens/leaving/words"
 import type { BatchData } from "@/lib/cleanup/types/list-parts"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -97,16 +97,6 @@ describe("words", () => {
   it("names the arr app of a level", () => {
     expect(arrServiceOf("movie")).toBe("radarr")
     expect(arrServiceOf("season")).toBe("sonarr")
-  })
-
-  it("words each kind of failure code, and never shows an unknown code raw", () => {
-    expect(failureWords("sourceFailed:plex", "sonarr")).toBe("Plex did not answer")
-    expect(failureWords("sourceFailed:nas", "sonarr")).toBe("The delete failed")
-    expect(failureWords("noSeasonNumber", "sonarr")).toBe("The season has no number")
-    expect(failureWords("noArrSeason", "sonarr")).toBe("Sonarr has no such season")
-    expect(failureWords("outsideArrPath", "radarr")).toBe("The file is outside Radarr's root folders")
-    expect(failureWords("TIMEOUT", "radarr")).toBe("Radarr did not respond in time")
-    expect(failureWords("SOMETHING_NEW", "radarr")).toBe("The delete failed")
   })
 
   it("names the read time of a failed source in a hold, and no time for a source that answered", () => {

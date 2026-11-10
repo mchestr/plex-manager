@@ -45,8 +45,8 @@ import { z } from "zod"
 import type { AuditEventName } from "@/lib/audit/events"
 import type { Summarize, SummaryFormat } from "@/lib/audit/summary"
 import { type Block, BLOCK_CODES, blockLabel, blockSchema, type BlockWords, RUN_OUTCOMES } from "@/lib/cleanup/blocks"
+import { failureWords } from "@/lib/cleanup/failure-words"
 import { OUTCOME_REASONS, outcomeDetailSchema, type OutcomeWords, outcomeWords } from "@/lib/cleanup/outcomes"
-import { serviceErrorMessage, type ServiceErrorCode } from "@/lib/connections/http"
 import { STATUS } from "@/lib/ui/status"
 import { type DateStyle, formatBytes } from "@/lib/utils/format"
 import { type Level, LEVELS, MODES, SERVICES, type Service } from "@/lib/validations/cleanup-vocabulary"
@@ -93,24 +93,8 @@ const BLOCK_WORDS: BlockWords = { service: (service) => SERVICE_WORDS[service], 
 const noIds = () => ""
 const OUTCOME_WORDS: OutcomeWords = { service: (service) => SERVICE_WORDS[service], protection: noIds, condition: noIds, failure: noIds }
 
-const isService = (value: string): value is Service => (SERVICES as readonly string[]).includes(value)
-const SERVICE_ERRORS: readonly string[] = ["TIMEOUT", "ABORTED", "NETWORK", "HTTP", "REDIRECT_BLOCKED", "INVALID_RESPONSE",
-  "UPSTREAM_ERROR"] satisfies ServiceErrorCode[]
-/** The stop codes of the season checks (TS 8.9), with the cause words of TS 6.9. */
-const STOP_WORDS = new Map<string, (service: string) => string>([
-  ["noSeasonNumber", () => "The season has no number"],
-  ["noArrSeason", () => "Sonarr has no such season"],
-  ["outsideArrPath", (service) => `The file is outside ${service}'s root folders`],
-])
-
-function failure({ service, code, status }: { service: Service; code: string; status?: number }): string {
-  const name = SERVICE_WORDS[service]
-  const source = /^sourceFailed:(\w+)$/.exec(code)?.[1]
-  if (source) return isService(source) ? `${SERVICE_WORDS[source]} did not answer` : "The delete failed"
-  const stop = STOP_WORDS.get(code)
-  if (stop) return stop(name)
-  return SERVICE_ERRORS.includes(code) ? serviceErrorMessage(name, { ok: false, code, status }) : "The delete failed"
-}
+/** The failure words that Leaving soon and History read too (`lib/cleanup/failure-words.ts`). */
+const failure = ({ service, code, status }: { service: Service; code: string; status?: number }): string => failureWords(code, service, status)
 
 /** A stored block: a `Block` object or a bare code. Only a code that `BLOCK_CODES` knows, so its words are fixed. */
 function knownBlock(raw: unknown): Block | null {

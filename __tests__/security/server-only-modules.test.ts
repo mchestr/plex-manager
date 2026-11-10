@@ -36,6 +36,7 @@ const CLEANUP_SERVER_ONLY = [
   'lib/cleanup/live-facts.ts',
   'lib/cleanup/protections.ts',
   'lib/cleanup/schedule.ts',
+  'lib/cleanup/failure-words.ts',
   'lib/cleanup/snapshot/store.ts',
   'lib/cleanup/snapshot/cache.ts',
   'lib/cleanup/snapshot/read.ts',
