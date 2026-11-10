@@ -554,7 +554,8 @@ jobs:
             projects: --project=chromium --project=setup-wizard
             advisory: false
             artifact: playwright-report
-            timeout: 30
+            # The media cleanup specs took the job to about 29 minutes, near the old 30-minute stop
+            timeout: 40
           # Its own job (and database) so it runs beside "E2E Tests"; together
           # they were one 28 minute serial run.
           - name: Rewind E2E Tests
