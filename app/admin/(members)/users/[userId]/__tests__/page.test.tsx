@@ -61,6 +61,7 @@ function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeader
     lastSeenAt: null,
     lastSeenReadAt: null,
     inactivityExcluded: false,
+    swapsNeedApproval: false,
     plexAccess: 'shared',
     subscription: null,
     stripeEnabled: false,
