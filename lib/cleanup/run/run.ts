@@ -40,6 +40,7 @@ import { evaluateRule } from "@/lib/cleanup/engine/evaluate"
 import { ruleOverlaps } from "@/lib/cleanup/engine/overlap"
 import { ruleStats } from "@/lib/cleanup/engine/stats"
 import type { CompiledRule, ItemResult } from "@/lib/cleanup/engine/types"
+import { CLEANUP_JOB_OPTIONS } from "@/lib/cleanup/constants"
 import { ruleBlocks } from "@/lib/cleanup/rule-blocks"
 import { type ActResult, actStep } from "@/lib/cleanup/run/act"
 import { addNewMatches, type EntriesResult } from "@/lib/cleanup/run/entries"
@@ -64,8 +65,6 @@ const logger = createLogger("CLEANUP_RUN")
 /** A busy scheduled run or act job adds itself again this many times, 10 minutes apart (TS 8.3 step 3, 9.3). */
 export const BUSY_WAITS = 6
 export const BUSY_DELAY_MS = 10 * 60_000
-/** Every cleanup job add (TS 9.2). */
-export const CLEANUP_JOB_OPTIONS = { attempts: 1, removeOnComplete: true, removeOnFail: { age: 7 * 24 * 3600 } }
 
 export interface RunCleanupOptions { trigger: "scheduled" | "admin" | "create"; actorId: string; dryRunRuleIds?: string[]; act: boolean; entries?: boolean
   readStatus?: "complete" | "failed" | "busy"; waits?: number; signal?: AbortSignal; now?: Date }

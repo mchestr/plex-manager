@@ -14,6 +14,7 @@ import "server-only"
 
 import { randomUUID } from "node:crypto"
 
+import { CLEANUP_JOB_OPTIONS } from "@/lib/cleanup/constants"
 import { loadPreviousCompleteHeader } from "@/lib/cleanup/snapshot/store"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { jobIdOptions } from "@/lib/queue/job-id"
@@ -23,9 +24,6 @@ import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("CLEANUP_RULES")
 
-/** TS 9.2: one attempt, gone when done, a failed job stays 7 days on the Queues page. */
-const JOB_OPTIONS = { attempts: 1, removeOnComplete: true, removeOnFail: { age: 7 * 24 * 3600 } }
-
 type CleanupJob = typeof JOB_TYPES.CLEANUP_RUN | typeof JOB_TYPES.CLEANUP_READ
 
 /** Whether the add went in, and whether it joined a job with the same deduplication id. */
@@ -33,7 +31,7 @@ export type OwnAdd = { ok: true; joined: boolean } | { ok: false }
 
 async function addOwn<T extends CleanupJob>(type: T, data: JobPayloadMap[T]): Promise<OwnAdd> {
   const jobId = randomUUID()
-  const added = await enqueueFromRequest(type, data, { ...JOB_OPTIONS, ...jobIdOptions(type, data), jobId })
+  const added = await enqueueFromRequest(type, data, { ...CLEANUP_JOB_OPTIONS, ...jobIdOptions(type, data), jobId })
   if (!added.ok) {
     logger.warn("cleanup.dry_run_enqueue_failed", { type, code: added.code })
     return { ok: false }

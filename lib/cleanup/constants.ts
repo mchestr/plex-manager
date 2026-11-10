@@ -13,6 +13,8 @@ import type { Level } from "@/lib/validations/cleanup-vocabulary"
 export const NIGHTLY_PATTERN = "7 3 * * *"
 /** The Plex collection sync: hourly, at minute 41. */
 export const COLLECTIONS_PATTERN = "41 * * * *"
+/** Every cleanup job add (TS 9.2): one attempt, gone when done, a failed job kept 7 days on the Queues page. */
+export const CLEANUP_JOB_OPTIONS = { attempts: 1, removeOnComplete: true, removeOnFail: { age: 7 * 24 * 3600 } }
 
 /** Above this many items, a batch approval or an Automatic turn-on needs the typed count. */
 export const TYPED_APPROVAL_ABOVE = 50

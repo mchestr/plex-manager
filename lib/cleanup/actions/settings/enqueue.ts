@@ -24,6 +24,7 @@ import { randomUUID } from "node:crypto"
 
 import { isClaimHeld } from "@/lib/cleanup/claims"
 import { normTitle } from "@/lib/cleanup/collections/text"
+import { CLEANUP_JOB_OPTIONS } from "@/lib/cleanup/constants"
 import { readCleanupSettingsRow } from "@/lib/cleanup/settings"
 import { loadPreviousCompleteHeader } from "@/lib/cleanup/snapshot/store"
 import { prisma } from "@/lib/prisma"
@@ -35,9 +36,6 @@ import { createLogger } from "@/lib/utils/logger"
 import type { CleanupOptions } from "@/lib/validations/cleanup-options"
 
 const logger = createLogger("CLEANUP_SETTINGS")
-
-/** TS 9.2: one attempt, gone when done, a failed job stays 7 days on the Queues page. */
-const JOB_OPTIONS = { attempts: 1, removeOnComplete: true, removeOnFail: { age: 7 * 24 * 3600 } }
 
 type CleanupJob = typeof JOB_TYPES.CLEANUP_RUN | typeof JOB_TYPES.CLEANUP_READ
 
@@ -59,7 +57,7 @@ async function addOwn<T extends CleanupJob>(type: T, data: JobPayloadMap[T]): Pr
   if (!pending.ok) return refused("UPSTREAM_UNAVAILABLE")
   if (pending.value) return refused("CONFLICT")
   const jobId = randomUUID()
-  const added = await enqueueFromRequest(type, data, { ...JOB_OPTIONS, deduplication: { id }, jobId })
+  const added = await enqueueFromRequest(type, data, { ...CLEANUP_JOB_OPTIONS, deduplication: { id }, jobId })
   if (!added.ok) return refused("UPSTREAM_UNAVAILABLE")
   return added.jobId === jobId ? { ok: true } : refused("CONFLICT")
 }
@@ -107,7 +105,7 @@ export async function readNewCollections(options: CleanupOptions): Promise<boole
   const header = await loadPreviousCompleteHeader()
   const read = new Set((header?.facts?.membersRead ?? []).map(normTitle))
   if (names.every((name) => read.has(normTitle(name)))) return false
-  const queued = await enqueueFromRequest(JOB_TYPES.CLEANUP_READ, { trigger: "system", chain: false }, JOB_OPTIONS)
+  const queued = await enqueueFromRequest(JOB_TYPES.CLEANUP_READ, { trigger: "system", chain: false }, CLEANUP_JOB_OPTIONS)
   if (!queued.ok) logger.warn("cleanup.collections_read_enqueue_failed", { code: queued.code })
   return queued.ok
 }

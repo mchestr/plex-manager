@@ -20,7 +20,7 @@
 
 import "server-only"
 
-import { COLLECTIONS_PATTERN, NIGHTLY_PATTERN } from "@/lib/cleanup/constants"
+import { CLEANUP_JOB_OPTIONS, COLLECTIONS_PATTERN, NIGHTLY_PATTERN } from "@/lib/cleanup/constants"
 import { serverZone } from "@/lib/cleanup/settings"
 import { scheduleCronJob } from "@/lib/queue/client"
 import { JOB_TYPES } from "@/lib/queue/types"
@@ -34,8 +34,6 @@ export const CLEANUP_NIGHTLY_SCHEDULER_ID = "cleanup-nightly"
 export const CLEANUP_COLLECTIONS_SCHEDULER_ID = "cleanup-collections"
 
 const SCHEDULER_TIMEOUT_MS = 5000
-/** Every cleanup job add (TS 9.2): one attempt, gone when done, a failure kept 7 days on the Queues page. */
-const JOB_OPTIONS = { attempts: 1, removeOnComplete: true, removeOnFail: { age: 7 * 24 * 3600 } }
 
 export type CleanupScheduleResult = { ok: true; state: "scheduled" | "no-redis" | "e2e" } | { ok: false; code: "TIMEOUT" | "FAILED" }
 
@@ -52,14 +50,14 @@ export async function ensureCleanupSchedule(): Promise<CleanupScheduleResult> {
           JOB_TYPES.CLEANUP_READ,
           { trigger: "scheduled", chain: true },
           { pattern: NIGHTLY_PATTERN, tz },
-          JOB_OPTIONS
+          CLEANUP_JOB_OPTIONS
         ),
         scheduleCronJob(
           CLEANUP_COLLECTIONS_SCHEDULER_ID,
           JOB_TYPES.CLEANUP_COLLECTIONS,
           { reason: "scheduled" },
           { pattern: COLLECTIONS_PATTERN, tz },
-          JOB_OPTIONS
+          CLEANUP_JOB_OPTIONS
         ),
       ])
       return tz
