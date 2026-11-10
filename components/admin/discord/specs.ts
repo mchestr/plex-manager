@@ -22,6 +22,7 @@ export const COMMAND_TYPE_LABELS: Record<string, string> = {
   SELECTION: "Selection",
   LINK_REQUEST: "Link request",
   HELP: "Help",
+  PROBLEM_REPORT: "Problem report",
 }
 
 const MARK_COMMAND_LABELS: Record<string, string> = {

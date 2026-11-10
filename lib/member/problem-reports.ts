@@ -10,13 +10,14 @@
 
 import "server-only"
 
-import { getPlexShowEpisodes, searchPlexMedia } from "@/lib/connections/plex"
+import { getPlexShowEpisodes } from "@/lib/connections/plex"
 import { getActivePlexServerConfig, type PlexServerConfig } from "@/lib/connections/plex-config"
 import type { ProblemReportStatus } from "@/lib/generated/prisma/client"
 import { recentlyWatched, watchingNow, type TitleResult } from "@/lib/member/problem-report-titles"
 import { prisma } from "@/lib/prisma"
-import { inLibraries, memberLibraryAccess, readMemberItem, type LibraryAccess } from "@/lib/problem-reports/access"
+import { memberLibraryAccess, readMemberItem, type LibraryAccess } from "@/lib/problem-reports/access"
 import { memberLastPlay, type LastPlay } from "@/lib/problem-reports/evidence"
+import { searchMemberTitles } from "@/lib/problem-reports/search"
 import { problemLabel, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { reportTitle, titleKeyOf } from "@/lib/problem-reports/title"
 import { closedEventDataSchema } from "@/lib/validations/problem-reports"
@@ -67,8 +68,6 @@ export interface ReportPageData {
   selected: SelectedTitle | { error: string } | null
 }
 
-const isReportable = (type: string): type is ReportableType => type === "movie" || type === "show" || type === "episode"
-
 /** The latest step in the member's words, and why a closed report closed. */
 function latestWords(event: { kind: string; data: unknown } | undefined, own: boolean): { words: string; statusSub: string | null } {
   if (event?.kind === "FIXED") return { words: "The server admin fixed it", statusSub: null }
@@ -117,15 +116,8 @@ export async function listMemberReports(userId: string): Promise<ReportRow[]> {
 }
 
 async function searchTitles(server: PlexServerConfig | null, access: LibraryAccess | null, query: string): Promise<NonNullable<ReportPageData["search"]>> {
-  if (!server || !access) return { results: [], error: UNAVAILABLE }
-  const found = await searchPlexMedia(server, query)
-  if (!found.success) return { results: [], error: UNAVAILABLE }
-  const results = (found.data ?? []).flatMap((item) =>
-    isReportable(item.type) && inLibraries(access, item.librarySectionId)
-      ? [{ ratingKey: item.ratingKey, type: item.type, title: reportTitle({ ...item, showTitle: item.grandparentTitle, seasonNumber: item.parentIndex, episodeNumber: item.index }), posterKey: item.ratingKey }]
-      : []
-  )
-  return { results: results.slice(0, RESULT_LIMIT), error: null }
+  const results = server && access ? await searchMemberTitles(server, access, query, RESULT_LIMIT) : null
+  return results ? { results, error: null } : { results: [], error: UNAVAILABLE }
 }
 
 async function selectTitle(userId: string, plexUserId: string | null, ratingKey: string): Promise<NonNullable<ReportPageData["selected"]>> {
