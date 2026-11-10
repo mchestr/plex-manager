@@ -14,31 +14,30 @@
 import "server-only"
 
 import { isClaimHeld } from "@/lib/cleanup/claims"
+import { readPeople } from "@/lib/cleanup/screens/leaving/people"
 import type { CleanupSettingsRow } from "@/lib/cleanup/settings"
 import type { CompleteHeader } from "@/lib/cleanup/snapshot/cache"
 import type { CleanupFeatureState, CleanupSnapshotState } from "@/lib/cleanup/types/screens"
 import { getActiveService } from "@/lib/data/active-service"
-import { prisma } from "@/lib/prisma"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { SERVICES, type Service } from "@/lib/validations/cleanup-vocabulary"
-
-/** The words of a pausing admin whose user row is gone. */
-export const UNKNOWN_ADMIN = "An admin"
 
 const iso = (date: Date | null): string | null => (date ? date.toISOString() : null)
 
 /**
- * The feature switch and the pause as the tabs read them. `pausedBy` names
- * the admin, and reads "you" for the viewer (`isYou`).
+ * The feature switch and the pause as every tab reads them. `pausedBy` names
+ * the admin through `readPeople()` (a gone user reads "Unknown member"), and
+ * reads "you" for the viewer (`isYou`). A resume keeps the id of the admin
+ * who paused, so only a pause names them.
  */
 export async function featureState(settings: CleanupSettingsRow, viewerId: string): Promise<CleanupFeatureState> {
   const pausedById = settings.pausedAt ? settings.pausedBy : null
-  const admin = pausedById ? await prisma.user.findUnique({ where: { id: pausedById }, select: { name: true } }) : null
+  const people = await readPeople([pausedById], viewerId)
   return {
     enabled: settings.enabled,
     enabledAt: iso(settings.enabledAt),
     pausedAt: iso(settings.pausedAt),
-    pausedBy: pausedById ? { id: pausedById, name: admin?.name ?? UNKNOWN_ADMIN, isYou: pausedById === viewerId } : null,
+    pausedBy: people.ref(pausedById),
     redis: isRedisConfigured(),
   }
 }

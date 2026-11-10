@@ -31,12 +31,12 @@ import { readPeople } from "@/lib/cleanup/screens/leaving/people"
 import { ruleNamer } from "@/lib/cleanup/screens/leaving/rules"
 import { displayPlan } from "@/lib/cleanup/screens/leaving/plan"
 import { arrServiceOf, failureWords, holdWords } from "@/lib/cleanup/screens/leaving/words"
+import { featureState } from "@/lib/cleanup/screens/settings/feature"
 import { isLive, readCleanupSettingsRow, serverZone } from "@/lib/cleanup/settings"
 import { loadPreviousCompleteHeader } from "@/lib/cleanup/snapshot/store"
 import type { BatchData } from "@/lib/cleanup/types/list-parts"
 import type { CleanupLeavingData } from "@/lib/cleanup/types/screens"
 import { prisma } from "@/lib/prisma"
-import { isRedisConfigured } from "@/lib/queue/connection"
 import type { SearchParamsInput } from "@/lib/ui/table-params"
 import { dayKey } from "@/lib/utils/zoned-time"
 
@@ -83,12 +83,11 @@ export async function getCleanupLeavingSoon(params: SearchParamsInput, now: Date
     today, holdUntil, budget: options.budget, usedToday })
   const pageKeys = grouped.deletion.flatMap((batch) => batchPage(batch, batchPageOf(input, batch.id)).rows.map((item) => item.itemKey))
   const listed = rows.filter((row) => LIST_STATES.includes(row.state))
-  // A resume keeps the id of the admin who paused: only a pause names them
-  const pausedBy = settings.pausedAt ? settings.pausedBy : null
-  const [whys, people, heldBy] = await Promise.all([
+  const [whys, people, heldBy, feature] = await Promise.all([
     pageKeys.length === 0 ? [] : prisma.cleanupItem.findMany({ where: { itemKey: { in: pageKeys } }, select: { itemKey: true, why: true } }),
-    readPeople([pausedBy, ...listed.map((row) => row.postponedBy)], session.user.id),
+    readPeople(listed.map((row) => row.postponedBy), session.user.id),
     Promise.all(grouped.entry.map(readHeldBy)),
+    featureState(settings, session.user.id),
   ])
   const card = { now, today, ruleName: (id: string) => ruleOf(id).name, page: (id: string) => batchPageOf(input, id),
     whys: new Map(whys.map((row) => [row.itemKey, row.why])) }
@@ -109,9 +108,7 @@ export async function getCleanupLeavingSoon(params: SearchParamsInput, now: Date
   })
   const totalBytes = facts?.disk?.totalBytes ?? 0
   return {
-    feature: { enabled: settings.enabled, enabledAt: settings.enabledAt?.toISOString() ?? null, pausedAt: settings.pausedAt?.toISOString() ?? null,
-      pausedBy: people.ref(pausedBy), redis: isRedisConfigured() },
-    batches, exits7d,
+    feature, batches, exits7d,
     filters: { rules: rules.filter((rule) => rule.mode !== "dryRun").map(({ id, name }) => ({ id, name })), libraries, statuses: [...ITEM_STATUSES] },
     groups: list.groups, rows: list.rows,
     totals: { count: list.totals.count, bytes: list.totals.bytes,

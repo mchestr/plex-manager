@@ -214,7 +214,7 @@ describe("rule cards", () => {
       storedRule("rule-auto", "Auto shows", { mode: "automatic", definition: SHOW_DEFINITION }),
     ])
     prismaMock.cleanupItem.findMany.mockResolvedValue([reviewRow, showRow, heldRow])
-    prismaMock.user.findUnique.mockResolvedValue({ name: "Avery Admin" } as never)
+    prismaMock.user.findMany.mockResolvedValue([{ id: "admin-1", name: "Avery Admin", email: null }] as never)
     mockOutcomes({ freed: [buildCleanupOutcome({ level: "show", freedBytes: 7n * GIB })] })
 
     const data = await getCleanupOverview(AT)

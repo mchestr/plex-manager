@@ -283,6 +283,14 @@ describe("getCleanupLeavingSoon", () => {
       pausedBy: { id: "admin-2", name: "Sam Admin", isYou: false }, redis: true })
   })
 
+  it("reads a pausing admin whose user row is gone as Unknown member, as the other tabs do", async () => {
+    seed({ settings: { pausedAt: NOW, pausedBy: "admin-gone" } })
+
+    const data = await load()
+
+    expect(data.feature.pausedBy).toEqual({ id: "admin-gone", name: "Unknown member", isYou: false })
+  })
+
   it("names no pausing admin once cleanup runs again", async () => {
     seed({ settings: { pausedAt: null, pausedBy: "admin-2" } })
 
