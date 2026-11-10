@@ -154,9 +154,9 @@ describe("getProblemReport", () => {
       .mockResolvedValueOnce({ ...DETAIL, status: "FIXING", action: "BETTER_COPY" } as never)
       .mockResolvedValueOnce({ ...DETAIL, status: "FIXING", action: "SWAP" } as never)
 
-    expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: "LOOK_FOR_MISSING", others: ["REFRESH"] }, running: null })
-    expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: "SWAP", others: ["BETTER_COPY", "REFRESH", "REMOVE_AND_SEARCH"] } })
-    expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: "BETTER_COPY", others: ["SWAP", "REFRESH", "REMOVE_AND_SEARCH"] } })
+    expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: "LOOK_FOR_MISSING", others: ["FIX_MATCH", "REFRESH"] }, running: null })
+    expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: "SWAP", others: ["BETTER_COPY", "FIX_MATCH", "REFRESH", "REMOVE_AND_SEARCH"] } })
+    expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: "BETTER_COPY", others: ["SWAP", "FIX_MATCH", "REFRESH", "REMOVE_AND_SEARCH"] } })
     expect(await getProblemReport("report-1")).toMatchObject({ fixes: null, running: "Looking for the episodes" })
     expect(await getProblemReport("report-1")).toMatchObject({ fixes: null, running: "Looking for a better copy" })
     expect(await getProblemReport("report-1")).toMatchObject({ fixes: null, running: "Swapping the copy" })

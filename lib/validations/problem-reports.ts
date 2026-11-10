@@ -112,6 +112,15 @@ const TO_ADMIN_REASONS = [
   "DELETE_FAILED",
   "NOTHING_GRABBED",
   "INTERRUPTED",
+  "PLEX_CAP",
+  "IDS_AGREE",
+  "EPISODE_ORDER",
+  "MISMATCH",
+  "NO_MATCH",
+  "WOULD_MERGE",
+  "MATCH_FAILED",
+  "MATCH_WRONG",
+  "MATCH_STUCK",
 ] as const
 export type ToAdminReason = (typeof TO_ADMIN_REASONS)[number]
 

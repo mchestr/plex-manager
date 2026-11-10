@@ -62,12 +62,14 @@ const FIXED_BY: Partial<Record<FixAction, (title: string) => string>> = {
   SWAP: (title) => `A different copy of ${title} is on the server now.`,
   BETTER_COPY: (title) => `A better copy of ${title} is on the server now.`,
   LOOK_FOR_MISSING: (title) => `${title} has the missing episodes now.`,
+  FIX_MATCH: (title) => `${title} has the right title and poster in Plex now.`,
+  REFRESH: (title) => `Plex has read the details of ${title} again.`,
   REMOVE_AND_SEARCH: (title) => `A new copy of ${title} is on the server now.`,
 }
 
 /** A fix's end, in the member's words. */
 function byFix(update: MemberUpdate, title: string): string {
-  if (update.status === "FIXED") return FIXED_BY[update.action ?? "REFRESH"]?.(title) ?? `${title} is fixed.`
+  if (update.status === "FIXED") return (update.action && FIXED_BY[update.action]?.(title)) || `${title} is fixed.`
   const none = `We looked for a better copy of ${title}, but there isn't one right now.`
   return update.own ? `${none} If it still looks poor, you can ask the server admin from your reports.` : none
 }

@@ -28,10 +28,13 @@ import { PROBLEM_REPORT_SETTINGS_ID } from "@/lib/problem-reports/settings"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
 
 /** What a run did, as the ledger records it: a scan of Plex is not a search. */
-type LedgerAction = "LOOK_FOR_MISSING" | "BETTER_COPY" | "SWAP" | "REMOVE_AND_SEARCH" | "SCAN" | "REFRESH"
+type LedgerAction = "LOOK_FOR_MISSING" | "BETTER_COPY" | "SWAP" | "REMOVE_AND_SEARCH" | "SCAN" | "FIX_MATCH" | "REFRESH"
 
 /** Ledger actions that send an indexer search: a swap's interactive search, and a removal's search, included. */
 const SEARCHES: LedgerAction[] = ["LOOK_FOR_MISSING", "BETTER_COPY", "SWAP", "REMOVE_AND_SEARCH"]
+
+/** Ledger actions that change an item in Plex; a scan of a folder only looks for files. */
+const PLEX_CHANGES: LedgerAction[] = ["FIX_MATCH", "REFRESH"]
 
 const HOUR_MS = 60 * 60 * 1000
 const DAY_MS = 24 * HOUR_MS
@@ -59,11 +62,12 @@ type Tx = PrismaTransactionClient
 
 const since = (now: Date, ms: number) => new Date(now.getTime() - ms)
 
-/** The day's searches and the hour's and day's replacements, as `gateFix` reads them; replacements only when they matter. */
+/** The day's searches, the hour's and day's replacements and the hour's Plex changes, as `gateFix` reads them; each only when it matters. */
 async function counts(tx: Tx, traits: FixTraits, now: Date) {
   const searchesToday = traits.searches ? await tx.problemFixLedger.count({ where: { action: { in: SEARCHES }, startedAt: { gte: since(now, DAY_MS) } } }) : 0
   const replaced = (ms: number) => (traits.replacesFile ? tx.problemFixLedger.count({ where: { replacedAt: { gte: since(now, ms) } } }) : 0)
-  return { searchesToday, replacementsLastHour: await replaced(HOUR_MS), replacementsToday: await replaced(DAY_MS) }
+  const plexChangesLastHour = traits.changesPlex ? await tx.problemFixLedger.count({ where: { action: { in: PLEX_CHANGES }, startedAt: { gte: since(now, HOUR_MS) } } }) : 0
+  return { searchesToday, replacementsLastHour: await replaced(HOUR_MS), replacementsToday: await replaced(DAY_MS), plexChangesLastHour }
 }
 
 /** Gates in the transaction, latching the breaker when this refusal trips it. */
@@ -142,12 +146,17 @@ export async function gateReplace(run: { reportId: string; runToken: number }, n
     const row = await tx.problemFixLedger.findUnique({ where: { id }, select: { replacedAt: true } })
     if (!row) return { value: "NO_RUN", tripped: false }
     if (row.replacedAt) return { value: "ALREADY_REPLACED", tripped: false }
-    const { refusal, tripped } = await gate(tx, { searches: false, replacesFile: true }, now)
+    const { refusal, tripped } = await gate(tx, { searches: false, replacesFile: true, changesPlex: false }, now)
     if (refusal) return { value: "BREAKER", tripped }
     await tx.problemFixLedger.update({ where: { id }, data: { replacedAt: now } })
     return { value: null, tripped: false }
   })
   return afterGate(result, now)
+}
+
+/** Whether the run recorded its row: it acted, or was about to, before a step ran again. */
+export async function hasRunRecord(reportId: string, runToken: number): Promise<boolean> {
+  return (await prisma.problemFixLedger.count({ where: { id: ledgerId(reportId, runToken) } })) > 0
 }
 
 /** Ends a run's row with its outcome; a run that never reached the gate has no row. */

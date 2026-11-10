@@ -64,6 +64,7 @@ describe("timelineStep", () => {
   it("says what a fix did, and when a member asked the server admin after one", () => {
     expect(timelineStep(event("FIXED", { reason: "fix", action: "BETTER_COPY" })).words).toBe("Fixed: a better copy is on the server")
     expect(timelineStep(event("FIXED", { reason: "fix", action: "LOOK_FOR_MISSING" })).words).toBe("Fixed: the missing episodes are on the server")
+    expect(timelineStep(event("FIXED", { reason: "fix", action: "FIX_MATCH" })).words).toBe("Fixed: Plex has the title Radarr or Sonarr has")
     expect(timelineStep(event("FIXED", { reason: "fix" })).words).toBe("Fixed")
     expect(timelineStep(event("CLOSED", { reason: "no_better_copy" }, null)).words).toBe("Closed: no better copy right now")
     expect(timelineStep(event("REOPENED", null))).toMatchObject({ words: "Asked the server admin to take a look", actor: MEMBER })

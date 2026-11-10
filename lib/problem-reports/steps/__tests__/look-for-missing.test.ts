@@ -20,7 +20,7 @@ jest.mock("@/lib/problem-reports/steps/missing-state", () => ({ readMissingState
 const NOW = new Date("2026-11-09T20:00:00Z")
 const MINUTE = 60_000
 const SERVER = { name: "Home", url: "http://plex.local:32400", token: "owner-token", adminPlexUserId: "owner", machineIdentifier: "m" }
-const REPORT = { id: "report-1", runToken: 3, action: "LOOK_FOR_MISSING" as const, reporterId: "member-1", plexRatingKey: "6999" }
+const REPORT = { id: "report-1", runToken: 3, action: "LOOK_FOR_MISSING" as const, reporterId: "member-1", plexRatingKey: "6999", titleKey: "plex://show/the-office" }
 const START = { reportId: "report-1", runToken: 3, step: "start" as const, trigger: "automatic" as const, actorUserId: "member-1" }
 const SHOW = { ratingKey: "6999", type: "show", title: "The Office", ids: { tvdb: 73244 }, librarySectionId: "2", media: [], locations: ["/tv/The Office"] }
 const SONARR = { name: "Sonarr", url: "http://sonarr.local:8989", apiKey: "arr-key" }
@@ -41,7 +41,7 @@ describe("the start", () => {
     await expect(runLookForMissing(REPORT, START, NOW)).resolves.toEqual({
       next: { at: NOW.getTime() + 10 * MINUTE, data: { step: "wait", targets: [11, 12], deadline: NOW.getTime() + 24 * 60 * MINUTE } },
     })
-    expect(gateAndRecord).toHaveBeenCalledWith(expect.objectContaining({ target: "sonarr:series:42", action: "LOOK_FOR_MISSING", traits: { searches: true, replacesFile: false }, trigger: "automatic" }), NOW)
+    expect(gateAndRecord).toHaveBeenCalledWith(expect.objectContaining({ target: "sonarr:series:42", action: "LOOK_FOR_MISSING", traits: { searches: true, replacesFile: false, changesPlex: false }, trigger: "automatic" }), NOW)
     expect(searchSonarrEpisodes).toHaveBeenCalledWith(SONARR, [11, 12])
   })
 
@@ -51,7 +51,7 @@ describe("the start", () => {
     await expect(runLookForMissing(REPORT, START, NOW)).resolves.toEqual({
       next: { at: NOW.getTime() + 2 * MINUTE, data: { step: "wait", targets: [13], deadline: NOW.getTime() + 30 * MINUTE, scannedAt: NOW.getTime() } },
     })
-    expect(gateAndRecord).toHaveBeenCalledWith(expect.objectContaining({ action: "SCAN", traits: { searches: false, replacesFile: false } }), NOW)
+    expect(gateAndRecord).toHaveBeenCalledWith(expect.objectContaining({ action: "SCAN", traits: { searches: false, replacesFile: false, changesPlex: false } }), NOW)
     expect(scanPlexFolder).toHaveBeenCalledWith(SERVER, "2", "/tv/The Office")
     expect(searchSonarrEpisodes).not.toHaveBeenCalled()
   })

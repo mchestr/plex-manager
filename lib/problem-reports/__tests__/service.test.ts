@@ -14,6 +14,7 @@ import { readMemberItem } from '@/lib/problem-reports/access'
 import { queueReportAlert } from '@/lib/problem-reports/alerts'
 import { readEvidence } from '@/lib/problem-reports/evidence'
 import { decideBetterCopyForMember } from '@/lib/problem-reports/report-better-copy'
+import { decideDetailsForMember } from '@/lib/problem-reports/report-details'
 import { decideMissingForMember } from '@/lib/problem-reports/report-missing'
 import { startFix } from '@/lib/problem-reports/run'
 import { cancelProblemReport, followProblemReport, reportProblem } from '@/lib/problem-reports/service'
@@ -25,6 +26,7 @@ jest.mock('@/lib/problem-reports/access', () => ({ readMemberItem: jest.fn() }))
 jest.mock('@/lib/problem-reports/evidence', () => ({ readEvidence: jest.fn() }))
 jest.mock('@/lib/problem-reports/alerts', () => ({ queueReportAlert: jest.fn() }))
 jest.mock('@/lib/problem-reports/report-better-copy', () => ({ decideBetterCopyForMember: jest.fn() }))
+jest.mock('@/lib/problem-reports/report-details', () => ({ decideDetailsForMember: jest.fn() }))
 jest.mock('@/lib/problem-reports/report-missing', () => ({ decideMissingForMember: jest.fn() }))
 jest.mock('@/lib/problem-reports/run', () => ({ startFix: jest.fn() }))
 jest.mock('@/lib/problem-reports/updates', () => ({ queueMemberUpdates: jest.fn() }))
@@ -388,6 +390,36 @@ describe('reportProblem for a blurry title', () => {
   it('leaves a whole show to the admins, since a show has no file', async () => {
     expect(await blurry({ ratingKey: '6999' })).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
     expect(decideBetterCopyForMember).not.toHaveBeenCalled()
+  })
+})
+
+describe('reportProblem for wrong details', () => {
+  const details = (overrides: Partial<Parameters<typeof reportProblem>[0]> = {}) => reportProblem({ userId: 'member-1', ratingKey: '555', problem: 'wrong_details', note: null, ...overrides })
+
+  beforeEach(() => {
+    jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: MOVIE, server: SERVER })
+    jest.mocked(startFix).mockResolvedValue({ ok: true, runToken: 1 })
+  })
+
+  it('starts Refresh the details, which checks the match in the run, instead of alerting the admins', async () => {
+    jest.mocked(decideDetailsForMember).mockResolvedValue({ startsFix: true })
+
+    expect(await details()).toEqual({ ok: true, outcome: 'fixing', reportId: 'report-1', action: 'REFRESH' })
+    expect(decideDetailsForMember).toHaveBeenCalledWith('movie')
+    expect(startFix).toHaveBeenCalledWith({ reportId: 'report-1', action: 'REFRESH', trigger: 'automatic', actorUserId: 'member-1' })
+    expect(queueReportAlert).not.toHaveBeenCalled()
+  })
+
+  it("sends it to the admins with why when there is nothing to check the match against, or the member asks", async () => {
+    jest.mocked(decideDetailsForMember).mockResolvedValue({ startsFix: false, reason: 'NO_RADARR' })
+
+    expect(await details()).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({ data: { reportId: 'report-1', kind: 'TO_ADMIN', data: { reason: 'NO_RADARR' } } })
+
+    jest.mocked(decideDetailsForMember).mockClear()
+    expect(await details({ toAdmin: true })).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
+    expect(decideDetailsForMember).not.toHaveBeenCalled()
+    expect(startFix).not.toHaveBeenCalled()
   })
 })
 

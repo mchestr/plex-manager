@@ -54,4 +54,13 @@ export const TO_ADMIN_WORDS: Record<ToAdminReason, string> = {
   DELETE_FAILED: "Radarr or Sonarr didn't delete the file, so the copy is still there. If it came from a download, its release is on the blocklist now",
   NOTHING_GRABBED: "The file was removed, and the search found nothing to replace it",
   INTERRUPTED: "The fix was interrupted part way, so it stopped rather than act twice. Check the title in Radarr or Sonarr before you run it again",
+  PLEX_CAP: "The server reached this hour's limit of Plex changes, so the fix didn't run",
+  IDS_AGREE: "Plex has the same title as Radarr or Sonarr, so the match isn't the problem. If a different title plays, swap the copy",
+  EPISODE_ORDER: "Plex numbers this episode differently from Sonarr. Check the show's episode order in Plex",
+  MISMATCH: "Plex has a different title than Radarr or Sonarr for this file. Fix the Plex match",
+  NO_MATCH: "Plex's agent found nothing for the title Radarr or Sonarr has",
+  WOULD_MERGE: "Another item in the library already has the right match, so matching would merge the two",
+  MATCH_FAILED: "Plex didn't take the match",
+  MATCH_WRONG: "Plex's new match didn't have the right ids within a minute, so Plex was asked to match it back",
+  MATCH_STUCK: "Plex's new match didn't have the right ids, and it couldn't be matched back. Check the match in Plex",
 }

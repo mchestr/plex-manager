@@ -15,6 +15,8 @@ export interface StepReport {
   action: FixAction
   reporterId: string
   plexRatingKey: string
+  /** The title's Plex guid, or its rating key when it has none (`titleKeyOf`). */
+  titleKey: string
 }
 
 /** What a fix that replaced the file tells the timeline, and the Plex item's new rating key when the title came back as a new item. */
