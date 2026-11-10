@@ -44,6 +44,18 @@ describe("icons", () => {
     ["chevronDown", "ChevronDown"],
     ["chevronLeft", "ChevronLeft"],
     ["chevronRight", "ChevronRight"],
+    // Media cleanup (TS 12.5) and the mixed checkbox
+    ["cleanup", "BrushCleaning"],
+    ["leavingSoon", "Hourglass"],
+    ["keep", "ShieldCheck"],
+    ["exclude", "ShieldMinus"],
+    ["postpone", "CalendarClock"],
+    ["group", "ListTree"],
+    ["cannotDelete", "Ban"],
+    ["indeterminate", "Minus"],
+    ["playing", "Play"],
+    ["paused", "Pause"],
+    ["pending", "Clock"],
   ] as const)("maps %s to lucide %s", (concept, name) => {
     expect(icons[concept]).toBe(lucide[name])
   })

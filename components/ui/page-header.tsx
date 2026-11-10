@@ -1,6 +1,6 @@
 import type { Route } from "next"
 import Link from "next/link"
-import { Fragment, type ReactNode } from "react"
+import { Fragment, type ReactNode, type Ref } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -13,6 +13,11 @@ interface Breadcrumb {
 interface PageHeaderProps {
   /** The nav label, or the entity name on a detail page. */
   title: string
+  /**
+   * Makes the h1 a focus target (`tabIndex={-1}`, no focus ring), for a page
+   * that moves focus to its title, such as after a create or at a visit.
+   */
+  titleRef?: Ref<HTMLHeadingElement>
   description?: ReactNode
   breadcrumbs?: Breadcrumb[]
   /** Buttons only: secondary first, primary last. */
@@ -29,7 +34,7 @@ interface PageHeaderProps {
  * in a Breadcrumb landmark, the page's one h1, a description, a meta line and
  * the actions. Back links are breadcrumbs only.
  */
-export function PageHeader({ title, description, breadcrumbs, actions, meta, className, ...props }: PageHeaderProps) {
+export function PageHeader({ title, titleRef, description, breadcrumbs, actions, meta, className, ...props }: PageHeaderProps) {
   return (
     <header data-slot="page-header" className={cn("flex flex-col gap-3", className)} data-testid={props["data-testid"]}>
       {breadcrumbs && breadcrumbs.length > 0 && (
@@ -64,7 +69,13 @@ export function PageHeader({ title, description, breadcrumbs, actions, meta, cla
       )}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex min-w-0 flex-col gap-1.5">
-          <h1 className="text-h1">{title}</h1>
+          {titleRef ? (
+            <h1 ref={titleRef} tabIndex={-1} className="text-h1 outline-none">
+              {title}
+            </h1>
+          ) : (
+            <h1 className="text-h1">{title}</h1>
+          )}
           {meta && <div className="flex flex-wrap items-center gap-2">{meta}</div>}
           {description && <p className="max-w-prose text-ui text-muted-foreground">{description}</p>}
         </div>

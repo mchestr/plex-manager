@@ -2,9 +2,10 @@
  * The admin pages' reads as MCP tools: the lists and details an action needs
  * ids from (users, invites, jobs, LLM calls) and the settings it changes.
  * Server Actions only write, so without these a client could change things it
- * cannot see. The LLM usage reads are in `lib/mcp/read-tools-llm.ts`, and the
+ * cannot see. The LLM usage reads are in `lib/mcp/read-tools-llm.ts`, the
  * community reads (announcements, affiliates, request limits) in
- * `lib/mcp/read-tools-community.ts`.
+ * `lib/mcp/read-tools-community.ts`, and the media cleanup reads (rules,
+ * Leaving soon, Keeps, runs, settings) in `lib/mcp/read-tools-cleanup.ts`.
  *
  * Every tool checks `assertAdmin()` (or the loader's own permission) before it
  * reads (`lib/mcp/read-tool.ts`), and returns what those pages render: secrets
@@ -30,6 +31,7 @@ import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
 import { getAllUsersWithWrapped } from "@/lib/data/admin-users"
 import { matches, pageFields, paginate } from "@/lib/mcp/paging"
 import { idArg, inviteForCaller, readTool, seasonYear, yearArg } from "@/lib/mcp/read-tool"
+import { cleanupReadTools } from "@/lib/mcp/read-tools-cleanup"
 import { communityReadTools } from "@/lib/mcp/read-tools-community"
 import { llmReadTools } from "@/lib/mcp/read-tools-llm"
 import type { McpTool } from "@/lib/mcp/types"
@@ -128,5 +130,6 @@ export function readTools(): McpTool[] {
     readTool({ name: "get_discord_overview", description: "The Discord integration and bot state.", read: () => getDiscordOverview() }),
     ...llmReadTools(),
     ...communityReadTools(),
+    ...cleanupReadTools(),
   ]
 }

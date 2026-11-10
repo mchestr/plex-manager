@@ -1,7 +1,13 @@
 /**
+ * @jest-environment node
+ */
+
+/**
  * Security tests for admin server actions and loaders (P11.5): actions refuse
  * signed-out and non-admin callers with `UNAUTHENTICATED` and `FORBIDDEN`
  * without a throw; loaders throw the digests the error boundaries read.
+ * Server code only, so the node environment: the media cleanup actions load
+ * BullMQ, whose `msgpackr` import has no CommonJS build for jsdom.
  */
 
 import { setLLMDisabled } from '@/actions/admin/admin-config'
@@ -19,6 +25,19 @@ import { enqueueFromRequest } from '@/lib/queue/request-path'
 import { mockReset } from 'jest-mock-extended'
 import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { buildUser } from '@/__tests__/helpers/factories'
+import * as cleanupItems from '@/actions/admin/cleanup-items'
+import * as cleanupPreview from '@/actions/admin/cleanup-preview'
+import * as cleanupProtections from '@/actions/admin/cleanup-protections'
+import * as cleanupRules from '@/actions/admin/cleanup-rules'
+import * as cleanupSettings from '@/actions/admin/cleanup-settings'
+import { getCleanupHistory } from '@/lib/data/cleanup-history'
+import { getCleanupLeavingSoon } from '@/lib/data/cleanup-leaving'
+import { getCleanupOverview } from '@/lib/data/cleanup-overview'
+import { getCleanupProtections } from '@/lib/data/cleanup-protections'
+import { getCleanupRuleEditor } from '@/lib/data/cleanup-editor'
+import { getCleanupSettings } from '@/lib/data/cleanup-settings'
+import { getCleanupTurnOn } from '@/lib/data/cleanup-turn-on'
+import { revalidatePath } from 'next/cache'
 
 jest.mock('@/lib/security/audit-log', () => ({
   ...jest.requireActual('@/lib/security/audit-log'),
@@ -714,5 +733,82 @@ describe('Roles', () => {
 
       expect(authErrorKind(error as Error & { digest?: string })).toBe('unauthenticated')
     })
+  })
+})
+
+describe('Media cleanup admin actions and loaders', () => {
+  // Every admin action of the five cleanup modules (TS 10.2), by module. A new export fails the first case until it is listed here.
+  const ACTIONS: Record<string, Record<string, unknown>> = {
+    'admin/cleanup-rules': cleanupRules,
+    'admin/cleanup-preview': cleanupPreview,
+    'admin/cleanup-items': cleanupItems,
+    'admin/cleanup-protections': cleanupProtections,
+    'admin/cleanup-settings': cleanupSettings,
+  }
+  const LISTED: Record<string, string[]> = {
+    'admin/cleanup-rules': ['createCleanupRule', 'createCleanupRuleFromRecipe', 'saveCleanupRule', 'duplicateCleanupRule', 'deleteCleanupRule',
+      'turnOnCleanupRule', 'setCleanupRuleReviewFirst', 'moveCleanupRuleToDryRun', 'runCleanupRuleDryRun'],
+    'admin/cleanup-preview': ['previewCleanupRule', 'previewCleanupRecipe', 'previewCleanupProtectionImpact', 'getCleanupItemWhy'],
+    'admin/cleanup-items': ['deleteCleanupBatch', 'approveCleanupEntryBatch', 'getCleanupBatchSelection', 'postponeCleanupItems', 'excludeCleanupItems'],
+    'admin/cleanup-protections': ['removeCleanupKeep', 'removeCleanupExclusion', 'setCleanupExclusionEnd'],
+    'admin/cleanup-settings': ['updateCleanupSettings', 'pauseCleanup', 'resumeCleanup', 'runCleanupNow', 'refreshCleanupData', 'startCleanupFirstRead'],
+  }
+  const cases = Object.entries(LISTED).flatMap(([file, names]) =>
+    names.map((name) => [name, ACTIONS[file][name] as (input?: unknown) => Promise<unknown>] as const))
+  // Inputs that parse, so the guard is the only thing that can refuse the call
+  const INPUT = { ruleId: 'cleanup-rule-1', batchId: 'deletion-cleanup-rule-1', itemKeys: ['movie:tmdb:1'], keys: ['movie:tmdb:1'], days: 14, until: null,
+    keepId: 'keep-1', exclusionId: 'exclusion-1', itemKey: 'movie:tmdb:1' }
+
+  const asSupport = () => (getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'support-1', isAdmin: false, role: 'support' } })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('lists every export of the cleanup admin modules', () => {
+    for (const [file, module] of Object.entries(ACTIONS)) {
+      expect([file, Object.keys(module).sort()]).toEqual([file, [...LISTED[file]].sort()])
+    }
+  })
+
+  it.each(cases)('%s refuses a signed-out caller, a member and a Support user without a throw, before any read, write, queue or audit row', async (_name, action) => {
+    signedOut()
+    await expect(action(INPUT)).resolves.toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
+    asMember()
+    await expect(action(INPUT)).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+    asSupport()
+    await expect(action(INPUT)).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+
+    expect(prismaMock.cleanupRule.findUnique).not.toHaveBeenCalled()
+    expect(prismaMock.cleanupRule.findMany).not.toHaveBeenCalled()
+    expect(prismaMock.cleanupItem.findMany).not.toHaveBeenCalled()
+    expect(prismaMock.cleanupSettings.findUnique).not.toHaveBeenCalled()
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    expect(prismaMock.auditLog.create).not.toHaveBeenCalled()
+    expect(logAuditEvent).not.toHaveBeenCalled()
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['getCleanupOverview', () => getCleanupOverview()],
+    ['getCleanupRuleEditor', () => getCleanupRuleEditor({ ruleId: 'cleanup-rule-1' })],
+    ['getCleanupTurnOn', () => getCleanupTurnOn('cleanup-rule-1')],
+    ['getCleanupLeavingSoon', () => getCleanupLeavingSoon({})],
+    ['getCleanupProtections', () => getCleanupProtections({})],
+    ['getCleanupHistory', () => getCleanupHistory({})],
+    ['getCleanupSettings', () => getCleanupSettings()],
+  ] as const)('the loader %s throws the digests before it reads', async (_name, load) => {
+    signedOut()
+    await expect(load()).rejects.toMatchObject({ digest: 'PM_UNAUTHENTICATED' })
+    asMember()
+    await expect(load()).rejects.toMatchObject({ digest: 'PM_FORBIDDEN' })
+    asSupport()
+    await expect(load()).rejects.toMatchObject({ digest: 'PM_FORBIDDEN' })
+    expect(prismaMock.cleanupRule.findMany).not.toHaveBeenCalled()
+    expect(prismaMock.cleanupItem.findMany).not.toHaveBeenCalled()
+    expect(prismaMock.cleanupProtection.findMany).not.toHaveBeenCalled()
+    expect(prismaMock.cleanupOutcome.findMany).not.toHaveBeenCalled()
+    expect(prismaMock.auditLog.create).not.toHaveBeenCalled()
   })
 })

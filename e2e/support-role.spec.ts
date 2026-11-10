@@ -46,6 +46,9 @@ const REFUSED_PATHS = [
   '/admin/watchlist',
   '/admin/inactivity',
   '/admin/request-limits',
+  '/admin/cleanup',
+  '/admin/cleanup/rules/new',
+  '/admin/cleanup/rules/a11y-cleanup-rule-dry/turn-on',
 ];
 
 test.describe('Support role', () => {

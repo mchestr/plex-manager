@@ -52,6 +52,19 @@ describe('SettingsSection', () => {
     expect(screen.getByTestId('settings-tautulli-status')).toHaveTextContent('Connected')
   })
 
+  it('shows a badge in the header beside Edit in view mode, and hides it while editing', async () => {
+    const user = userEvent.setup()
+    render(
+      <SettingsSection id="protections" title="Protections" form={formState()} badge={<span>12 on</span>} view={<p>Saved values</p>}>
+        <input aria-label="Days" />
+      </SettingsSection>
+    )
+
+    expect(screen.getByTestId('settings-protections-badge')).toHaveTextContent('12 on')
+    await user.click(screen.getByTestId('settings-protections-edit'))
+    expect(screen.queryByTestId('settings-protections-badge')).not.toBeInTheDocument()
+  })
+
   it('opens read-only: the summary, Last saved and an Edit button named for the section, with no form', () => {
     renderSection(formState(), jest.fn())
 

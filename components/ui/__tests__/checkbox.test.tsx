@@ -71,4 +71,39 @@ describe("Checkbox", () => {
     const { container } = render(<Labelled />)
     expect(await axe(container)).toHaveNoViolations()
   })
+
+  it("draws the minus glyph while indeterminate and reports the mixed state", async () => {
+    const { container } = render(<Checkbox aria-label="Select Nov 19" indeterminate data-testid="cb" />)
+    const checkbox = screen.getByRole("checkbox", { name: "Select Nov 19" })
+    expect(checkbox).toHaveAttribute("aria-checked", "mixed")
+    expect(checkbox).toHaveAttribute("data-indeterminate")
+    const glyph = checkbox.querySelector('[data-slot="checkbox-indicator"] svg')
+    expect(glyph).toHaveClass("lucide-minus")
+    expect(glyph).toHaveAttribute("aria-hidden", "true")
+    expect(checkbox.querySelector(".lucide-check")).toBeNull()
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("draws the check, not the minus, once checked", () => {
+    const { rerender } = render(<Checkbox aria-label="Select all" checked={false} indeterminate />)
+    rerender(<Checkbox aria-label="Select all" checked />)
+    const checkbox = screen.getByRole("checkbox", { name: "Select all" })
+    expect(checkbox).toHaveAttribute("aria-checked", "true")
+    expect(checkbox.querySelector("svg")).toHaveClass("lucide-check")
+    expect(checkbox.querySelector(".lucide-minus")).toBeNull()
+  })
+
+  it("draws no glyph while unchecked", () => {
+    render(<Checkbox aria-label="Select all" />)
+    expect(screen.getByRole("checkbox", { name: "Select all" }).querySelector("svg")).toBeNull()
+  })
+
+  it("asks to check a mixed box with Space", async () => {
+    const user = userEvent.setup()
+    const onCheckedChange = jest.fn()
+    render(<Checkbox aria-label="Select all" indeterminate onCheckedChange={onCheckedChange} />)
+    screen.getByRole("checkbox").focus()
+    await user.keyboard(" ")
+    expect(onCheckedChange).toHaveBeenCalledWith(true, expect.anything())
+  })
 })

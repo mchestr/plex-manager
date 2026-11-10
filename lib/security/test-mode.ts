@@ -1,5 +1,6 @@
 /**
- * Guards for test-only code paths: destructive E2E runs and the seed.
+ * Guards for test-only code paths: destructive E2E runs, the seed, and the
+ * plex.tv seam of the E2E suite ({@link plexTvBaseUrl}).
  *
  * This is a plain module with no `@/` imports, so Jest, the Playwright config
  * and `prisma/seed.ts` (run by tsx) can all import it without path aliases.
@@ -13,7 +14,8 @@ const LOCAL_SEED_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "db", "db-pla
 const POSTGRES_URL_PREFIX = /^postgres(ql)?:\/\//
 
 /**
- * The environment the guards read (`NODE_ENV`, `E2E_TEST_MODE`, `DATABASE_URL`).
+ * The environment the guards read (`NODE_ENV`, `E2E_TEST_MODE`, `DATABASE_URL`,
+ * `E2E_PLEX_TV_URL`).
  * An index signature, so `process.env` fits under both Next's types and plain `@types/node`.
  */
 type TestModeEnv = Readonly<Record<string, string | undefined>>
@@ -187,4 +189,57 @@ export function resolveSeedTarget(env: TestModeEnv = process.env): ParsedDatabas
     )
   }
   return assertSeedTarget(env.DATABASE_URL)
+}
+
+/** The plex.tv origins the server calls: the real hosts, or the E2E mock. */
+export interface PlexTvBaseUrls {
+  /** `https://plex.tv`, for `shared_servers`. */
+  plexTv: string
+  /** `https://clients.plex.tv`, for `/api/users`. */
+  clients: string
+}
+
+const REAL_PLEX_TV: PlexTvBaseUrls = Object.freeze({ plexTv: "https://plex.tv", clients: "https://clients.plex.tv" })
+
+/** Hosts the plex.tv mock may listen on. */
+const PLEX_TV_MOCK_HOSTS = new Set(["localhost", "127.0.0.1"])
+
+/** The origin of `http://localhost:<port>` or `http://127.0.0.1:<port>`, with nothing else in it; else null. */
+function plexTvMockOrigin(value: string): string | null {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    return null
+  }
+  const bare = !url.username && !url.password && !url.search && !url.hash && url.pathname === "/"
+  if (url.protocol !== "http:" || !PLEX_TV_MOCK_HOSTS.has(url.hostname) || !url.port || !bare) return null
+  return url.origin
+}
+
+/**
+ * The one test seam for plex.tv (TS E27). plex.tv calls run on the server, so
+ * a Playwright route cannot catch them: the E2E web server sets
+ * `E2E_PLEX_TV_URL` to its plex.tv mock instead.
+ *
+ * Both hosts become that URL only while `E2E_TEST_MODE` is `"true"` and the
+ * URL is `http://localhost:<port>` or `http://127.0.0.1:<port>`. The flag is
+ * read raw, as `isConnectionTestBypassed()` does, because
+ * {@link isE2ETestMode} is false in the E2E production build. In every other
+ * case, a remote or malformed override included, the real hosts come back. A
+ * real deployment never sets `E2E_TEST_MODE`.
+ *
+ * @example
+ * ```ts
+ * plexTvBaseUrl({}) // => { plexTv: "https://plex.tv", clients: "https://clients.plex.tv" }
+ * plexTvBaseUrl({ E2E_TEST_MODE: "true", E2E_PLEX_TV_URL: "http://localhost:4010" })
+ * // => { plexTv: "http://localhost:4010", clients: "http://localhost:4010" }
+ * plexTvBaseUrl({ E2E_TEST_MODE: "true", E2E_PLEX_TV_URL: "http://plex.example.com:4010" }) // => the real hosts
+ * ```
+ */
+export function plexTvBaseUrl(env: TestModeEnv = process.env): PlexTvBaseUrls {
+  const override = env.E2E_PLEX_TV_URL
+  if (env.E2E_TEST_MODE !== "true" || !override) return REAL_PLEX_TV
+  const origin = plexTvMockOrigin(override)
+  return origin ? { plexTv: origin, clients: origin } : REAL_PLEX_TV
 }

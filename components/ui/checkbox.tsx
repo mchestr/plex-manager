@@ -1,6 +1,7 @@
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox"
 import { Check } from "lucide-react"
 
+import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 
 interface CheckboxProps extends Omit<CheckboxPrimitive.Root.Props, "className"> {
@@ -12,6 +13,9 @@ interface CheckboxProps extends Omit<CheckboxPrimitive.Root.Props, "className"> 
  * `border-input`; checked fills with `primary-indicator` (3:1 in both themes)
  * and a 12px check at stroke 3. A 24px hit area surrounds the box (WCAG
  * 2.5.8). Name it with a `<label htmlFor={id}>`, a wrapping label, or `Field`.
+ *
+ * While `data-indeterminate` is set (some rows of a group selected) it draws a
+ * minus instead of the check, and Base UI reports `aria-checked="mixed"`.
  */
 export function Checkbox({ className, ...props }: CheckboxProps) {
   return (
@@ -29,9 +33,19 @@ export function Checkbox({ className, ...props }: CheckboxProps) {
       )}
       {...props}
     >
-      <CheckboxPrimitive.Indicator data-slot="checkbox-indicator" className="flex">
-        <Check aria-hidden="true" size={12} strokeWidth={3} />
-      </CheckboxPrimitive.Indicator>
+      <CheckboxPrimitive.Indicator
+        data-slot="checkbox-indicator"
+        className="flex"
+        // The glyph follows the state Base UI resolved (the same one behind `data-indeterminate`)
+        render={(indicatorProps, state) => {
+          const Glyph = state.indeterminate ? icons.indeterminate : Check
+          return (
+            <span {...indicatorProps}>
+              <Glyph aria-hidden="true" size={12} strokeWidth={3} />
+            </span>
+          )
+        }}
+      />
     </CheckboxPrimitive.Root>
   )
 }

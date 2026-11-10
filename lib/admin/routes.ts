@@ -8,7 +8,9 @@
 
 import type { Route } from "next"
 
+import type { RecipeId } from "@/lib/cleanup/constants"
 import type { FindingSeverity, FindingStatus, FindingType } from "@/lib/generated/prisma/client"
+import type { Level } from "@/lib/validations/cleanup-vocabulary"
 
 const seg = encodeURIComponent
 
@@ -91,6 +93,49 @@ export function affiliates({ tab }: { tab?: AffiliateTab } = {}): Route {
   return (tab && tab !== "applications" ? `/admin/affiliates?tab=${tab}` : "/admin/affiliates") as Route
 }
 
+/** The Media cleanup page's tabs (UX 3.1); `rules` is the default and leaves the URL bare. */
+export const CLEANUP_TABS = ["rules", "leaving-soon", "kept", "history", "settings"] as const
+export type CleanupTab = (typeof CLEANUP_TABS)[number]
+
+/**
+ * The Media cleanup page: a tab, a Settings `section` to open in Edit, and the
+ * turn-on page to go back to after a save (`returnTo`, TS 12.7 item 10).
+ */
+export function cleanup({ tab, section, returnTo }: { tab?: CleanupTab; section?: string; returnTo?: string } = {}): Route {
+  const params = new URLSearchParams()
+  if (tab && tab !== "rules") params.set("tab", tab)
+  if (section) params.set("section", section)
+  if (returnTo) params.set("returnTo", returnTo)
+  const query = params.toString()
+  return (query ? `/admin/cleanup?${query}` : "/admin/cleanup") as Route
+}
+
+/** One rule's editor. */
+export function cleanupRule(id: string): Route {
+  return `/admin/cleanup/rules/${seg(id)}` as Route
+}
+
+/**
+ * The new-rule editor: a blank rule of a level, or a recipe with its key
+ * values (`?recipe=<id>&<key>=<value>`). A value key named `recipe` or `level` is left out.
+ */
+export function cleanupNewRule({ recipe, level, values }: { recipe?: RecipeId; level?: Level; values?: Record<string, string> } = {}): Route {
+  const params = new URLSearchParams()
+  if (recipe) params.set("recipe", recipe)
+  if (level) params.set("level", level)
+  for (const [key, value] of Object.entries(values ?? {})) {
+    if (key !== "recipe" && key !== "level") params.set(key, value)
+  }
+  const query = params.toString()
+  return (query ? `/admin/cleanup/rules/new?${query}` : "/admin/cleanup/rules/new") as Route
+}
+
+/** One rule's turn-on review, or its Change mode page for a live rule; `automatic` preselects Automatic. */
+export function cleanupTurnOn(id: string, mode?: "automatic"): Route {
+  const base = `/admin/cleanup/rules/${seg(id)}/turn-on`
+  return (mode ? `${base}?mode=${mode}` : base) as Route
+}
+
 export function invite(id: string): Route {
   return `/admin/invites/${seg(id)}` as Route
 }
@@ -120,7 +165,12 @@ export interface AuditLogFilters {
   actor?: string
   /** Whom it was about: a user id. */
   member?: string
-  /** One inactivity run's events, by the run id. */
+  /**
+   * One run's events, by the run id: an inactivity run, or a media cleanup run
+   * (`CLEANUP_RUN`, `CLEANUP_ITEMS_ENTERED`, `CLEANUP_ITEMS_HELD`,
+   * `CLEANUP_ITEM_RESCUED`, `CLEANUP_ITEM_DELETED` and `CLEANUP_ITEM_FAILED`
+   * carry `details.runId`). The History "Audit" link is `auditLog({ run })`.
+   */
   run?: string
   /** An inclusive day range (`YYYY-MM-DD` in the server zone). */
   from?: string

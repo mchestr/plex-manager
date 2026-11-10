@@ -7,7 +7,7 @@ import { join, relative } from 'node:path'
 import type { Session } from 'next-auth'
 
 import { ACTION_MODULES, EXCLUDED_MODULES } from '@/lib/mcp/action-modules'
-import { EXCLUDED, READ_ONLY_ACTIONS, toolName, WRITES_DESPITE_READ_NAME } from '@/lib/mcp/action-tools'
+import { DESTRUCTIVE_ACTIONS, EXCLUDED, READ_ONLY_ACTIONS, toolName, WRITES_DESPITE_READ_NAME } from '@/lib/mcp/action-tools'
 import { ADMIN_READ_TOOLS } from '@/lib/mcp/assistant-tools'
 import { allTools, blockedByScope, toolFor, toolsFor } from '@/lib/mcp/catalog'
 import { ALL_TOOLS } from '@/lib/chatbot/tools'
@@ -79,9 +79,11 @@ describe('the catalog', () => {
 
   it('lets only whole-record reads past the default result limit', () => {
     const raised = tools.filter((tool) => tool.maxResultChars !== undefined).map((tool) => [tool.name, tool.maxResultChars])
-    expect(raised).toEqual([
+    expect(raised.sort(([a], [b]) => String(a).localeCompare(String(b)))).toEqual([
+      ['get_cleanup_item_why', 60_000],
       ['get_rewind_dry_run', 120_000],
       ['get_user_plex_wrapped', 120_000],
+      ['preview_cleanup_rule', 120_000],
     ])
   })
 
@@ -104,6 +106,110 @@ describe('the catalog', () => {
     expect(byName.get('create_invite')?.annotations).toEqual({ readOnlyHint: false, destructiveHint: false })
   })
 })
+
+describe('the media cleanup tools', () => {
+  const CLEANUP_MODULES = ['admin/cleanup-items', 'admin/cleanup-preview', 'admin/cleanup-protections', 'admin/cleanup-rules', 'admin/cleanup-settings', 'cleanup-keeps']
+  const cleanupActions = CLEANUP_MODULES.flatMap((file) => Object.keys(ACTION_MODULES[file] ?? {}))
+  const NO_TOOL = ['approveCleanupEntryBatch', 'deleteCleanupBatch', 'turnOnCleanupRule']
+  const byName = allTools()
+
+  it('offers every cleanup action module', () => {
+    for (const file of CLEANUP_MODULES) expect(Object.keys(ACTION_MODULES[file] ?? {}).length).toBeGreaterThan(0)
+    expect(cleanupActions).toEqual(expect.arrayContaining([...NO_TOOL, 'saveCleanupRule', 'keepCleanupTitle', 'startCleanupFirstRead']))
+  })
+
+  it('makes every cleanup action a tool, except turning a rule on and approving an entry or deletion batch (E24)', () => {
+    expect(cleanupActions.filter((name) => !NO_TOOL.includes(name) && !byName.has(toolName(name)))).toEqual([])
+    for (const name of NO_TOOL) expect(byName.has(toolName(name))).toBe(false)
+    expect(EXCLUDED.deleteCleanupBatch).toBe('a deletion needs a person on the review page')
+    expect(EXCLUDED.turnOnCleanupRule).toBe('a deletion needs a person on the review page')
+    expect(EXCLUDED.approveCleanupEntryBatch).toBe('the entry check needs a person to approve a large batch')
+  })
+
+  it('offers no tool that turns a rule on or approves a deletion batch', () => {
+    const changes = [...byName.values()].filter((tool) => !tool.annotations.readOnlyHint).map((tool) => tool.name)
+    expect(changes.filter((name) => /turn_on|delete_cleanup_batch|approve_cleanup_batch/.test(name))).toEqual([])
+    expect(changes.filter((name) => /^approve_cleanup/.test(name))).toEqual([])
+    // The turn-on review is a read: it shows what the review page shows
+    expect(byName.get('get_cleanup_turn_on')?.annotations).toEqual({ readOnlyHint: true })
+  })
+
+  it('lists only real actions as destructive, and gives each the hint (E24)', () => {
+    expect([...DESTRUCTIVE_ACTIONS].sort()).toEqual(['resumeCleanup', 'saveCleanupRule', 'setCleanupExclusionEnd', 'updateCleanupSettings'])
+    for (const name of DESTRUCTIVE_ACTIONS) {
+      expect(cleanupActions).toContain(name)
+      expect([name, byName.get(toolName(name))?.annotations]).toEqual([name, { readOnlyHint: false, destructiveHint: true }])
+    }
+  })
+
+  it.each(['delete_cleanup_rule', 'remove_cleanup_keep', 'remove_cleanup_exclusion', 'remove_my_cleanup_keep'])('%s is destructive by its name (X5)', (name) => {
+    expect(byName.get(name)?.annotations).toEqual({ readOnlyHint: false, destructiveHint: true })
+  })
+
+  it('marks the other cleanup writes as writes that are not destructive', () => {
+    const writes = ['create_cleanup_rule', 'create_cleanup_rule_from_recipe', 'duplicate_cleanup_rule', 'set_cleanup_rule_review_first', 'move_cleanup_rule_to_dry_run',
+      'run_cleanup_rule_dry_run', 'postpone_cleanup_items', 'exclude_cleanup_items', 'pause_cleanup', 'run_cleanup_now', 'refresh_cleanup_data', 'start_cleanup_first_read', 'keep_cleanup_title']
+    for (const name of writes) expect([name, byName.get(name)?.annotations]).toEqual([name, { readOnlyHint: false, destructiveHint: false }])
+  })
+
+  it('marks the four previews and the batch selection read only', () => {
+    const reads = ['preview_cleanup_rule', 'preview_cleanup_recipe', 'preview_cleanup_protection_impact', 'get_cleanup_item_why', 'get_cleanup_batch_selection']
+    for (const name of reads) expect([name, byName.get(name)?.annotations]).toEqual([name, { readOnlyHint: true }])
+  })
+
+  it.each(['postpone_cleanup_items', 'exclude_cleanup_items'])('%s takes itemKeys or the batch form in one object schema (E37)', (name) => {
+    const schema = byName.get(name)?.inputSchema as { type?: string; properties?: Record<string, { type?: string; properties?: Record<string, unknown> }> }
+    expect(schema.type).toBe('object')
+    expect(Object.keys(schema.properties ?? {})).toEqual(expect.arrayContaining(['itemKeys', 'batch']))
+    expect(schema.properties?.input).toBeUndefined()
+    expect(Object.keys(schema.properties?.batch?.properties ?? {})).toEqual(expect.arrayContaining(['batchId', 'count', 'keysHash', 'excludeKeys', 'selectedCount']))
+  })
+
+  it('offers the eight cleanup read tools, read only and admin only, with paging on the lists', () => {
+    const reads = ['get_cleanup_overview', 'get_cleanup_rule', 'get_cleanup_turn_on', 'list_cleanup_leaving_soon', 'list_cleanup_protections', 'list_cleanup_runs', 'list_cleanup_deleted', 'get_cleanup_settings']
+    for (const name of reads) {
+      const tool = byName.get(name)
+      expect([name, tool?.source, tool?.annotations]).toEqual([name, 'loader', { readOnlyHint: true }])
+      expect(tool?.allowed(support)).toBe(false)
+      expect(tool?.allowed(admin)).toBe(true)
+    }
+    for (const name of ['get_cleanup_overview', 'list_cleanup_leaving_soon', 'list_cleanup_protections', 'list_cleanup_deleted']) {
+      expect(JSON.stringify(byName.get(name)?.inputSchema)).toMatch(/pageSize/)
+    }
+  })
+
+  it('names only real tools in the cleanup read tool descriptions', () => {
+    const named = toolNamesIn(['get_cleanup_overview', 'get_cleanup_rule', 'get_cleanup_turn_on', 'list_cleanup_leaving_soon', 'list_cleanup_protections', 'get_cleanup_settings'].map((name) => byName.get(name)?.description ?? ''))
+    expect(named.length).toBeGreaterThan(5)
+    expect(named.filter((name) => !byName.has(name))).toEqual([])
+  })
+
+  it('gives a member only their own Keep tools', () => {
+    const names = toolsFor(member, 'full').map((tool) => tool.name).filter((name) => name.includes('cleanup'))
+    expect(names.sort()).toEqual(['keep_cleanup_title', 'remove_my_cleanup_keep'])
+  })
+
+  it('gives a read-only token the cleanup reads and no cleanup change', () => {
+    const names = toolsFor(admin, 'read').map((tool) => tool.name).filter((name) => name.includes('cleanup'))
+    expect(names).toEqual(expect.arrayContaining(['get_cleanup_rule', 'list_cleanup_leaving_soon', 'preview_cleanup_rule', 'get_cleanup_batch_selection']))
+    for (const name of ['save_cleanup_rule', 'approve_cleanup_entry_batch', 'update_cleanup_settings', 'resume_cleanup', 'postpone_cleanup_items']) expect(names).not.toContain(name)
+  })
+
+  it('tells clients in the server instructions that a person turns rules on and approves deletions', () => {
+    const source = readFileSync(join(ROOT, 'lib/mcp/server.ts'), 'utf8')
+    expect(source).toContain('Turning a cleanup rule on, approving an entry batch that the entry check held and approving a deletion batch need a person on the admin pages: no tool does them.')
+    expect(source).toContain('Ask a person to check each cleanup change that a tool marks destructive.')
+    // An Automatic rule deletes with no review page (security review S-04)
+    expect(source).toContain('A rule that is already Automatic deletes its new matches at the end of their grace period with no review page')
+    // Both coverage lists, the read-only one and the full one
+    expect(source.split('media cleanup (rules, previews, Leaving soon').length - 1).toBe(2)
+  })
+})
+
+/** The snake-case tool names that some text names. */
+function toolNamesIn(texts: string[]): string[] {
+  return [...new Set(texts.join(' ').match(/\b(?:create|list|get|delete|set|remove|approve|save|update|postpone|exclude|preview)_[a-z_]+\b/g) ?? [])]
+}
 
 describe('toolsFor', () => {
   it('gives an admin every tool', () => {

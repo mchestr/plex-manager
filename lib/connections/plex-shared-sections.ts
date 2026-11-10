@@ -9,19 +9,24 @@
  *
  * 1. {@link getSharedSectionKeys} reads the owner's share list from plex.tv
  *    (`GET https://plex.tv/api/servers/<machineIdentifier>/shared_servers`,
- *    owner token; parsed by `./plex-shared-servers-xml`).
+ *    owner token; parsed by `./plex-shared-servers-xml`). The host comes from
+ *    `plexTvBaseUrl()`, the E2E seam.
  * 2. {@link getItemSectionKey} asks the Plex server for an item's metadata
  *    (`GET <url>/library/metadata/<ratingKey>`).
+ *
+ * {@link getSharedSectionFilters} reads the same share list, with the filter
+ * text of each section, for media cleanup's member pages.
  *
  * Responses are validated with Zod. Failures (timeout, network error,
  * unexpected status or shape) are reported, never thrown, so callers deny
  * access when plex.tv or the server cannot be read. Each call takes a
- * `timeoutMs` (default 3 s) that covers the whole lookup, body included.
+ * `timeoutMs` (default 3 s): how long it waits for the answer, body included.
  *
  * ## Caching
  *
- * - The share list is cached per server for 10 minutes; concurrent callers
- *   share one plex.tv load (and the timeout of the caller that started it).
+ * - The share list is cached per server for 10 minutes. Concurrent callers
+ *   share one plex.tv load with a fixed 3 s budget. Each caller waits only
+ *   for its own timeout.
  * - An item's section key is cached for 24 hours.
  * - Failures are not cached, so a recovered plex.tv is used on the next call.
  *
@@ -32,14 +37,15 @@ import "server-only"
 
 import { z } from "zod"
 
+import { plexTvBaseUrl } from "@/lib/security/test-mode"
 import { fetchWithTimeout } from "@/lib/utils/fetch-with-timeout"
 import { createLoadingCache, createTtlCache } from "@/lib/utils/ttl-cache"
 
 import { getPlexServerIdentity } from "./plex-connection"
 import { getClientIdentifier, logger } from "./plex-core"
-import { parseSharedServersXml, type SharedSectionKeys } from "./plex-shared-servers-xml"
+import { filtersOf, keysOf, parseSharedServersDocument, type SharedSectionFilters, type SharedSectionKeys } from "./plex-shared-servers-xml"
 
-export type { SharedSectionKeys } from "./plex-shared-servers-xml"
+export type { SharedSectionFilters, SharedSectionKeys } from "./plex-shared-servers-xml"
 
 const LOOKUP_TIMEOUT_MS = 3000
 const SHARED_SERVERS_TTL_MS = 10 * 60 * 1000
@@ -53,7 +59,7 @@ interface PlexServerConfig {
 }
 
 interface LookupOptions {
-  /** Time allowed for the whole lookup (default 3000 ms). */
+  /** How long this caller waits for the answer (default 3000 ms). */
   timeoutMs?: number
 }
 
@@ -68,44 +74,39 @@ export type ItemSectionLookup =
   | { status: "unknown" }
 
 const sectionIdSchema = z.object({
-  librarySectionID: z
-    .union([z.number().int().nonnegative(), z.string().regex(/^\d+$/)])
-    .transform(String),
+  librarySectionID: z.union([z.number().int().nonnegative(), z.string().regex(/^\d+$/)]).transform(String),
 })
 
 const itemMetadataSchema = z.object({
   MediaContainer: z.object({ Metadata: z.array(z.unknown()).optional() }).loose(),
 })
 
-type SharedServers = ReadonlyMap<string, SharedSectionKeys>
+/** One parse of the share list, read by both lookups (13.1 rule 2). */
+interface SharedServers {
+  keys: ReadonlyMap<string, SharedSectionKeys>
+  filters: ReadonlyMap<string, SharedSectionFilters>
+}
 
 const sharedServersCache = createLoadingCache<string, SharedServers | null>({
   ttlMs: SHARED_SERVERS_TTL_MS,
   maxEntries: 8,
-  keep: (byUser) => byUser !== null,
+  keep: (loaded) => loaded !== null,
 })
-const itemSectionCache = createTtlCache<string, string>({
-  ttlMs: ITEM_SECTION_TTL_MS,
-  maxEntries: 10_000,
-})
+const itemSectionCache = createTtlCache<string, string>({ ttlMs: ITEM_SECTION_TTL_MS, maxEntries: 10_000 })
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
-async function loadSharedServers(
-  server: PlexServerConfig,
-  timeoutMs: number
-): Promise<SharedServers | null> {
-  const deadline = Date.now() + timeoutMs
+/** The share list, in at most {@link LOOKUP_TIMEOUT_MS} whatever any caller waits. */
+async function loadSharedServers(server: PlexServerConfig): Promise<SharedServers | null> {
+  const deadline = Date.now() + LOOKUP_TIMEOUT_MS
   try {
-    const identity = await getPlexServerIdentity(server, { timeoutMs })
+    const identity = await getPlexServerIdentity(server, { timeoutMs: LOOKUP_TIMEOUT_MS })
     if (!identity.success || !identity.machineIdentifier) {
-      logger.warn("Shared sections: could not read the server's machine identifier", {
-        error: identity.error,
-      })
+      logger.warn("Shared sections: could not read the server's machine identifier", { error: identity.error })
       return null
     }
 
-    const url = `https://plex.tv/api/servers/${encodeURIComponent(identity.machineIdentifier)}/shared_servers`
+    const url = `${plexTvBaseUrl().plexTv}/api/servers/${encodeURIComponent(identity.machineIdentifier)}/shared_servers`
     const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
@@ -121,12 +122,32 @@ async function loadSharedServers(
       return null
     }
 
-    const byUser = parseSharedServersXml(await response.text())
-    if (!byUser) logger.warn("Shared sections: unexpected plex.tv response shape")
-    return byUser
+    const document = parseSharedServersDocument(await response.text())
+    if (!document) {
+      logger.warn("Shared sections: unexpected plex.tv response shape")
+      return null
+    }
+    return { keys: keysOf(document), filters: filtersOf(document) }
   } catch (error) {
     logger.warn("Shared sections: plex.tv lookup failed", { error: errorMessage(error) })
     return null
+  }
+}
+
+/**
+ * The shared load (E29), or `null` once `timeoutMs` has passed. A caller that
+ * stops waiting leaves the load running, and it fills the cache.
+ */
+async function sharedServers(server: PlexServerConfig, timeoutMs: number): Promise<SharedServers | null> {
+  const load = sharedServersCache.get(server.url, () => loadSharedServers(server))
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<null>((resolve) => {
+    timer = setTimeout(resolve, timeoutMs, null)
+  })
+  try {
+    return await Promise.race([load, late])
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -149,11 +170,31 @@ export async function getSharedSectionKeys(
   { timeoutMs = LOOKUP_TIMEOUT_MS }: LookupOptions = {}
 ): Promise<SharedSectionKeys | null> {
   if (server.adminPlexUserId && plexUserId === server.adminPlexUserId) return "all"
-  const byUser = await sharedServersCache.get(server.url, () =>
-    loadSharedServers(server, timeoutMs)
-  )
-  if (!byUser) return null
-  return byUser.get(plexUserId) ?? new Set<string>()
+  const loaded = await sharedServers(server, timeoutMs)
+  if (!loaded) return null
+  return loaded.keys.get(plexUserId) ?? new Set<string>()
+}
+
+/**
+ * The sections the server shares with a Plex user, each with its filter text
+ * (`null` for none), from the same cached load as {@link getSharedSectionKeys}.
+ * Unlike that lookup, a filtered section stays (`filtersOf`).
+ *
+ * @param server - The active Plex server (URL, owner token, owner's Plex ID)
+ * @param plexUserId - The member's Plex account ID
+ * @returns `'all'` for the owner or a share of every library with no filter,
+ *   the section map (empty when the user has no share), or `null` when
+ *   plex.tv could not be read in `timeoutMs`
+ */
+export async function getSharedSectionFilters(
+  server: PlexServerConfig,
+  plexUserId: string,
+  { timeoutMs = LOOKUP_TIMEOUT_MS }: LookupOptions = {}
+): Promise<SharedSectionFilters | null> {
+  if (server.adminPlexUserId && plexUserId === server.adminPlexUserId) return "all"
+  const loaded = await sharedServers(server, timeoutMs)
+  if (!loaded) return null
+  return loaded.filters.get(plexUserId) ?? new Map<string, string | null>()
 }
 
 /** Reads `MediaContainer.librarySectionID`, falling back to the first item's. */
@@ -186,10 +227,7 @@ export async function getItemSectionKey(
   try {
     const response = await fetchWithTimeout(`${server.url}/library/metadata/${ratingKey}`, {
       method: "GET",
-      headers: {
-        Accept: "application/json",
-        "X-Plex-Token": server.token,
-      },
+      headers: { Accept: "application/json", "X-Plex-Token": server.token },
       timeoutMs,
       timeoutCoversBody: true,
     })

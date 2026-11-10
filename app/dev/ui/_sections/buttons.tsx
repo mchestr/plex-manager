@@ -48,6 +48,7 @@ export function ButtonSpecimen() {
         <Button render={<Link href="/dev/ui" />} nativeButton={false} variant="outline">
           Open as a link
         </Button>
+        {/* eslint-disable-next-line jsx-a11y/anchor-has-content -- Button renders its children inside the anchor */}
         <Button render={<a href="https://www.plex.tv" />} nativeButton={false} variant="link">
           Plex website
           <Icon icon={ArrowUpRight} />

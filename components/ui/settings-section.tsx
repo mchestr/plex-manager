@@ -57,6 +57,11 @@ interface SettingsSectionProps {
   status?: ConnectionStatus
   /** When `status` was checked: "Checked 4 minutes ago". */
   checkedAt?: string | Date | null
+  /**
+   * A state that `status` has no word for, in the header beside Edit, in
+   * view mode only: "On" with "Read at 3:07 AM today", or "12 on".
+   */
+  badge?: ReactNode
   /** "Last saved ... by ..." from the audit log. */
   footerMeta?: ReactNode
   /** Tests the saved values in view mode and the typed ones while editing. */
@@ -117,6 +122,7 @@ export function SettingsSection({
   description,
   status,
   checkedAt,
+  badge,
   footerMeta,
   onTest,
   form,
@@ -283,9 +289,14 @@ export function SettingsSection({
             {title}
           </CardTitle>
           {description && <CardDescription>{description}</CardDescription>}
-          {(status || form) && (
+          {(status || form || badge) && (
             <CardAction className="flex items-start gap-3 max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-auto max-sm:justify-self-start">
               {status && <SectionStatus id={id} status={status} checkedAt={checkedAt} />}
+              {badge && !editing && (
+                <span className="flex flex-col items-start gap-0.5 sm:items-end" data-testid={`settings-${id}-badge`}>
+                  {badge}
+                </span>
+              )}
               {form &&
                 (editing ? (
                   <Badge variant="info" data-testid={`settings-${id}-editing`}>

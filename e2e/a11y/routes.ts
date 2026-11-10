@@ -1,5 +1,7 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { TEST_USERS } from '../fixtures/auth';
+import { CLEANUP_A11Y_PREFIX, CLEANUP_A11Y_RULE_IDS, CLEANUP_MEMBERS, cleanupA11ySeedIds } from '../helpers/cleanup-fixtures';
+import { clearCleanupA11yRules, resetCleanupMemberA11y, seedCleanupA11y, useCleanupServices } from '../helpers/seed-cleanup';
 import {
   VISUAL_INVITE_IDS,
   VISUAL_INVITES,
@@ -9,12 +11,29 @@ import {
 } from '../helpers/seed-fixtures';
 import { editSection } from '../helpers/settings';
 import { FAR_FUTURE, LONG_AGO, unsubscribePath } from '../helpers/unsubscribe-token';
-import { A11Y_CONVERSATION_ID, A11Y_SHARE_TOKEN, clearA11yShareVisits } from './seed';
+import { settlePage } from '../visual/visual-test';
+import { A11Y_CONVERSATION_ID, A11Y_SHARE_TOKEN, clearA11yCleanupServices, clearA11yShareVisits } from './seed';
 
 /**
  * Every page under `app/` the axe spec scans, with the seeded ids its detail
  * routes need (`e2e/a11y/seed.ts`). Later steps add routes here: P3.2's
  * landmarks spec reads this table, and P5.4 adds the Rewind story.
+ *
+ * The media cleanup rows (UX 11.5, TS 16.5) come last, in the table order of
+ * UX 11.5: the routes run in order on one worker, and `beforeAll` seeds once.
+ * The admin rows reset with `seedCleanupA11y`, "first use" and "recipe
+ * sheet" with `clearCleanupA11yRules` after them, and the turn-on row and
+ * the member rows with `resetCleanupMemberA11y`, which also points the Plex
+ * row at the Plex mock (`clearA11yFixtures()` puts it back). "Use this
+ * recipe" needs Tautulli, so "recipe sheet" also points the service rows at
+ * the mocks, and the member rows delete them again first.
+ *
+ * Two kinds of text are out of axe's reach, and their contrast reads as
+ * `color-contrast` incomplete: text outside the viewport inside a horizontal
+ * scroller (the Home strips, the phone Results tabs), and text under a fixed
+ * bar (the phone count bar over the editor). The rows that show them hide
+ * the scroller items that are out of sight (`hideScrolledOut`), and the phone
+ * row makes the viewport as tall as the page.
  */
 
 export type A11yAudience = 'public' | 'member' | 'admin';
@@ -34,6 +53,12 @@ export interface A11yRoute {
   userId?: string;
   /** Turns Stripe on (`e2e/helpers/stripe.ts`) for this scan. */
   stripe?: boolean;
+  /**
+   * The page moves focus to its `h1` once it loads (the turn-on page, UX 4.6
+   * behaviour 1). The landmarks spec then checks the skip link from its own
+   * focus, because the first Tab moves on inside `main`.
+   */
+  focusesTitle?: boolean;
   /**
    * Resets rows that earlier routes write and this one reads, so the scan
    * sees the same data whichever routes ran before it in this worker.
@@ -73,7 +98,114 @@ async function openWith(page: Page, trigger: string, opened: string): Promise<vo
   await expect(page.getByTestId(opened)).toBeVisible();
 }
 
+/**
+ * Presses `trigger` until `opened` shows. A press before hydration does
+ * nothing, so it presses again, but never once `opened` shows. The paused
+ * clock runs between tries, for popups that mount on an animation frame.
+ */
+async function pressUntil(page: Page, trigger: Locator, opened: Locator): Promise<void> {
+  await expect(async () => {
+    if (!(await opened.isVisible())) await trigger.click({ timeout: 2000 });
+    await page.clock.runFor(100);
+    await expect(opened).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 20_000 });
+}
+
+/** `pressUntil` with two test ids. */
+function openUntil(page: Page, trigger: string, opened: string): Promise<void> {
+  return pressUntil(page, page.getByTestId(trigger), page.getByTestId(opened));
+}
+
+/** The test id of the first element whose test id starts with `start` and ends with `end`. */
+async function firstTestId(page: Page, start: string, end: string, not?: string): Promise<string> {
+  const selector = `[data-testid^="${start}"][data-testid$="${end}"]${not ? `:not([data-testid$="${not}"])` : ''}`;
+  const first = page.locator(selector).first();
+  await expect(first).toBeVisible();
+  const id = await first.getAttribute('data-testid');
+  if (!id) throw new Error(`No element matches ${selector}`);
+  return id;
+}
+
+/** Ticks the first two rows of the Leaving soon list. A press before hydration ticks nothing, and a press on a ticked box would untick it. */
+async function selectTwoRows(page: Page): Promise<void> {
+  const boxes = page.locator('[data-testid^="admin-cleanup-leaving-row-"][data-testid$="-select"]');
+  await expect(async () => {
+    for (const box of [boxes.nth(0), boxes.nth(1)]) {
+      if ((await box.getAttribute('aria-checked')) !== 'true') await box.click({ timeout: 2000 });
+    }
+    await page.clock.runFor(100);
+    await expect(page.getByTestId('admin-cleanup-leaving-bulk')).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 20_000 });
+}
+
+/** A live rule with a changed value, then Save: the impact dialog of the save (UX 4.3.9). */
+async function openImpactDialog(page: Page): Promise<void> {
+  const editor = page.getByTestId('admin-cleanup-condition-editor');
+  await openUntil(page, 'admin-cleanup-condition-c1-value', 'admin-cleanup-condition-editor');
+  // Two years: the titles played in the second year leave Leaving soon
+  await page.getByTestId('admin-cleanup-condition-editor-preset-2-years').click();
+  await page.getByTestId('admin-cleanup-condition-editor-done').click();
+  await page.clock.runFor(100);
+  await expect(editor).toHaveCount(0);
+  await expect(page.getByTestId('admin-cleanup-condition-c1-value')).toContainText('2 years');
+  // The preview of the draft carries the impact that the save shows
+  await settlePage(page);
+  await openUntil(page, 'admin-cleanup-editor-save', 'admin-cleanup-impact-dialog');
+}
+
+/**
+ * Hides each item of a horizontal scroller that lies wholly outside the
+ * scroller's visible box. Nobody sees it before a scroll, and axe cannot
+ * read text outside the viewport, so its contrast would read as incomplete.
+ */
+async function hideScrolledOut(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (const scroller of document.querySelectorAll<HTMLElement>('body *')) {
+      if (getComputedStyle(scroller).overflowX === 'visible' || scroller.scrollWidth <= scroller.clientWidth) continue;
+      const box = scroller.getBoundingClientRect();
+      for (const item of Array.from(scroller.children)) {
+        const rect = item.getBoundingClientRect();
+        if (item instanceof HTMLElement && (rect.right <= box.left || rect.left >= box.right)) item.style.visibility = 'hidden';
+      }
+    }
+  });
+}
+
+/**
+ * The phone editor (UX 11.5 row 14): 390 x 844 switches the layout, then the
+ * viewport grows to the height of the page, so the fixed count bar and tab
+ * bar cover only the space that the page keeps free for them.
+ */
+async function phoneEditor(page: Page): Promise<void> {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.clock.runFor(100);
+  await expect(page.getByTestId('admin-cleanup-condition-c2-box')).toBeVisible();
+  await settlePage(page);
+  const height = await page.evaluate(() => document.documentElement.scrollHeight);
+  await page.setViewportSize({ width: 390, height });
+  await settlePage(page);
+  await hideScrolledOut(page);
+}
+
+/** "recipe sheet": "Use this recipe" shows only with Tautulli set up, so the rows point at the mocks, with prefix ids. */
+async function resetRecipeSheet(): Promise<void> {
+  await clearCleanupA11yRules();
+  await useCleanupServices(CLEANUP_A11Y_PREFIX);
+}
+
+/** The member rows: the service rows of "recipe sheet" go first, so every member row reads the same data, on a retry too. */
+async function resetCleanupMember(): Promise<void> {
+  await clearA11yCleanupServices();
+  await resetCleanupMemberA11y();
+}
+
 const regularId = TEST_USERS.REGULAR.id;
+const cleanupRule = {
+  dry: `/admin/cleanup/rules/${CLEANUP_A11Y_RULE_IDS.dry}`,
+  live: `/admin/cleanup/rules/${CLEANUP_A11Y_RULE_IDS.live}`,
+};
+const liveBatch = `admin-cleanup-batch-${cleanupA11ySeedIds().batches.live}`;
+const cleanupMember = CLEANUP_MEMBERS.member.id;
 
 export const A11Y_ROUTES: A11yRoute[] = [
   // Public
@@ -177,6 +309,117 @@ export const A11Y_ROUTES: A11yRoute[] = [
     as: 'admin',
     ready: 'admin-wrapped-history-heading',
   },
+
+  // Media cleanup, admin (UX 11.5 rows 1 to 15): the seed holds both fixed rules
+  { path: '/admin/cleanup', as: 'admin', ready: 'admin-cleanup-page', reset: seedCleanupA11y },
+  { path: '/admin/cleanup?tab=leaving-soon', as: 'admin', ready: 'admin-cleanup-leaving', reset: seedCleanupA11y },
+  {
+    path: '/admin/cleanup?tab=leaving-soon',
+    as: 'admin',
+    state: 'selection',
+    ready: 'admin-cleanup-leaving',
+    setup: selectTwoRows,
+    reset: seedCleanupA11y,
+  },
+  // The deletion batch of the Review first rule; the dialog lists its titles
+  {
+    path: '/admin/cleanup?tab=leaving-soon',
+    as: 'admin',
+    state: 'approve dialog',
+    ready: `${liveBatch}-approve`,
+    setup: (page) => openUntil(page, `${liveBatch}-approve`, 'admin-cleanup-approve-dialog'),
+    reset: seedCleanupA11y,
+  },
+  { path: '/admin/cleanup?tab=kept', as: 'admin', ready: 'admin-cleanup-kept', reset: seedCleanupA11y },
+  { path: '/admin/cleanup?tab=history', as: 'admin', ready: 'admin-cleanup-runs', reset: seedCleanupA11y },
+  { path: '/admin/cleanup?tab=settings', as: 'admin', ready: 'settings-cleanup-feature-section', reset: seedCleanupA11y },
+  {
+    path: '/admin/cleanup?tab=settings',
+    as: 'admin',
+    state: 'protections editing',
+    ready: 'settings-cleanup-protections-section',
+    setup: (page) => editSection(page, 'cleanup-protections'),
+    reset: seedCleanupA11y,
+  },
+  { path: '/admin/cleanup/rules/new?level=movie', as: 'admin', ready: 'admin-cleanup-editor-page', reset: seedCleanupA11y },
+  { path: cleanupRule.dry, as: 'admin', ready: 'admin-cleanup-editor-page', reset: seedCleanupA11y },
+  // After UX 10.1 item 7 the id matches only the desktop token; the phone box has its own
+  {
+    path: cleanupRule.dry,
+    as: 'admin',
+    state: 'condition editor',
+    ready: 'admin-cleanup-condition-c2-value',
+    setup: (page) => openUntil(page, 'admin-cleanup-condition-c2-value', 'admin-cleanup-condition-editor'),
+    reset: seedCleanupA11y,
+  },
+  {
+    path: cleanupRule.dry,
+    as: 'admin',
+    state: 'why',
+    ready: 'admin-cleanup-editor-page',
+    setup: async (page) => {
+      const why = await firstTestId(page, 'admin-cleanup-results-row-', '-why');
+      await openUntil(page, why, 'admin-cleanup-why');
+    },
+    reset: seedCleanupA11y,
+  },
+  {
+    path: cleanupRule.live,
+    as: 'admin',
+    state: 'impact dialog',
+    ready: 'admin-cleanup-editor-page',
+    setup: openImpactDialog,
+    reset: seedCleanupA11y,
+  },
+  // The table has no viewport field: the phone condition boxes must hold no nested button (axe nested-interactive)
+  { path: cleanupRule.dry, as: 'admin', state: 'phone', ready: 'admin-cleanup-editor-page', setup: phoneEditor, reset: seedCleanupA11y },
+  // Its member count reads plex.tv
+  { path: `${cleanupRule.dry}/turn-on`, as: 'admin', ready: 'admin-cleanup-turn-on-page', focusesTitle: true, reset: resetCleanupMemberA11y },
+  // No rule: the first-use recipes and the recipe Sheet (UX 11.5 rows 16 and 17)
+  { path: '/admin/cleanup', as: 'admin', state: 'first use', ready: 'admin-cleanup-recipes', reset: clearCleanupA11yRules },
+  {
+    path: '/admin/cleanup',
+    as: 'admin',
+    state: 'recipe sheet',
+    ready: 'admin-cleanup-recipe-never-watched-movies-use',
+    setup: (page) => openUntil(page, 'admin-cleanup-recipe-never-watched-movies-use', 'admin-cleanup-recipe-sheet'),
+    reset: resetRecipeSheet,
+  },
+
+  // Media cleanup, member (UX 11.5 rows 18 to 22): last, with the Plex row on the Plex mock
+  { path: '/leaving-soon', as: 'member', userId: cleanupMember, ready: 'leaving-soon-page', reset: resetCleanupMember },
+  {
+    path: '/leaving-soon',
+    as: 'member',
+    userId: cleanupMember,
+    state: 'kept',
+    ready: 'leaving-soon-page',
+    // The Keep toast with its Undo action
+    setup: async (page) => {
+      const keep = await firstTestId(page, 'leaving-soon-card-', '-keep', '-end-keep');
+      await openUntil(page, keep, 'toast-action');
+    },
+    reset: resetCleanupMember,
+  },
+  {
+    path: '/leaving-soon',
+    as: 'member',
+    userId: CLEANUP_MEMBERS.noshare.id,
+    state: 'empty',
+    ready: 'leaving-soon-empty',
+    reset: resetCleanupMember,
+  },
+  // New states, so their keys differ from the rows of `/` and `/account` above
+  {
+    path: '/',
+    as: 'member',
+    userId: cleanupMember,
+    state: 'leaving soon row',
+    ready: 'home-leaving-soon-row',
+    setup: hideScrolledOut,
+    reset: resetCleanupMember,
+  },
+  { path: '/account', as: 'member', userId: cleanupMember, state: 'keeps', ready: 'account-keeps', reset: resetCleanupMember },
 ];
 
 /** `/setup` needs an incomplete setup, so these run in the `setup-wizard` project. */

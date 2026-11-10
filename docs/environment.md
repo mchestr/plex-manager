@@ -124,4 +124,5 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `E2E_PORT` |  | `3100` | Test only: the Playwright web server port. |
 | `E2E_SMTP_PORT` |  | `2526` | Test only: the port of the Playwright SMTP sink, which the web server's SMTP_URL names. |
 | `SKIP_CONNECTION_TESTS` |  |  | Test only: "true" skips live Plex checks. |
+| `E2E_PLEX_TV_URL` |  |  | Test only: the URL of the E2E plex.tv mock, on localhost with a port. Used only while E2E_TEST_MODE is "true"; Playwright sets it. |
 | `ENABLE_DEV_UI` |  |  | Development only: "1" serves the /dev/ui primitives sheet (Playwright sets it). |

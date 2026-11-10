@@ -64,6 +64,11 @@ jest.mock('@/components/dashboard/rewind-card', () => ({
 }))
 
 jest.mock('@/components/watchlist/sync-settings-card', () => ({ WatchlistSyncCard: () => null }))
+// The Leaving soon row reads the member's cleanup data; its own tests cover it
+jest.mock('@/components/dashboard/leaving-soon-row', () => ({
+  LeavingSoonRow: () => <div data-testid="leaving-soon-row-stub" />,
+  LeavingSoonRowSkeleton: () => null,
+}))
 jest.mock('@/components/auth/member-pass', () => ({
   MemberPass: jest.fn(() => <div data-testid="member-pass-stub" />),
 }))

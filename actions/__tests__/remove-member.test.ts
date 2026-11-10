@@ -45,7 +45,7 @@ beforeEach(() => {
   jest.mocked(consume).mockResolvedValue({ ok: true })
   jest.mocked(isPlexServerOwner).mockResolvedValue(false)
   jest.mocked(loadEraseSubject).mockResolvedValue({ userId: 'member-1', discordUserIds: [], wrappedIds: [], generationIds: [] })
-  jest.mocked(countInventory).mockResolvedValue({ user: 1 } as unknown as InventoryCounts)
+  jest.mocked(countInventory).mockResolvedValue({ user: 1, cleanupProtection: 1 } as unknown as InventoryCounts)
   prismaMock.user.findUnique.mockResolvedValue(MEMBER as never)
   prismaMock.user.count.mockResolvedValue(2)
   prismaMock.rewindGeneration.count.mockResolvedValue(0)
@@ -89,7 +89,12 @@ describe('previewMemberRemoval', () => {
 
     expect(result).toEqual({
       success: true,
-      data: { dryRun: true, plan: { cancelStripe: false, services: ['plex'], discordLinked: false }, counts: { user: 1 }, outcome: null },
+      data: {
+        dryRun: true,
+        plan: { cancelStripe: false, services: ['plex'], discordLinked: false },
+        counts: { user: 1, cleanupProtection: 1 },
+        outcome: null,
+      },
     })
     expect(revokeServiceAccess).not.toHaveBeenCalled()
   })

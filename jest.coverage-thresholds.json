@@ -1,9 +1,9 @@
 {
   "global": {
-    "statements": 90,
-    "branches": 82,
-    "functions": 89,
-    "lines": 90
+    "statements": 92,
+    "branches": 85,
+    "functions": 91,
+    "lines": 92
   },
   "./lib/affiliates/": {
     "statements": 100,
@@ -12,10 +12,10 @@
     "lines": 100
   },
   "./lib/auth.ts": {
-    "statements": 95,
-    "branches": 94,
+    "statements": 97,
+    "branches": 95,
     "functions": 100,
-    "lines": 95
+    "lines": 97
   },
   "./lib/prisma.ts": {
     "statements": 96,
@@ -36,16 +36,22 @@
     "lines": 94
   },
   "./actions/admin/": {
-    "statements": 98,
-    "branches": 94,
+    "statements": 99,
+    "branches": 95,
     "functions": 99,
     "lines": 99
   },
   "./lib/queue/": {
-    "statements": 89,
-    "branches": 84,
-    "functions": 81,
-    "lines": 90
+    "statements": 90,
+    "branches": 86,
+    "functions": 82,
+    "lines": 91
+  },
+  "./lib/cleanup/": {
+    "statements": 99,
+    "branches": 97,
+    "functions": 99,
+    "lines": 99
   },
   "./lib/security/crypto.ts": {
     "statements": 100,
@@ -61,7 +67,7 @@
   },
   "./lib/queue/client.ts": {
     "statements": 97,
-    "branches": 89,
+    "branches": 91,
     "functions": 100,
     "lines": 97
   },

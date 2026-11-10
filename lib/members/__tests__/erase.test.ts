@@ -44,7 +44,7 @@ jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }))
 
-const COUNTS = { user: 1, plexWrapped: 2, userMediaMark: 3 } as unknown as InventoryCounts
+const COUNTS = { user: 1, plexWrapped: 2, userMediaMark: 3, cleanupProtection: 2 } as unknown as InventoryCounts
 const SUBJECT = { userId: 'member-1', discordUserIds: ['discord-1'], wrappedIds: ['w-1'], generationIds: ['g-1'] }
 const TX = asTransactionClient({})
 
@@ -123,6 +123,13 @@ describe('eraseMember', () => {
     )
     const details = JSON.stringify(jest.mocked(recordAuditEvent).mock.calls[0][2])
     expect(details).not.toContain('@')
+  })
+
+  it("reports and audits the member's Leaving soon keeps in the counts", async () => {
+    const result = await erase()
+
+    expect(result).toMatchObject({ success: true, data: { counts: { cleanupProtection: 2 } } })
+    expect(jest.mocked(recordAuditEvent).mock.calls[0][2]).toMatchObject({ counts: { cleanupProtection: 2 } })
   })
 
   it('makes no external call and writes nothing on a dry run', async () => {

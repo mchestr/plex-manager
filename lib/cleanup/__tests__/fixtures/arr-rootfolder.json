@@ -1,0 +1,15 @@
+[
+  {
+    "path": "/data/movies",
+    "accessible": true,
+    "freeSpace": 1099511627776,
+    "unmappedFolders": [
+      {
+        "name": "Invented Leftover",
+        "path": "/data/movies/Invented Leftover",
+        "relativePath": "Invented Leftover"
+      }
+    ],
+    "id": 1
+  }
+]

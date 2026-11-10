@@ -14,8 +14,18 @@ export const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa',
  */
 const REGION_MATCHER = 'dialog, [role=dialog], [role=alertdialog], svg, [role=listbox]';
 
-/** axe itself, configured with {@link REGION_MATCHER} once it loads in the page. */
+/**
+ * axe itself, configured with {@link REGION_MATCHER} once it loads in the page.
+ *
+ * It first removes the `next dev` overlay. `exclude('nextjs-portal')` hides
+ * only the overlay's results: axe's skip link test still reads the overlay's
+ * links in its shadow root. On a page with no link of its own, such as the
+ * sign-in page, the first link is then outside the document, so the skip link
+ * reads as content outside a landmark (`region`). A production build has no
+ * overlay, so the scan sees the page as CI does.
+ */
 const AXE_SOURCE = `${axe.source}
+document.querySelectorAll('nextjs-portal').forEach((portal) => portal.remove());
 axe.configure({ checks: [{ id: 'region', options: { regionMatcher: ${JSON.stringify(REGION_MATCHER)} } }] });`;
 
 /** Scans the whole page at every impact level, leaving out the `next dev` overlay. */

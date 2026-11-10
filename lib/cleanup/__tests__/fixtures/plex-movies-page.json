@@ -1,0 +1,217 @@
+{
+  "MediaContainer": {
+    "size": 3,
+    "totalSize": 3,
+    "offset": 0,
+    "allowSync": true,
+    "librarySectionID": 1,
+    "librarySectionTitle": "Movies",
+    "librarySectionUUID": "0b7c4f2e-0000-4000-8000-000000000001",
+    "Metadata": [
+      {
+        "ratingKey": "101",
+        "key": "/library/metadata/101",
+        "guid": "plex://movie/5d7768aa96b655001fdc0101",
+        "slug": "the-lantern-keeper",
+        "studio": "Invented Pictures",
+        "type": "movie",
+        "title": "The Lantern Keeper",
+        "librarySectionTitle": "Movies",
+        "librarySectionID": 1,
+        "librarySectionKey": "/library/sections/1",
+        "contentRating": "PG-13",
+        "summary": "An invented film for the cleanup fixtures.",
+        "audienceRating": 7.1,
+        "viewCount": 2,
+        "lastViewedAt": 1730000000,
+        "year": 2014,
+        "tagline": "Invented.",
+        "thumb": "/library/metadata/101/thumb/1735689600",
+        "art": "/library/metadata/101/art/1735689600",
+        "duration": 6300000,
+        "originallyAvailableAt": "2014-05-01",
+        "addedAt": 1700000000,
+        "updatedAt": 1735689600,
+        "Media": [
+          {
+            "id": 1010,
+            "duration": 6300000,
+            "bitrate": 8000,
+            "width": 1920,
+            "height": 1080,
+            "videoResolution": "1080",
+            "container": "mkv",
+            "Part": [
+              {
+                "id": 10100,
+                "key": "/library/parts/10100/1735689600/file.mkv",
+                "duration": 6300000,
+                "file": "/data/movies/The Lantern Keeper (2014)/The Lantern Keeper (2014).mkv",
+                "size": 8589934592,
+                "container": "mkv"
+              }
+            ]
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Drama"
+          }
+        ],
+        "Director": [
+          {
+            "tag": "Invented Director"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Invented Actor"
+          }
+        ],
+        "Guid": [
+          {
+            "id": "imdb://tt9900101"
+          },
+          {
+            "id": "tmdb://990101"
+          }
+        ],
+        "Label": [
+          {
+            "tag": "Untranscodable"
+          }
+        ]
+      },
+      {
+        "ratingKey": "102",
+        "key": "/library/metadata/102",
+        "guid": "plex://movie/5d7768aa96b655001fdc0102",
+        "slug": "harbor-of-glass",
+        "studio": "Invented Pictures",
+        "type": "movie",
+        "title": "Harbor of Glass",
+        "librarySectionTitle": "Movies",
+        "librarySectionID": 1,
+        "librarySectionKey": "/library/sections/1",
+        "contentRating": "PG-13",
+        "summary": "An invented film for the cleanup fixtures.",
+        "audienceRating": 7.1,
+        "viewCount": 2,
+        "lastViewedAt": 1730000000,
+        "year": 2019,
+        "tagline": "Invented.",
+        "thumb": "/library/metadata/102/thumb/1735689600",
+        "art": "/library/metadata/102/art/1735689600",
+        "duration": 6300000,
+        "originallyAvailableAt": "2019-05-01",
+        "addedAt": 1720000000,
+        "updatedAt": 1735689600,
+        "Media": [
+          {
+            "id": 1020,
+            "duration": 6300000,
+            "bitrate": 8000,
+            "width": 1920,
+            "height": 1080,
+            "videoResolution": "1080",
+            "container": "mkv",
+            "Part": [
+              {
+                "id": 10200,
+                "key": "/library/parts/10200/1735689600/file.mkv",
+                "duration": 6300000,
+                "file": "/data/movies/Harbor of Glass (2019)/Harbor of Glass (2019).mkv",
+                "size": 4294967296,
+                "container": "mkv"
+              }
+            ]
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Drama"
+          }
+        ],
+        "Director": [
+          {
+            "tag": "Invented Director"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Invented Actor"
+          }
+        ],
+        "Guid": [
+          {
+            "id": "imdb://tt9900102"
+          },
+          {
+            "id": "tmdb://990102"
+          }
+        ]
+      },
+      {
+        "ratingKey": "103",
+        "key": "/library/metadata/103",
+        "guid": "com.plexapp.agents.imdb://tt9900103?lang=en",
+        "slug": "quiet-orchard",
+        "studio": "Invented Pictures",
+        "type": "movie",
+        "title": "Quiet Orchard",
+        "librarySectionTitle": "Movies",
+        "librarySectionID": 1,
+        "librarySectionKey": "/library/sections/1",
+        "contentRating": "PG-13",
+        "summary": "An invented film for the cleanup fixtures.",
+        "audienceRating": 7.1,
+        "viewCount": 2,
+        "lastViewedAt": 1730000000,
+        "year": 2008,
+        "tagline": "Invented.",
+        "thumb": "/library/metadata/103/thumb/1735689600",
+        "art": "/library/metadata/103/art/1735689600",
+        "duration": 6300000,
+        "originallyAvailableAt": "2008-05-01",
+        "addedAt": 1650000000,
+        "updatedAt": 1735689600,
+        "Media": [
+          {
+            "id": 1030,
+            "duration": 6300000,
+            "bitrate": 8000,
+            "width": 1920,
+            "height": 1080,
+            "videoResolution": "1080",
+            "container": "mkv",
+            "Part": [
+              {
+                "id": 10300,
+                "key": "/library/parts/10300/1735689600/file.mkv",
+                "duration": 6300000,
+                "file": "/data/movies/Quiet Orchard (2008)/Quiet Orchard (2008).mkv",
+                "size": 2147483648,
+                "container": "mkv"
+              }
+            ]
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Drama"
+          }
+        ],
+        "Director": [
+          {
+            "tag": "Invented Director"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Invented Actor"
+          }
+        ]
+      }
+    ]
+  }
+}

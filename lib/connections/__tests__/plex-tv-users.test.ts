@@ -96,6 +96,22 @@ describe("fetchPlexTvUsers", () => {
     expect(init?.headers).toMatchObject({ "X-Plex-Token": "owner-token", "X-Plex-Client-Identifier": "plex-manager-test" })
   })
 
+  it("asks the E2E plex.tv mock in E2E mode (TS E27)", async () => {
+    process.env = { ...process.env, E2E_TEST_MODE: "true", E2E_PLEX_TV_URL: "http://localhost:4010" }
+    const fetchSpy = respondWith(200, USERS_XML)
+
+    await expect(fetchPlexTvUsers("owner-token")).resolves.toMatchObject({ ok: true })
+    expect(String(fetchSpy.mock.calls[0][0])).toBe("http://localhost:4010/api/users")
+  })
+
+  it("keeps the real host for a mock URL that is not local", async () => {
+    process.env = { ...process.env, E2E_TEST_MODE: "true", E2E_PLEX_TV_URL: "http://plex.example.com:4010" }
+    const fetchSpy = respondWith(200, USERS_XML)
+
+    await fetchPlexTvUsers("owner-token")
+    expect(String(fetchSpy.mock.calls[0][0])).toBe("https://clients.plex.tv/api/users")
+  })
+
   it("reads only a 401 as an invalid token", async () => {
     respondWith(401, "<errors/>")
 

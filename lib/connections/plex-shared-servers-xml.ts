@@ -22,8 +22,14 @@
  * - Several entries for one user are merged (union).
  * - A share with a content filter (`filterAll`, or the filter for the
  *   section's type, e.g. `filterMovies` for a movie section) loses that
- *   section: the filter limits which items the member sees, and items are not
- *   checked against it here. Such a share is never `'all'`.
+ *   section in {@link parseSharedServersXml}: the filter limits which items
+ *   the member sees, and items are not checked against it here. Such a share
+ *   is never `'all'`.
+ * - {@link filtersOf} keeps a filtered section with its filter text instead,
+ *   for media cleanup's member pages, which check labels themselves (13.1).
+ *
+ * {@link parseSharedServersDocument} parses the XML once; {@link keysOf} and
+ * {@link filtersOf} read the same parsed document.
  *
  * @module
  */
@@ -33,6 +39,15 @@ import { z } from "zod"
 
 /** Section keys a member may browse: every library, or a set of local section keys. */
 export type SharedSectionKeys = "all" | ReadonlySet<string>
+
+/**
+ * The sections a member may browse, each with the filter text that applies to
+ * it, or `null` for no filter. When `filterAll` and the filter of the section's
+ * type both hold text, the text is both, joined by `|`: plex.tv joins clauses
+ * that must all pass with `|` (python-plexapi `MyPlexAccount._filterDictToStr`).
+ * `'all'`: every library with no filter, as {@link keysOf} gives it.
+ */
+export type SharedSectionFilters = "all" | ReadonlyMap<string, string | null>
 
 type FilterAttribute =
   | "@_filterAll"
@@ -118,23 +133,98 @@ function merge(a: SharedSectionKeys | undefined, b: SharedSectionKeys): SharedSe
   return new Set([...a, ...b])
 }
 
+/** A parsed `shared_servers` document: each valid entry with its Plex user ID, in order. */
+export interface SharedServersDocument {
+  shares: readonly { userId: string; share: Share }[]
+}
+
 /**
- * Parses a plex.tv `shared_servers` document into Plex user ID → shared
- * section keys.
+ * Parses a plex.tv `shared_servers` document once, for {@link keysOf} and
+ * {@link filtersOf}. Malformed entries and entries without a user are left out.
  *
- * @returns The map, or `null` when the document has no `MediaContainer`
+ * @returns The document, or `null` when it has no `MediaContainer`
  */
-export function parseSharedServersXml(xml: string): Map<string, SharedSectionKeys> | null {
+export function parseSharedServersDocument(xml: string): SharedServersDocument | null {
   const parsed = documentSchema.safeParse(xmlParser.parse(xml))
   if (!parsed.success) return null
 
-  const byUser = new Map<string, SharedSectionKeys>()
+  const shares: { userId: string; share: Share }[] = []
   for (const item of parsed.data.MediaContainer.SharedServer ?? []) {
     const share = shareSchema.safeParse(item)
     if (!share.success) continue
     const userId = share.data["@_userID"]
     if (!userId || userId === "0") continue
-    byUser.set(userId, merge(byUser.get(userId), sharedKeysOf(share.data)))
+    shares.push({ userId, share: share.data })
   }
+  return { shares }
+}
+
+/** Plex user ID → shared section keys, with several entries of one user merged (union). */
+export function keysOf(document: SharedServersDocument): Map<string, SharedSectionKeys> {
+  const byUser = new Map<string, SharedSectionKeys>()
+  for (const { userId, share } of document.shares) byUser.set(userId, merge(byUser.get(userId), sharedKeysOf(share)))
   return byUser
+}
+
+/**
+ * Parses a plex.tv `shared_servers` document into Plex user ID → shared
+ * section keys.
+ *
+ * @returns The map, or `null` when the document has no `MediaContainer`
+ * @internal Exported for the tests.
+ */
+export function parseSharedServersXml(xml: string): Map<string, SharedSectionKeys> | null {
+  const document = parseSharedServersDocument(xml)
+  return document ? keysOf(document) : null
+}
+
+/**
+ * The filter text that applies to a section of this type, `null` for none,
+ * or `undefined` when the type is unknown and any filter is set (as
+ * `isFiltered` reads it, the section is then hidden).
+ */
+function filterTextOf(share: Share, sectionType: string | undefined): string | null | undefined {
+  const attribute = sectionType ? TYPE_FILTERS.get(sectionType) : undefined
+  if (!attribute) return hasAnyFilter(share) ? undefined : null
+  const texts = [share["@_filterAll"], share[attribute]].filter((text): text is string => Boolean(text))
+  return texts.length > 0 ? texts.join("|") : null
+}
+
+/**
+ * Plex user ID → the sections shared with them and the filter text of each
+ * (13.1). Unlike {@link keysOf}, a filtered section stays, with its text.
+ *
+ * Several entries of one user merge section by section (integrations-r4-2):
+ * a section that one entry shares takes that entry's filter. Two entries that
+ * give one section different texts hide it, and `null` (no filter) differs
+ * from any text. A section of unknown type under a filter is hidden too.
+ * A user whose every entry shares all libraries with no filter gets `'all'`,
+ * also when plex.tv lists no section.
+ */
+export function filtersOf(document: SharedServersDocument): Map<string, SharedSectionFilters> {
+  const byUser = new Map<string, Map<string, string | null>>()
+  const hidden = new Map<string, Set<string>>()
+  const open = new Map<string, boolean>()
+  for (const { userId, share } of document.shares) {
+    const filters = byUser.get(userId) ?? new Map<string, string | null>()
+    const gone = hidden.get(userId) ?? new Set<string>()
+    byUser.set(userId, filters)
+    hidden.set(userId, gone)
+    const allLibraries = share["@_allLibraries"] === "1"
+    open.set(userId, (open.get(userId) ?? true) && allLibraries && !hasAnyFilter(share))
+    for (const item of share.Section ?? []) {
+      const section = sectionSchema.safeParse(item)
+      if (!section.success || (!allLibraries && section.data["@_shared"] !== "1")) continue
+      const key = section.data["@_key"]
+      if (gone.has(key)) continue
+      const text = filterTextOf(share, section.data["@_type"])
+      if (text === undefined || (filters.has(key) && filters.get(key) !== text)) {
+        filters.delete(key)
+        gone.add(key)
+      } else {
+        filters.set(key, text)
+      }
+    }
+  }
+  return new Map([...byUser].map(([userId, filters]) => [userId, open.get(userId) ? "all" : filters]))
 }

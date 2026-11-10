@@ -1,3 +1,4 @@
+/* eslint max-lines: ["error", { "max": 220, "skipBlankLines": true, "skipComments": true }] -- cohesive: every zone and locale formatter in one module, so `npm run test:tz` covers them all */
 /**
  * The one formatter module: numbers, money, dates, durations and relative time.
  *
@@ -137,8 +138,9 @@ export function formatTokens(n: number, settings: Pick<FormatSettings, "locale">
  * - `day-month`: "October 11" in en-US, "11 October" in en-GB (Rewind copy)
  * - `day-month-short`: "Oct 11" (chart axes)
  * - `month-year`: "October 2026" (member-since lines)
+ * - `month-year-short`: "Mar 2024" (media cleanup's fact phrases, "Last played Mar 2024.")
  */
-export type DateStyle = "short" | "long" | "day-month" | "day-month-short" | "month-year"
+export type DateStyle = "short" | "long" | "day-month" | "day-month-short" | "month-year" | "month-year-short"
 
 const DATE_STYLES: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   short: { year: "numeric", month: "short", day: "numeric" },
@@ -146,6 +148,7 @@ const DATE_STYLES: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   "day-month": { month: "long", day: "numeric" },
   "day-month-short": { month: "short", day: "numeric" },
   "month-year": { year: "numeric", month: "long" },
+  "month-year-short": { year: "numeric", month: "short" },
 }
 
 const TIME: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" }

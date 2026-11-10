@@ -6,6 +6,7 @@ import { getEnv } from "@/lib/env"
 
 import { ButtonSpecimen } from "./_sections/buttons"
 import { ChartSpecimen } from "./_sections/charts"
+import { CleanupPrimitivesSpecimen } from "./_sections/cleanup-primitives"
 import { CommandSpecimen } from "./_sections/command"
 import { DataTableSpecimen } from "./_sections/composite-tables"
 import { EmptyStateSpecimen, PageHeaderSpecimen, StatTileSpecimen } from "./_sections/composites"
@@ -35,7 +36,8 @@ export const metadata: Metadata = {
  * primitive in every variant and state, rendered from the real components.
  * It is the visual-regression target for `components/ui` and grows with each
  * Phase 3 step. The ink section draws them again in three Rewind inks
- * (P3.7), and the last sections hold the admin composites (P6.5). Off unless
+ * (P3.7), the admin composites follow (P6.5), and the media cleanup
+ * primitives with the condition editor come last (TS 12.4). Off unless
  * `ENABLE_DEV_UI=1`.
  */
 export default function DevUiPage() {
@@ -88,6 +90,9 @@ export default function DevUiPage() {
       <EmptyStateSpecimen />
       <ChartSpecimen />
       <RewindCardSpecimen />
+      <Suspense>
+        <CleanupPrimitivesSpecimen />
+      </Suspense>
     </main>
   )
 }

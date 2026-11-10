@@ -1,12 +1,13 @@
 /**
- * Zod checks for route handlers' dynamic segments and query strings, the
- * entitlement check for signed-in requests, and the request-id wrapper
- * {@link withRequestContext}.
+ * Zod checks for route handlers' dynamic segments, query strings and JSON
+ * bodies, the entitlement check for signed-in requests, and the request-id
+ * wrapper {@link withRequestContext}.
  *
  * Each parser returns the parsed value, or a 400 JSON response with
  * `{ error, code: "VALIDATION_ERROR" }` (the code every route already uses)
- * that the handler returns as is. {@link requireEntitlement} returns a 403
- * with `code: "NOT_ENTITLED"`, or a redirect to `/subscribe`.
+ * that the handler returns as is; {@link parseJsonBody} answers a body over
+ * 64 KB with a 413. {@link requireEntitlement} returns a 403 with
+ * `code: "NOT_ENTITLED"`, or a redirect to `/subscribe`.
  *
  * @example
  * ```ts
@@ -46,12 +47,8 @@ export function withRequestContext<A extends [Request, ...unknown[]], R>(
   }
 }
 
-function badRequest(error: z.ZodError, headers?: HeadersInit): NextResponse {
-  const message = error.issues[0]?.message ?? "Invalid request"
-  return NextResponse.json(createSafeError(ErrorCode.VALIDATION_ERROR, message), {
-    status: getStatusCode(ErrorCode.VALIDATION_ERROR),
-    headers,
-  })
+function refuse(message: string, headers?: HeadersInit, status = getStatusCode(ErrorCode.VALIDATION_ERROR)): NextResponse {
+  return NextResponse.json(createSafeError(ErrorCode.VALIDATION_ERROR, message), { status, headers })
 }
 
 /** Parses a route's awaited `params`. */
@@ -61,7 +58,8 @@ export function parseRouteParams<S extends z.ZodType>(
   headers?: HeadersInit
 ): Parsed<z.output<S>> {
   const parsed = schema.safeParse(params)
-  return parsed.success ? { ok: true, data: parsed.data } : { ok: false, response: badRequest(parsed.error, headers) }
+  if (parsed.success) return { ok: true, data: parsed.data }
+  return { ok: false, response: refuse(parsed.error.issues[0]?.message ?? "Invalid request", headers) }
 }
 
 /**
@@ -79,6 +77,49 @@ export function parseSearchParams<S extends z.ZodType>(
     if (!(key in values)) values[key] = value
   }
   return parseRouteParams(schema, values, headers)
+}
+
+/** The most bytes {@link parseJsonBody} reads. */
+const MAX_JSON_BODY_BYTES = 64 * 1024
+
+/** The body as text, or null above `maxBytes`: by its Content-Length unread, else reading stops there. */
+async function readCapped(request: Request, maxBytes: number): Promise<string | null> {
+  if (Number(request.headers.get("content-length")) > maxBytes) return null
+  if (!request.body) return ""
+  const reader = request.body.getReader()
+  const decoder = new TextDecoder()
+  let size = 0
+  let text = ""
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) return text + decoder.decode()
+    size += value.byteLength
+    if (size > maxBytes) {
+      await reader.cancel()
+      return null
+    }
+    text += decoder.decode(value, { stream: true })
+  }
+}
+
+/**
+ * Parses a route's JSON body: at most 64 KB is read, and a larger body is a
+ * 413. A body that is not JSON, or fails `schema`, is a 400.
+ */
+export async function parseJsonBody<S extends z.ZodType>(
+  schema: S,
+  request: Request,
+  headers?: HeadersInit
+): Promise<Parsed<z.output<S>>> {
+  const text = await readCapped(request, MAX_JSON_BODY_BYTES)
+  if (text === null) return { ok: false, response: refuse("Request body is too large", headers, 413) }
+  let body: unknown
+  try {
+    body = JSON.parse(text)
+  } catch {
+    return { ok: false, response: refuse("Request body is not valid JSON", headers) }
+  }
+  return parseRouteParams(schema, body, headers)
 }
 
 /**

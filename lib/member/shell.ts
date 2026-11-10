@@ -1,6 +1,7 @@
 import "server-only"
 
 import { serverName } from "@/lib/brand"
+import { memberSeesLeavingSoon } from "@/lib/data/leaving-soon"
 import { hasInvitesPage } from "@/lib/member/invites-page"
 import { hasMembershipPage } from "@/lib/member/membership-page"
 import { memberNav, type MemberNavItem } from "@/lib/member/nav"
@@ -62,15 +63,19 @@ export async function discordHandleFor(userId: string): Promise<string | null | 
   return integration?.isEnabled && integration.clientId && integration.clientSecret ? null : undefined
 }
 
+/** The shell's plex.tv budget for the Leaving soon item (TS 13.1, E29): a later answer hides the item for this page load. */
+const NAV_TIMEOUT_MS = 300
+
 /** Everything the member layout needs for the signed-in member, read once per layout render. */
 export async function getAppShellData(session: { id: string } & PermissionSubject): Promise<AppShellData> {
-  const [name, user, rewindYear, discordHandle, membership, invites] = await Promise.all([
+  const [name, user, rewindYear, discordHandle, membership, invites, leavingSoon] = await Promise.all([
     serverName(),
     prisma.user.findUnique({ where: { id: session.id }, select: { name: true, email: true, timezone: true } }),
     rewindYearFor(session.id, session.isAdmin),
     discordHandleFor(session.id),
     hasMembershipPage(session.id),
     hasInvitesPage(session.id),
+    memberSeesLeavingSoon(session.id, NAV_TIMEOUT_MS),
   ])
   const displayName = user?.name?.trim() || user?.email || "Member"
 
@@ -84,7 +89,8 @@ export async function getAppShellData(session: { id: string } & PermissionSubjec
       membership,
       ...(discordHandle === undefined ? {} : { discordHandle }),
     },
-    nav: memberNav({ rewindYear, invites, membership }),
+    // Only `true` shows the item: `null` (plex.tv did not answer in time) hides it (E29)
+    nav: memberNav({ leavingSoon: leavingSoon === true, rewindYear, invites, membership }),
     timeZoneUnset: user !== null && user.timezone === null,
   }
 }

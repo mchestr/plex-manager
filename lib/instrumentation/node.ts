@@ -11,7 +11,8 @@
  * `PROCESS_ROLE` (P11.3) picks what starts: a `web` container issues only the
  * setup code, because web containers serve the wizard; `worker` and `all`
  * (the default) also start the queue Workers, their schedulers (watchlist,
- * role reconcile, retention, the member activity run and the Rewind runs),
+ * role reconcile, retention, the member activity run, media cleanup and the
+ * Rewind runs),
  * the Discord bot poller and, without Redis, the database-lease fallbacks and
  * the secret re-encryption.
  *
@@ -129,10 +130,12 @@ async function startQueueWorker() {
   const { ensureRequestTierSchedule } = await import("@/lib/request-tiers/schedule")
   const { ensureMemberActivitySchedule } = await import("@/lib/inactivity/schedule")
   const { ensureJudgeSchedule } = await import("@/lib/judge/schedule")
+  const { ensureCleanupSchedule } = await import("@/lib/cleanup/schedule")
   // The settings saves call all but the member activity one too, so a change
   // applies without a restart; the member activity run is always scheduled.
   // None of them throws.
-  await Promise.all([ensureChannelStatsSchedule(), ensureRequestTierSchedule(), ensureJudgeSchedule(), ensureMemberActivitySchedule()])
+  await Promise.all([ensureChannelStatsSchedule(), ensureRequestTierSchedule(), ensureJudgeSchedule(), ensureMemberActivitySchedule(),
+    ensureCleanupSchedule()])
   await ensureWatchlistSchedule()
 }
 
