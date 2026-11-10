@@ -13,6 +13,8 @@
  * 3. Any other type, an item without ids, an id the service doesn't have, a
  *    service that isn't set up or can't be read: `null`. No link is better
  *    than a link to the wrong title, because later steps change files by it.
+ *    Nothing here throws, not even a failed database read, so a caller such
+ *    as `applyMark` still saves its mark without a link.
  *
  * @module
  */
@@ -54,10 +56,18 @@ async function activeArr(kind: "radarr" | "sonarr") {
  * @param ratingKey - The item's rating key
  * @returns The service and the title's id and `titleSlug`, or `null`
  */
-export async function findArrTitle(
-  server: PlexServer,
-  ratingKey: string
-): Promise<{ service: "radarr" | "sonarr"; id: number; titleSlug: string } | null> {
+export async function findArrTitle(server: PlexServer, ratingKey: string): Promise<ArrTitleLink | null> {
+  try {
+    return await lookUp(server, ratingKey)
+  } catch (error) {
+    logger.error("Could not look the title up by its Plex ids", error, { ratingKey })
+    return null
+  }
+}
+
+type ArrTitleLink = { service: "radarr" | "sonarr"; id: number; titleSlug: string }
+
+async function lookUp(server: PlexServer, ratingKey: string): Promise<ArrTitleLink | null> {
   const title = await readTitle(server, ratingKey)
   if (!title || Object.keys(title.ids).length === 0) return null
   const service = title.type === "movie" ? "radarr" : title.type === "show" ? "sonarr" : null
