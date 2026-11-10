@@ -27,7 +27,7 @@ const RUN = {
   trigger: "automatic" as const,
   target: "sonarr:series:42",
   action: "LOOK_FOR_MISSING" as const,
-  traits: { searches: true, replacesFile: false },
+  traits: { searches: true, replacesFile: false, changesPlex: false },
 }
 
 beforeEach(() => {
@@ -66,7 +66,7 @@ describe("gateAndRecord", () => {
   })
 
   it("names the admin who approved a run they started", async () => {
-    await gateAndRecord({ ...RUN, trigger: "web", actorUserId: "admin-1", action: "REFRESH", traits: { searches: false, replacesFile: false } }, NOW)
+    await gateAndRecord({ ...RUN, trigger: "web", actorUserId: "admin-1", action: "REFRESH", traits: { searches: false, replacesFile: false, changesPlex: true } }, NOW)
 
     expect(recordAuditEvent).toHaveBeenCalledWith(AuditEventType.PROBLEM_FIX_RUN, "admin-1", expect.objectContaining({ askedBy: "admin-1", approvedBy: "admin-1", trigger: "web" }), prismaMock)
   })
@@ -86,17 +86,27 @@ describe("gateAndRecord", () => {
     expect(prismaMock.problemFixLedger.create).not.toHaveBeenCalled()
   })
 
+  it("counts the hour's matches and refreshes for a fix that changes Plex, and refuses one past the cap", async () => {
+    const match = { ...RUN, target: "plex:plex://movie/heat", action: "FIX_MATCH" as const, traits: { searches: false, replacesFile: false, changesPlex: true } }
+    prismaMock.problemFixLedger.count.mockResolvedValue(20)
+
+    await expect(gateAndRecord(match, NOW)).resolves.toBe("PLEX_CAP")
+    expect(prismaMock.problemFixLedger.count).toHaveBeenCalledWith({ where: { action: { in: ["FIX_MATCH", "REFRESH"] }, startedAt: { gte: new Date("2026-11-09T19:00:00Z") } } })
+    expect(prismaMock.problemFixLedger.count).toHaveBeenCalledTimes(1)
+    expect(prismaMock.problemFixLedger.create).not.toHaveBeenCalled()
+  })
+
   it("refuses a file replacement while the breaker is tripped", async () => {
     prismaMock.problemReportSettings.findUnique.mockResolvedValue({ breakerTrippedAt: NOW } as never)
 
-    await expect(gateAndRecord({ ...RUN, traits: { searches: false, replacesFile: true } }, NOW)).resolves.toBe("BREAKER")
+    await expect(gateAndRecord({ ...RUN, traits: { searches: false, replacesFile: true, changesPlex: false } }, NOW)).resolves.toBe("BREAKER")
     expect(prismaMock.problemReportSettings.upsert).not.toHaveBeenCalled()
     expect(queueBreakerAlert).not.toHaveBeenCalled()
   })
 
   it("counts file replacements by when they began, from any fix, and trips the breaker past the hour's limit, alerting the admins", async () => {
     prismaMock.problemFixLedger.count.mockResolvedValueOnce(0).mockResolvedValueOnce(5).mockResolvedValueOnce(5)
-    const removal = { ...RUN, action: "REMOVE_AND_SEARCH" as const, traits: { searches: true, replacesFile: true }, replaces: true }
+    const removal = { ...RUN, action: "REMOVE_AND_SEARCH" as const, traits: { searches: true, replacesFile: true, changesPlex: false }, replaces: true }
 
     await expect(gateAndRecord(removal, NOW)).resolves.toBe("BREAKER")
     expect(prismaMock.problemFixLedger.count).toHaveBeenCalledWith({ where: { replacedAt: { gte: new Date("2026-11-09T19:00:00Z") } } })
@@ -111,7 +121,7 @@ describe("gateAndRecord", () => {
   })
 
   it("records a removal as replacing the file at once, and audits the file and the release it replaces", async () => {
-    const removal = { ...RUN, trigger: "web" as const, actorUserId: "admin-1", action: "REMOVE_AND_SEARCH" as const, traits: { searches: true, replacesFile: true }, replaces: true, file: { id: 77, release: "Heat.1995.720p.WEB-BAD" } }
+    const removal = { ...RUN, trigger: "web" as const, actorUserId: "admin-1", action: "REMOVE_AND_SEARCH" as const, traits: { searches: true, replacesFile: true, changesPlex: false }, replaces: true, file: { id: 77, release: "Heat.1995.720p.WEB-BAD" } }
 
     await expect(gateAndRecord(removal, NOW)).resolves.toBeNull()
     expect(prismaMock.problemFixLedger.create).toHaveBeenCalledWith({ data: expect.objectContaining({ id: "report-1:2", action: "REMOVE_AND_SEARCH", startedAt: NOW, replacedAt: NOW }) })

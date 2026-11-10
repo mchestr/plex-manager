@@ -10,7 +10,10 @@
  * |                    | grabs only an upgrade the quality profile wants           | replaces it      |
  * | `SWAP`             | another release of the same quality or better, grabbed    | The old copy, once |
  * |                    | from an interactive search (admins only)                  | the new one imports |
- * | `REFRESH`          | Plex reads the item's details again (admins only)         | No               |
+ * | `FIX_MATCH`        | Plex matches the movie or show to the title Radarr or     | No; it matches   |
+ * |                    | Sonarr has for its file (admins only)                     | back when wrong  |
+ * | `REFRESH`          | Plex reads the item's details again (a member's run       | No               |
+ * |                    | checks the match first)                                   |                  |
  * | `REMOVE_AND_SEARCH`| deletes the file, then searches (admins only, a confirm)  | Yes, at once     |
  *
  * ## The gate
@@ -25,7 +28,9 @@
  *   trigger. It stays tripped until an admin resumes fixes. A swap and a
  *   removal replace a file; a better copy is the server's own upgrade, which
  *   its quality profile asked for, so it counts as a search and not as a
- *   replacement.
+ *   replacement;
+ * - a fix that changes an item in Plex (a match or a refresh) waits past
+ *   {@link PLEX_HOURLY_CAP} of them in an hour, from any trigger.
  *
  * @module lib/problem-reports/fixes
  */
@@ -33,13 +38,13 @@
 import { PROBLEMS, type ProblemCode, type ReportableType } from "@/lib/problem-reports/taxonomy"
 
 /** A fix a report can run. */
-export type FixAction = "SWAP" | "BETTER_COPY" | "LOOK_FOR_MISSING" | "REFRESH" | "REMOVE_AND_SEARCH"
+export type FixAction = "SWAP" | "BETTER_COPY" | "LOOK_FOR_MISSING" | "FIX_MATCH" | "REFRESH" | "REMOVE_AND_SEARCH"
 
-/** The fixes a member's report can start on its own; none of them replaces the file. */
-export type MemberFixAction = Exclude<FixAction, "SWAP" | "REMOVE_AND_SEARCH">
+/** The fixes a member's report can start on its own: none replaces the file or changes Plex's match. */
+export type MemberFixAction = Exclude<FixAction, "SWAP" | "FIX_MATCH" | "REMOVE_AND_SEARCH">
 
 /** Every fix, for `z.enum`. */
-export const FIX_ACTIONS = ["SWAP", "BETTER_COPY", "LOOK_FOR_MISSING", "REFRESH", "REMOVE_AND_SEARCH"] as const satisfies readonly FixAction[]
+export const FIX_ACTIONS = ["SWAP", "BETTER_COPY", "LOOK_FOR_MISSING", "FIX_MATCH", "REFRESH", "REMOVE_AND_SEARCH"] as const satisfies readonly FixAction[]
 
 /** Fixes that replace the file: each has its own action, so MCP clients see it as destructive; `runProblemFix` runs the rest. */
 export const FILE_FIXES = ["SWAP", "REMOVE_AND_SEARCH"] as const satisfies readonly FixAction[]
@@ -53,18 +58,24 @@ export const DAILY_SEARCH_CAP = 30
 /** File replacements, from any trigger, that trip the breaker. @internal */
 export const BREAKER_LIMITS = { hour: 5, day: 15 } as const
 
+/** Matches and refreshes of Plex items an hour, across every trigger. @internal */
+export const PLEX_HOURLY_CAP = 20
+
 /** What a fix does, for the gate. */
 export interface FixTraits {
   searches: boolean
   replacesFile: boolean
+  /** It changes an item in Plex: a match or a refresh. */
+  changesPlex: boolean
 }
 
 const TRAITS: Record<FixAction, FixTraits> = {
-  LOOK_FOR_MISSING: { searches: true, replacesFile: false },
-  BETTER_COPY: { searches: true, replacesFile: false },
-  SWAP: { searches: true, replacesFile: true },
-  REMOVE_AND_SEARCH: { searches: true, replacesFile: true },
-  REFRESH: { searches: false, replacesFile: false },
+  LOOK_FOR_MISSING: { searches: true, replacesFile: false, changesPlex: false },
+  BETTER_COPY: { searches: true, replacesFile: false, changesPlex: false },
+  SWAP: { searches: true, replacesFile: true, changesPlex: false },
+  REMOVE_AND_SEARCH: { searches: true, replacesFile: true, changesPlex: false },
+  FIX_MATCH: { searches: false, replacesFile: false, changesPlex: true },
+  REFRESH: { searches: false, replacesFile: false, changesPlex: true },
 }
 
 /** The words for each fix: its button, what the report shows while it runs, and its timeline step. */
@@ -73,6 +84,7 @@ export const FIX_WORDS: Record<FixAction, { button: string; running: string; sta
   BETTER_COPY: { button: "Look for a better copy", running: "Looking for a better copy", started: "Started looking for a better copy" },
   SWAP: { button: "Swap the copy", running: "Swapping the copy", started: "Started swapping the copy" },
   REMOVE_AND_SEARCH: { button: "Remove the file and search", running: "Looking for a new copy", started: "Removed the file and started a search" },
+  FIX_MATCH: { button: "Fix the Plex match", running: "Fixing the Plex match", started: "Started fixing the Plex match" },
   REFRESH: { button: "Refresh the details", running: "Refreshing the details", started: "Asked Plex to refresh the details" },
 }
 
@@ -85,9 +97,10 @@ export interface GateCounts {
   searchesToday: number
   replacementsLastHour: number
   replacementsToday: number
+  plexChangesLastHour: number
 }
 
-export type GateRefusal = "SEARCH_CAP" | "BREAKER"
+export type GateRefusal = "SEARCH_CAP" | "BREAKER" | "PLEX_CAP"
 
 /**
  * Whether a fix may run now. `trips` is true when this refusal is the one
@@ -101,6 +114,7 @@ export function gateFix(traits: FixTraits, counts: GateCounts, breakerTripped: b
     }
   }
   if (traits.searches && counts.searchesToday >= DAILY_SEARCH_CAP) return { ok: false, reason: "SEARCH_CAP", trips: false }
+  if (traits.changesPlex && counts.plexChangesLastHour >= PLEX_HOURLY_CAP) return { ok: false, reason: "PLEX_CAP", trips: false }
   return { ok: true }
 }
 

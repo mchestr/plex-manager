@@ -110,6 +110,15 @@ const TO_ADMIN_REASONS = [
   "GRAB_FAILED",
   "ROOT_FOLDER_MISSING",
   "NOTHING_GRABBED",
+  "PLEX_CAP",
+  "IDS_AGREE",
+  "EPISODE_ORDER",
+  "MISMATCH",
+  "NO_MATCH",
+  "WOULD_MERGE",
+  "MATCH_FAILED",
+  "MATCH_WRONG",
+  "MATCH_STUCK",
 ] as const
 export type ToAdminReason = (typeof TO_ADMIN_REASONS)[number]
 

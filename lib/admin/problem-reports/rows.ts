@@ -76,6 +76,7 @@ const FIXED_WORDS: Record<FixAction, string> = {
   SWAP: "a different copy is on the server",
   BETTER_COPY: "a better copy is on the server",
   LOOK_FOR_MISSING: "the missing episodes are on the server",
+  FIX_MATCH: "Plex has the title Radarr or Sonarr has",
   REFRESH: "Plex read the details again",
   REMOVE_AND_SEARCH: "a new copy is on the server",
 }

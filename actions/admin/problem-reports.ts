@@ -87,10 +87,13 @@ async function startAdminFix(reportId: string, action: FixAction, userId: string
  * Runs a fix that leaves the file alone on an open report: Look for the
  * episodes (Sonarr's search for the show's missing episodes, or a Plex scan
  * of its folder), Look for a better copy (Radarr's or Sonarr's search with
- * the file in place, which grabs only an upgrade the quality profile wants)
- * or Refresh the details (Plex reads them again). None removes anything. The
- * run goes through the same gate and daily search cap as a member's, and
- * answers at once; the report shows how it went.
+ * the file in place, which grabs only an upgrade the quality profile wants),
+ * Fix the Plex match (Plex matches the movie or show to the title Radarr or
+ * Sonarr has for its file, and matches it back when the result doesn't have
+ * that title's ids) or Refresh the details (Plex reads them again). None
+ * removes anything. The run goes through the same gate, daily search cap
+ * and hourly cap on Plex changes as a member's, and answers at once; the
+ * report shows how it went.
  */
 export const runProblemFix = adminAction({
   input: runProblemFixSchema,

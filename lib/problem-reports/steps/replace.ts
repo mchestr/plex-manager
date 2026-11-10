@@ -79,7 +79,8 @@ async function currentRatingKey(server: PlexServer, ratingKey: string, sectionId
   const item = await getPlexItemMetadata(server, ratingKey)
   if (item.status === "found") return ratingKey
   if (item.status === "unknown" || !sectionId) return null
-  return findPlexItemByGuid(server, sectionId, guid)
+  const found = await findPlexItemByGuid(server, sectionId, guid)
+  return found.status === "found" ? found.ratingKey : null
 }
 
 /**

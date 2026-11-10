@@ -42,7 +42,7 @@ const DAY = 24 * 60 * MINUTE
 const SERVER = { name: "Home", url: "http://plex.local:32400", token: "owner-token", adminPlexUserId: "owner", machineIdentifier: "m" }
 const RADARR = { name: "Radarr", url: "http://radarr.local:7878", apiKey: "radarr-key" }
 const SONARR = { name: "Sonarr", url: "http://sonarr.local:8989", apiKey: "sonarr-key" }
-const REPORT = { id: "report-1", runToken: 3, action: "REMOVE_AND_SEARCH" as const, reporterId: "member-1", plexRatingKey: "555" }
+const REPORT = { id: "report-1", runToken: 3, action: "REMOVE_AND_SEARCH" as const, reporterId: "member-1", plexRatingKey: "555", titleKey: "plex://movie/heat" }
 const START: ProblemReportFixPayload = { reportId: "report-1", runToken: 3, step: "start", trigger: "web", actorUserId: "admin-1" }
 const FILE = {
   id: 77,
@@ -83,7 +83,7 @@ describe("the start", () => {
       expect.objectContaining({
         target: "radarr:movie:5",
         action: "REMOVE_AND_SEARCH",
-        traits: { searches: true, replacesFile: true },
+        traits: { searches: true, replacesFile: true, changesPlex: false },
         replaces: true,
         file: { id: 77, release: "Heat.1995.1080p.BluRay.x264-BAD" },
       }),

@@ -52,4 +52,13 @@ export const TO_ADMIN_WORDS: Record<ToAdminReason, string> = {
   GRAB_FAILED: "Radarr or Sonarr didn't take the chosen copy",
   ROOT_FOLDER_MISSING: "Radarr or Sonarr couldn't delete the file: its root folder is missing",
   NOTHING_GRABBED: "The file was removed, and the search found nothing to replace it",
+  PLEX_CAP: "The server reached this hour's limit of Plex changes, so the fix didn't run",
+  IDS_AGREE: "Plex has the same title as Radarr or Sonarr, so the match isn't the problem. If a different title plays, swap the copy",
+  EPISODE_ORDER: "Plex numbers this episode differently from Sonarr. Check the show's episode order in Plex",
+  MISMATCH: "Plex has a different title than Radarr or Sonarr for this file. Fix the Plex match",
+  NO_MATCH: "Plex's agent found nothing for the title Radarr or Sonarr has",
+  WOULD_MERGE: "Another item in the library already has the right match, so matching would merge the two",
+  MATCH_FAILED: "Plex didn't take the match",
+  MATCH_WRONG: "Plex's new match didn't have the right ids within a minute, so it was matched back",
+  MATCH_STUCK: "Plex's new match didn't have the right ids, and it couldn't be matched back. Check the match in Plex",
 }

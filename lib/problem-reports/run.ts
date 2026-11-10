@@ -30,6 +30,7 @@ import { FIX_ACTIONS, type FixAction, type FixTrigger } from "@/lib/problem-repo
 import { endLedgerRow } from "@/lib/problem-reports/ledger"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
 import { runBetterCopy } from "@/lib/problem-reports/steps/better-copy"
+import { runFixMatch } from "@/lib/problem-reports/steps/fix-match"
 import { runLookForMissing } from "@/lib/problem-reports/steps/look-for-missing"
 import { runRefresh } from "@/lib/problem-reports/steps/refresh"
 import { runRemoveAndSearch } from "@/lib/problem-reports/steps/remove-and-search"
@@ -118,6 +119,7 @@ const STEPS: Record<FixAction, (report: StepReport, data: ProblemReportFixPayloa
   SWAP: runSwap,
   BETTER_COPY: runBetterCopy,
   LOOK_FOR_MISSING: runLookForMissing,
+  FIX_MATCH: runFixMatch,
   REFRESH: runRefresh,
   REMOVE_AND_SEARCH: runRemoveAndSearch,
 }
@@ -129,7 +131,7 @@ export type StepResult = { next: { at: number; data: ProblemReportFixPayload } }
 export async function runFixStep(data: ProblemReportFixPayload, now = new Date()): Promise<StepResult> {
   const row = await prisma.problemReport.findUnique({
     where: { id: data.reportId },
-    select: { id: true, status: true, runToken: true, action: true, reporterId: true, plexRatingKey: true },
+    select: { id: true, status: true, runToken: true, action: true, reporterId: true, plexRatingKey: true, titleKey: true },
   })
   if (!row || row.status !== "FIXING" || row.runToken !== data.runToken || !isFixAction(row.action)) return { done: true }
   const report: StepReport = { ...row, action: row.action }

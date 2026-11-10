@@ -9,9 +9,9 @@
  *   as a new item without its watch state;
  * - {@link findPlexItemByGuid}: the item a library section holds for a guid
  *   (`GET /library/sections/<id>/all?guid=`), for a title Plex added again
- *   under a new rating key.
+ *   under a new rating key, and to see whether a match would merge two items.
  *
- * Each answers `null` when Plex can't be read, and never throws.
+ * Each says when Plex can't be read (`null`, or `unknown`), and never throws.
  *
  * @module lib/connections/plex-file-state
  */
@@ -60,9 +60,15 @@ export async function plexEmptiesTrash(server: PlexServer): Promise<boolean | nu
   return setting ? setting.value === true || setting.value === "1" || setting.value === 1 : null
 }
 
-/** The rating key of the section's item with this guid, or null when it has none or Plex can't be read. */
-export async function findPlexItemByGuid(server: PlexServer, sectionId: string, guid: string): Promise<string | null> {
-  if (!ratingKeySchema.safeParse(sectionId).success || !guid) return null
+/** The section's item with this guid: `found` with its rating key, `missing`, or `unknown` when Plex can't be read. */
+export async function findPlexItemByGuid(
+  server: PlexServer,
+  sectionId: string,
+  guid: string
+): Promise<{ status: "found"; ratingKey: string } | { status: "missing" } | { status: "unknown" }> {
+  if (!ratingKeySchema.safeParse(sectionId).success || !guid) return { status: "unknown" }
   const result = await read(server, `/library/sections/${encodeURIComponent(sectionId)}/all?guid=${encodeURIComponent(guid)}`, itemsSchema)
-  return result.ok ? (result.data.MediaContainer.Metadata?.[0]?.ratingKey ?? null) : null
+  if (!result.ok) return { status: "unknown" }
+  const ratingKey = result.data.MediaContainer.Metadata?.[0]?.ratingKey
+  return ratingKey ? { status: "found", ratingKey } : { status: "missing" }
 }

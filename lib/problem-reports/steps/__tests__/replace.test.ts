@@ -28,7 +28,7 @@ const MINUTE = 60_000
 const DAY = 24 * 60 * MINUTE
 const SERVER = { url: "http://plex.local:32400", token: "owner-token" }
 const RADARR = { name: "Radarr", url: "http://radarr.local:7878", apiKey: "radarr-key" }
-const REPORT = { id: "report-1", runToken: 3, action: "SWAP" as const, reporterId: "member-1", plexRatingKey: "555" }
+const REPORT = { id: "report-1", runToken: 3, action: "SWAP" as const, reporterId: "member-1", plexRatingKey: "555", titleKey: "plex://movie/heat" }
 const START: ProblemReportFixPayload = { reportId: "report-1", runToken: 3, step: "start", trigger: "web", actorUserId: "admin-1" }
 const FILE = {
   id: 77,
@@ -136,7 +136,7 @@ describe("finishReplace", () => {
 
   it("keeps the new rating key of a title Plex added again, found by its guid", async () => {
     jest.mocked(getPlexItemMetadata).mockResolvedValue({ status: "missing" })
-    jest.mocked(findPlexItemByGuid).mockResolvedValue("9001")
+    jest.mocked(findPlexItemByGuid).mockResolvedValue({ status: "found", ratingKey: "9001" })
 
     await expect(finish()).resolves.toMatchObject({ details: { ratingKey: "9001" } })
     expect(findPlexItemByGuid).toHaveBeenCalledWith(SERVER, "1", "plex://movie/heat")
@@ -144,7 +144,7 @@ describe("finishReplace", () => {
 
   it("keeps the rating key when Plex can't be read or has no item with the guid", async () => {
     jest.mocked(getPlexItemMetadata).mockResolvedValueOnce({ status: "unknown" }).mockResolvedValueOnce({ status: "missing" })
-    jest.mocked(findPlexItemByGuid).mockResolvedValue(null)
+    jest.mocked(findPlexItemByGuid).mockResolvedValue({ status: "missing" })
 
     await expect(finish()).resolves.toEqual({ fixed: true, details: { release: REPLACE.release, blocklisted: true } })
     await expect(finish()).resolves.toEqual({ fixed: true, details: { release: REPLACE.release, blocklisted: true } })
