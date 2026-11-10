@@ -109,7 +109,9 @@ const TO_ADMIN_REASONS = [
   "ONLY_LOWER",
   "GRAB_FAILED",
   "ROOT_FOLDER_MISSING",
+  "DELETE_FAILED",
   "NOTHING_GRABBED",
+  "INTERRUPTED",
 ] as const
 export type ToAdminReason = (typeof TO_ADMIN_REASONS)[number]
 

@@ -50,6 +50,8 @@ export const TO_ADMIN_WORDS: Record<ToAdminReason, string> = {
   NO_OTHER_COPY: "The search found no other copy",
   ONLY_LOWER: "The only other copies are lower quality. Remove the file and search can grab one of them",
   GRAB_FAILED: "Radarr or Sonarr didn't take the chosen copy",
-  ROOT_FOLDER_MISSING: "Radarr or Sonarr couldn't delete the file: its root folder is missing",
+  ROOT_FOLDER_MISSING: "Radarr or Sonarr couldn't delete the file: its root folder is missing. If the copy came from a download, its release is on the blocklist now",
+  DELETE_FAILED: "Radarr or Sonarr didn't delete the file, so the copy is still there. If it came from a download, its release is on the blocklist now",
   NOTHING_GRABBED: "The file was removed, and the search found nothing to replace it",
+  INTERRUPTED: "The fix was interrupted part way, so it stopped rather than act twice. Check the title in Radarr or Sonarr before you run it again",
 }
