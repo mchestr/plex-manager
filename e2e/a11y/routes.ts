@@ -54,6 +54,12 @@ export interface A11yRoute {
   /** Turns Stripe on (`e2e/helpers/stripe.ts`) for this scan. */
   stripe?: boolean;
   /**
+   * The page moves focus to its `h1` once it loads (the turn-on page, UX 4.6
+   * behaviour 1). The landmarks spec then checks the skip link from its own
+   * focus, because the first Tab moves on inside `main`.
+   */
+  focusesTitle?: boolean;
+  /**
    * Resets rows that earlier routes write and this one reads, so the scan
    * sees the same data whichever routes ran before it in this worker.
    */
@@ -368,7 +374,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   // The table has no viewport field: the phone condition boxes must hold no nested button (axe nested-interactive)
   { path: cleanupRule.dry, as: 'admin', state: 'phone', ready: 'admin-cleanup-editor-page', setup: phoneEditor, reset: seedCleanupA11y },
   // Its member count reads plex.tv
-  { path: `${cleanupRule.dry}/turn-on`, as: 'admin', ready: 'admin-cleanup-turn-on-page', reset: resetCleanupMemberA11y },
+  { path: `${cleanupRule.dry}/turn-on`, as: 'admin', ready: 'admin-cleanup-turn-on-page', focusesTitle: true, reset: resetCleanupMemberA11y },
   // No rule: the first-use recipes and the recipe Sheet (UX 11.5 rows 16 and 17)
   { path: '/admin/cleanup', as: 'admin', state: 'first use', ready: 'admin-cleanup-recipes', reset: clearCleanupA11yRules },
   {

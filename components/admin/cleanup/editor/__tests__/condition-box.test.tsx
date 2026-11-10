@@ -144,6 +144,16 @@ describe("ConditionBox", () => {
     expect(await axe(container, { rules: { "nested-interactive": { enabled: true } } })).toHaveNoViolations()
   })
 
+  it("keeps its visible words apart, so its name holds the visible text (SC 2.5.3)", async () => {
+    const view = rowView(LAST_PLAYED, { n: 2, total: 3 }, kit())
+    const { container } = render(<ConditionBox view={view} onPress={jest.fn()} />)
+    const box = tid("admin-cleanup-condition-c2-box")
+    const words = (text: string) => text.replace(/[.,]/g, "").split(/\s+/).filter(Boolean).join(" ")
+    expect(words(box.textContent ?? "")).toBe("Last played more than 365 days ago or never 13 more without it")
+    expect(words(box.getAttribute("aria-label") ?? "")).toContain(words(box.textContent ?? ""))
+    expect(await axe(container, { rules: { "label-content-name-mismatch": { enabled: true } } })).toHaveNoViolations()
+  })
+
   it("names a protection box, and a group member's box by its place in the group", () => {
     const protection = rowView(DRAFT.protections[0], { n: 1, total: 1 }, kit())
     expect(boxName(protection)).toBe("Plays at least 3 in total. Keeps 7 safe. Change protection 1 of 1.")

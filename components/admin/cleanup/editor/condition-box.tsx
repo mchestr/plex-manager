@@ -1,5 +1,7 @@
 "use client"
 
+import { Fragment } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { Token, type StaticTokenLook, type TokenState } from "@/components/ui/token"
@@ -205,16 +207,21 @@ export function ConditionBox({ view, describedBy, onPress }: ConditionBoxProps) 
     >
       <span className="flex min-w-0 flex-col gap-1.5">
         <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5 text-body text-foreground">
-          {view.parts.map((part, i) =>
-            part.kind === "text" ? (
-              <span key={i}>{part.text}</span>
-            ) : (
-              <Token key={i} part={part.part} state="static" look={LOOKS[part.state] ?? "default"} data-testid={`${box}-${part.part}`}>
-                {part.text}
-              </Token>
-            )
-          )}
+          {/* A space between the parts: flex hides it, and the text that axe and screen readers read keeps its words apart (SC 2.5.3) */}
+          {view.parts.map((part, i) => (
+            <Fragment key={i}>
+              {i > 0 && " "}
+              {part.kind === "text" ? (
+                <span>{part.text}</span>
+              ) : (
+                <Token part={part.part} state="static" look={LOOKS[part.state] ?? "default"} data-testid={`${box}-${part.part}`}>
+                  {part.text}
+                </Token>
+              )}
+            </Fragment>
+          ))}
         </span>
+        {held && " "}
         {held && (
           <span className="text-caption text-muted-foreground" data-testid={`${box}-held`}>
             {typeof held === "string" ? held : <HeldText held={held} />}
