@@ -21,7 +21,9 @@
  *    render its own error copy.
  * 2. Link the Radarr movie (movies) or Sonarr series (shows and episodes) by
  *    the ids Plex holds for the item (`findArrTitle`), never by title. A
- *    title Radarr or Sonarr doesn't have is saved without a link.
+ *    title Radarr or Sonarr doesn't have is saved without a link. Marking it
+ *    again replaces an older link (one the title matcher may have got wrong),
+ *    but a lookup that finds nothing never clears one.
  * 3. Upsert the mark on the `(userId, plexRatingKey, markType)` composite key.
  * 4. For {@link MarkType.FINISHED_WATCHING} only, best-effort sync Plex's watched
  *    state **as the member** (SEC-48): the scrobble carries the member's own
@@ -125,6 +127,12 @@ export async function applyMark(params: ApplyMarkParams): Promise<ApplyMarkResul
   const link = await findArrTitle(plexConfig, item.ratingKey)
   const radarr = link?.service === "radarr" ? link : null
   const sonarr = link?.service === "sonarr" ? link : null
+  const linkColumns = {
+    radarrId: radarr?.id ?? null,
+    radarrTitleSlug: radarr?.titleSlug ?? null,
+    sonarrId: sonarr?.id ?? null,
+    sonarrTitleSlug: sonarr?.titleSlug ?? null,
+  }
 
   await prisma.userMediaMark.upsert({
     where: {
@@ -144,16 +152,14 @@ export async function applyMark(params: ApplyMarkParams): Promise<ApplyMarkResul
       seasonNumber: item.parentIndex,
       episodeNumber: item.index,
       parentTitle: item.parentTitle || item.grandparentTitle,
-      radarrId: radarr?.id ?? null,
-      radarrTitleSlug: radarr?.titleSlug ?? null,
-      sonarrId: sonarr?.id ?? null,
-      sonarrTitleSlug: sonarr?.titleSlug ?? null,
+      ...linkColumns,
       markedVia,
       discordChannelId: channelId,
     },
     update: {
       markedAt: new Date(),
       discordChannelId: channelId,
+      ...(link ? linkColumns : {}),
     },
   })
 
