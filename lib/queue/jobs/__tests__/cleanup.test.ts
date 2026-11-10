@@ -41,7 +41,7 @@ import { getJobProcessor } from "@/lib/queue/jobs/index"
 import { JOB_ID_POLICY, JOB_TYPES } from "@/lib/queue/types"
 
 const OPTIONS = { attempts: 1, removeOnComplete: true, removeOnFail: { age: 604800 } }
-const HELD = { claim: { column: "runClaimAt" }, baseline: { rules: [], optionsHash: "h" } }
+const HELD = { claim: { column: "runClaimAt", lost: new AbortController().signal }, baseline: { rules: [], optionsHash: "h" } }
 const COUNTS = { checked: 1, matched: 0, joined: 0, held: 0, rescued: 0, deleted: 1, failed: 0, deferred: 0, freedBytes: "10" }
 const job = <T>(data: T) => ({ data }) as unknown as Job
 const process = (type: string, data: unknown) => {
@@ -160,11 +160,25 @@ describe("cleanup:act", () => {
     await expect(process(JOB_TYPES.CLEANUP_ACT, { trigger: "approval", actorId: "admin-1" })).resolves.toEqual({ runId: "run-act", outcome: "finished", rounds: 1,
       ...COUNTS })
     expect(mockRun.createRunRow).toHaveBeenCalledWith({ kind: "act", trigger: "approval", actorId: "admin-1" })
-    expect(mockAct.actStep).toHaveBeenCalledWith({ runId: "run-act", trigger: "approval", actorId: "admin-1", signal: shutdownSignal, reconciled: false })
+    expect(mockAct.actStep).toHaveBeenCalledWith({ runId: "run-act", trigger: "approval", actorId: "admin-1", signal: expect.any(AbortSignal), reconciled: false })
     expect(mockRun.finishRun).toHaveBeenCalledWith("run-act", { kind: "act", trigger: "approval", actorId: "admin-1", outcome: "finished", blocks: [], entries: [],
       checked: 1, matched: 0, joined: 0, held: 0, deferred: 0 })
     expect(mockClaim.releaseRunClaim).toHaveBeenCalledWith(HELD.claim, HELD.baseline, { actorId: "admin-1", runId: "run-act" })
     expect(mockJobs.requestCollectionSync).toHaveBeenCalledWith("act")
+  })
+
+  it("stops the act step when the run claim is lost, as a shutdown does (another holder may act)", async () => {
+    const lost = new AbortController()
+    mockClaim.takeRunClaim.mockResolvedValue({ ...HELD, claim: { ...HELD.claim, lost: lost.signal } })
+    let signal: AbortSignal | undefined
+    mockAct.actStep.mockImplementation(async (input: { signal: AbortSignal }) => {
+      signal = input.signal
+      return step()
+    })
+    await process(JOB_TYPES.CLEANUP_ACT, { trigger: "approval", actorId: "admin-1" })
+    expect(signal?.aborted).toBe(false)
+    lost.abort()
+    expect(signal?.aborted).toBe(true)
   })
 
   it("runs the step again for a candidate planned for today that it did not see (an approval during the job), at most 3 rounds", async () => {

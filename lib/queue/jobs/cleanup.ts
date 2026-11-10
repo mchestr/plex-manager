@@ -7,7 +7,7 @@
  * |---|---|
  * | `cleanup:read` | A scheduled read with no rule and the feature off deletes snapshots older than 48 hours and skips (`idle`). Else `readLibrary()`. With `chain`, a `cleanup:run` follows with the read's `readStatus`, also after a failed or busy read. With `thenDryRunRuleIds`, a dry run of those rules follows. |
  * | `cleanup:run` | `runCleanup()` with the payload |
- * | `cleanup:act` | Takes the run claim. Busy: adds itself again after 10 minutes with `waits + 1` (its own job id), and after 6 waits writes a `busy` run row. It never acts without the claim. Claimed: up to 3 act steps, the next one only while candidates planned for today are left that a step did not see (an approval during the job). Then the run row, `CLEANUP_RUN`, the release with the change check, and a collection sync. |
+ * | `cleanup:act` | Takes the run claim. A lost claim stops the step before its next item, as a shutdown does. Busy: adds itself again after 10 minutes with `waits + 1` (its own job id), and after 6 waits writes a `busy` run row. It never acts without the claim. Claimed: up to 3 act steps, the next one only while candidates planned for today are left that a step did not see (an approval during the job). Then the run row, `CLEANUP_RUN`, the release with the change check, and a collection sync. |
  * | `cleanup:collections` | `syncCollections()` |
  *
  * The actor: a scheduled job acts as `SYSTEM_ACTOR`. An admin job acts as its
@@ -90,9 +90,11 @@ async function processAct({ data }: Payload<typeof JOB_TYPES.CLEANUP_ACT>) {
     runId = await createRunRow({ kind: "act", trigger: data.trigger, actorId })
     const seen = new Set<string>()
     const blocks: Block[] = []
+    // A lost claim stops the step before its next item, as a shutdown does: a second holder may run its own
+    const signal = AbortSignal.any([shutdownSignal, held.claim.lost])
     let total = { deferred: 0, held: 0, rounds: 0, outcome: "finished" as Awaited<ReturnType<typeof actStep>>["outcome"] }
     for (let round = 0; round < ACT_ROUNDS; round++) {
-      const step = await actStep({ runId, trigger: data.trigger, actorId, signal: shutdownSignal, reconciled: false })
+      const step = await actStep({ runId, trigger: data.trigger, actorId, signal, reconciled: false })
       for (const key of step.seen) seen.add(key)
       blocks.push(...step.blocks)
       total = { deferred: total.deferred + step.deferred, held: total.held + step.held, rounds: round + 1, outcome: step.outcome }

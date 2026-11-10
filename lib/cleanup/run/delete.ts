@@ -127,7 +127,11 @@ async function finish(row: CleanupItem, arr: ArrRef, action: Action, env: Delete
     return { kind: "rescued" }
   }
   const alreadyGone = action.kind === "gone"
-  await exitDeleted(row, arr, { runId, alreadyGone, match: "deleting" })
+  if (!(await exitDeleted(row, arr, { runId, alreadyGone, match: "deleting" }))) {
+    // Another holder moved the row out of `deleting` (the claim was lost). Stop the step: that holder's re-read finds the title gone and writes its audit row
+    logger.error("cleanup.deleted_exit_missed", undefined, { itemKey: row.itemKey, action: action.kind })
+    return { kind: "auditFailed" }
+  }
   if (row.level === "show") await exitSeasons(row, runId)
   if (!alreadyGone && env.services.plex) {
     const scan = await refreshPlexPath(env.services.plex, row.sectionId, arr.path, { signal: env.signal })

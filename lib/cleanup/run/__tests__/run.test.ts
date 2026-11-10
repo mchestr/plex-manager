@@ -56,7 +56,7 @@ const MOVIE = buildMovieItem()
 const BIG = buildMovieItem({ key: "movie:tmdb:1002", titleKey: "tmdb:1002", ratingKey: "5002", ids: { tmdb: 1002 }, sizeBytes: 90 * 1024 ** 3 })
 const MATCHES: RuleDefinition = buildDefinition({ conditions: [buildCondition("watch.lastPlayed", { value: { duration: { amount: 90, unit: "days" }, orNever: true } })] })
 const OPTIONS = buildOptions({ protections: { g7: { enabled: false } } })
-const HELD = { claim: { column: "runClaimAt" }, baseline: { rules: [], optionsHash: "h" } }
+const HELD = { claim: { column: "runClaimAt", lost: new AbortController().signal }, baseline: { rules: [], optionsHash: "h" } }
 
 let rules: CleanupRule[] = []
 let settingsQueue: Partial<CleanupSettingsRow>[] = []
@@ -124,7 +124,7 @@ describe("a live run (TS 8.3)", () => {
       "release", "sync"])
     expect(mockSteps.recoverDeleting).toHaveBeenCalledWith(prismaMock, { clearApproval: false })
     expect(mockSteps.reconcile).toHaveBeenCalledWith({ ctx: expect.objectContaining({ runId: "run-1" }) })
-    expect(mockSteps.actStep).toHaveBeenCalledWith({ runId: "run-1", trigger: "scheduled", actorId: "system", signal: undefined, now: new Date(NOW),
+    expect(mockSteps.actStep).toHaveBeenCalledWith({ runId: "run-1", trigger: "scheduled", actorId: "system", signal: expect.any(AbortSignal), now: new Date(NOW),
       reconciled: true, readStatus: "complete" })
     expect(mockClaim.releaseRunClaim).toHaveBeenCalledWith(HELD.claim, HELD.baseline, { actorId: "system", runId: "run-1" })
     expect(mockSteps.requestCollectionSync).toHaveBeenCalledWith("run")
@@ -203,6 +203,15 @@ describe("a live run (TS 8.3)", () => {
     await expect(runCleanup(options({ signal: shutdown.signal }))).resolves.toMatchObject({ outcome: "stopped" })
     expect(mockSteps.reconcile).not.toHaveBeenCalled()
     expect(mockClaim.releaseRunClaim).toHaveBeenCalled()
+  })
+
+  it("stops between rules when the run claim is lost, as on shutdown (safety review S-2)", async () => {
+    const lost = new AbortController()
+    lost.abort()
+    mockClaim.takeRunClaim.mockResolvedValue({ ...HELD, claim: { ...HELD.claim, lost: lost.signal } })
+    await expect(runCleanup(options())).resolves.toMatchObject({ outcome: "stopped" })
+    expect(mockSteps.reconcile).not.toHaveBeenCalled()
+    expect(mockSteps.actStep).not.toHaveBeenCalled()
   })
 })
 

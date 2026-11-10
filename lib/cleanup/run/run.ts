@@ -184,7 +184,9 @@ export async function runCleanup(options: RunCleanupOptions): Promise<RunCleanup
   const release = () => (held ? releaseRunClaim(held.claim, held.baseline, { actorId: options.actorId, runId: hold.runId }) : Promise.resolve(null))
   let done: Awaited<ReturnType<typeof claimedRun>>
   try {
-    done = await claimedRun(options, live, now, hold)
+    // A lost claim stops the run between rules and the act step before its next item, as a shutdown does
+    const signal = held ? AbortSignal.any([options.signal ?? new AbortController().signal, held.claim.lost]) : options.signal
+    done = await claimedRun({ ...options, signal }, live, now, hold)
   } catch (error) {
     await release().catch((releaseError: unknown) => logger.error("cleanup.run_release_failed", releaseError, { runId: hold.runId }))
     throw error

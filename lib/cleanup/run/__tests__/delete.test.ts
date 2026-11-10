@@ -178,6 +178,13 @@ describe("the common steps (TS 8.9 steps 1 and 2)", () => {
     await expect(deleteItem(movie(), MOVIE_ARR, env)).resolves.toEqual({ kind: "auditFailed" })
     expect(mockError).toHaveBeenCalledWith("cleanup.delete_exit_failed", expect.any(Error), { itemKey: "movie:tmdb:1001", action: "done" })
   })
+  it("stops with auditFailed and logs when the deleted exit matched no deleting row (another holder moved it, safety review S-2)", async () => {
+    prismaMock.cleanupItem.deleteMany.mockResolvedValue({ count: 0 })
+    await expect(deleteItem(movie(), MOVIE_ARR, env)).resolves.toEqual({ kind: "auditFailed" })
+    expect(mockError).toHaveBeenCalledWith("cleanup.deleted_exit_missed", undefined, { itemKey: "movie:tmdb:1001", action: "done" })
+    expect(prismaMock.cleanupOutcome.create).not.toHaveBeenCalled()
+    expect(mockCalls).not.toContain("GET /library/sections/1/refresh")
+  })
 })
 
 describe("the movie actions", () => {
