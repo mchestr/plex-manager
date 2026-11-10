@@ -27,7 +27,7 @@ import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { parseRuleDefinition } from "@/lib/validations/cleanup-draft"
 import { ACTION_CARE, type ActionId, type Mode } from "@/lib/validations/cleanup-vocabulary"
 
-/** An item audit row holds at most this many item keys, then `more` (TS 11.1). */
+/** An item audit row holds at most this many item keys, then `more` (TS 11.1). @internal */
 export const AUDIT_KEYS_MAX = 500
 
 /** The `count`, `itemKeys` (at most 500) and `more` of an item audit row. */
@@ -62,13 +62,14 @@ export function auditReleased(groups: Iterable<ReleasedGroup>, actorId: string):
  * while the merged action is as careful as the stored one, and the import
  * list exclusion does not turn on. A stored action this build does not know
  * counts as the most careful, so the approval clears.
+ * @internal Exported for the tests.
  */
 export function keepsApproval(row: Pick<CleanupItem, "action" | "importListExclusion">, merged: Pick<MergedHolding, "action" | "importListExclusion">): boolean {
   const stored = Object.hasOwn(ACTION_CARE, row.action) ? ACTION_CARE[row.action as ActionId] : Number.POSITIVE_INFINITY
   return ACTION_CARE[merged.action] >= stored && !(merged.importListExclusion && !row.importListExclusion)
 }
 
-/** A live rule as a merge input (TS 6.8). Null for a rule whose definition does not parse. */
+/** A live rule as a merge input (TS 6.8). Null for a rule whose definition does not parse. @internal */
 export const holdingOf = (rule: LiveRule): HoldingRule | null =>
   rule.definition && { id: rule.id, mode: rule.mode, createdAt: rule.createdAt, then: rule.definition.then }
 

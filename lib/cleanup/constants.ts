@@ -30,7 +30,7 @@ export { TAUTULLI_STALE_DAYS } from "@/lib/inactivity/blocks"
 export const NEVER_WINDOW_DAYS = 365
 /** A rule that matches more than this share of the checked items gets the `wide` warning. */
 export const WIDE_RULE_PERCENT = 50
-/** A Review first grace period below this many days gets a warning. */
+/** A Review first grace period below this many days gets a warning. @internal */
 export const REVIEW_GRACE_WARN_DAYS = 14
 /** The newest runs that History keeps. */
 export const KEPT_RUNS = 30
@@ -64,7 +64,7 @@ export type ItemState = (typeof ITEM_STATES)[number]
 export const ITEM_STATUSES = ["paused", "deleting", "failed", "onHold", "deferred", "waitsForYou", "postponed", "deletesOn", "waitsForBudget", "leaving"] as const
 export type ItemStatus = (typeof ITEM_STATUSES)[number]
 
-/** The checks of the turn-on page (TS 10.5, UX 7.13), in page order. */
+/** The checks of the turn-on page (TS 10.5, UX 7.13), in page order. @internal */
 export const TURN_ON_CHECK_IDS = ["featureOn", "notPaused", "libraryData", "tautulliPlays", "historyCovers", "matchedInArr", "dryRuns",
   "firstBatchSize", "grace", "kometa"] as const
 export type TurnOnCheckId = (typeof TURN_ON_CHECK_IDS)[number]

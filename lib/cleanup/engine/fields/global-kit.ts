@@ -28,7 +28,7 @@ export function asProtection(v: FieldVerdict): ProtectionVerdict {
 }
 
 /** What a global protection is built from: the level, the options it reads, and the collection titles read (G13). */
-export interface GlobalInput {
+interface GlobalInput {
   level: Level
   options: CleanupOptions
   /** `facts.membersRead`, trimmed and in lower case. */

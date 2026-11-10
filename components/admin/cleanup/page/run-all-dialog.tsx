@@ -27,6 +27,7 @@ interface RunAllDialogProps {
  * data. New matches join Leaving soon and rescues apply, and the run never
  * deletes (TS 10.3). A refusal (a run in progress, the queue down) stays
  * inside the dialog. Success toasts "Run started" (UX 8.9).
+ * @internal Exported for the tests.
  */
 export function RunAllDialog({ dataFrom, now, ...dialog }: RunAllDialogProps) {
   const f = useFormat()

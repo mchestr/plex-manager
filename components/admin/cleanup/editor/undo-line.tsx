@@ -10,7 +10,7 @@ import type { DescribeWords } from "@/lib/cleanup/engine/types"
 import { draftRowParts, partsText } from "@/lib/cleanup/fields/sentence"
 import type { Level } from "@/lib/validations/cleanup-vocabulary"
 
-/** "Condition removed: Plays at least 3 in total." (UX 7.2 item 2, UX 8.4). A group reads "Any-of group removed: ...". */
+/** "Condition removed: Plays at least 3 in total." (UX 7.2 item 2, UX 8.4). A group reads "Any-of group removed: ...". @internal */
 export function undoText(undo: UndoRecord, level: Level, words?: DescribeWords): string {
   const sentence = (c: Parameters<typeof draftRowParts>[0]) => partsText(draftRowParts(c, level, words).parts)
   const { removed } = undo

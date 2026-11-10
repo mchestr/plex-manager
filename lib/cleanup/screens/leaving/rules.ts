@@ -8,7 +8,7 @@
 
 import type { NamedRule } from "@/lib/cleanup/types/rule-parts"
 
-/** The name of a rule id that is gone. */
+/** The name of a rule id that is gone. @internal */
 export const DELETED_RULE = "A deleted rule"
 
 /** The rule of an id, from the rules that exist now. */

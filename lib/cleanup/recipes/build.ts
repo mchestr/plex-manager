@@ -36,7 +36,7 @@ function graceDaysOf(values: RecipeValues, options: CleanupOptions): number {
   return typeof value === "number" ? value : options.defaults.graceDays
 }
 
-/** The section ids of the level whose locations overlap the level's arr and that have external ids (at most 20). */
+/** The section ids of the level whose locations overlap the level's arr and that have external ids (at most 20). @internal */
 export function defaultLibraries(level: Level, libraries: readonly SnapshotLibrary[]): string[] {
   const type = level === "movie" ? "movie" : "show"
   return libraries.filter((l) => l.type === type && l.arr === LEVEL_ARR[level] && !l.noIds).map((l) => l.sectionId).slice(0, 20)

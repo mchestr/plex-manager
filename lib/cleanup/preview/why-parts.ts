@@ -21,7 +21,7 @@ import type { Condition } from "@/lib/validations/cleanup-rule"
 import { type ActionId, FIELD_SOURCES } from "@/lib/validations/cleanup-vocabulary"
 
 /** The real value of a condition as the Why Sheet shows it (TS 4.5): full dates, and the window of a play count. */
-export function sheetFact(c: Condition, item: SnapshotItem, ctx: EvalContext): WhyPart[] {
+function sheetFact(c: Condition, item: SnapshotItem, ctx: EvalContext): WhyPart[] {
   return c.field === "watch.plays" ? conditionFact(c, item, ctx) : whySheetFact(c.field, item, ctx)
 }
 

@@ -43,7 +43,7 @@ export const NOTICE_KEEP_MS = 30 * 24 * 60 * 60_000
 
 const DIGITS = /^\d+$/
 
-/** The runtime key of a collection: `"<sectionId>:<level>"`. */
+/** The runtime key of a collection: `"<sectionId>:<level>"`. @internal */
 export function collectionKey(sectionId: string, level: Level): string {
   return `${sectionId}:${level}`
 }

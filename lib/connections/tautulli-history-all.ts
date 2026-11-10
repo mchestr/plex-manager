@@ -44,7 +44,7 @@ import type { TautulliParsed } from "@/lib/validations/tautulli"
 
 type TautulliEndpoint = Pick<TautulliParsed, "url" | "apiKey">
 
-export type HistoryReadCode = ServiceErrorCode | "TAUTULLI_ERROR" | RowsFailureCode | "INVALID_KEY"
+type HistoryReadCode = ServiceErrorCode | "TAUTULLI_ERROR" | RowsFailureCode | "INVALID_KEY"
 
 /** One key column of `get_history` and its keys; Tautulli reads a comma list as `IN`. */
 export interface HistoryKeyFilter {
@@ -59,7 +59,7 @@ export interface RecentHistoryQuery {
 }
 
 /** What a history read saw. `complete` is false when the page limit stopped a full read. */
-export interface HistoryPages {
+interface HistoryPages {
   rows: number
   pages: number
   complete: boolean

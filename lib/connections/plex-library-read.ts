@@ -32,7 +32,7 @@ export interface PlexReadConfig {
   token: string
 }
 
-export type PlexReadCode = ServiceErrorCode | RowsFailureCode | "INVALID_KEY"
+type PlexReadCode = ServiceErrorCode | RowsFailureCode | "INVALID_KEY"
 export type PlexReadResult<T> = ServiceResult<T, PlexReadCode>
 
 /** The listing `type` of each level (TS 7.2.2 P3 to P7). */

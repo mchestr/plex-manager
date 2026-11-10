@@ -21,7 +21,7 @@ export interface ChoiceChipsOption<T extends string> {
  * The last chip, "Other": a radio of the same group. While it is checked, a
  * `NumberField` labelled "Other value, in {unit}" shows after the group.
  */
-export interface ChoiceChipsOther {
+interface ChoiceChipsOther {
   label: string
   checked: boolean
   onSelect: () => void

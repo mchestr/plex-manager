@@ -18,7 +18,7 @@ import type { CleanupItem } from "@/lib/generated/prisma/client"
 
 type PlanItem = Pick<CleanupItem, "itemKey" | "level" | "titleKey" | "leaveOn" | "sizeBytes" | "state" | "needsApproval" | "holdCode">
 
-/** True for a title that the act step deletes without an approval when its day comes. */
+/** True for a title that the act step deletes without an approval when its day comes. @internal */
 export function goesByItself(item: Pick<PlanItem, "state" | "needsApproval" | "holdCode">): boolean {
   if (item.holdCode) return false
   return item.state === "approved" || item.state === "deleting" || (item.state === "leaving" && !item.needsApproval)

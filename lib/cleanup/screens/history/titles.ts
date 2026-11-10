@@ -31,7 +31,7 @@ import type { NamedRule } from "@/lib/cleanup/types/rule-parts"
 import type { CleanupOutcome, Prisma } from "@/lib/generated/prisma/client"
 
 /** The deleted and failed titles, and the rescues and releases that left a record unmonitored (TS 11.4). */
-export const HISTORY_TITLES_WHERE = {
+const HISTORY_TITLES_WHERE = {
   OR: [
     { kind: { in: ["deleted", "failed"] } },
     {

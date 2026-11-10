@@ -12,7 +12,7 @@ import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 import type { DraftCondition } from "@/lib/validations/cleanup-draft"
 
-/** The reason on the last condition's Remove button (UX 7.2 item 7, UX 8.4). */
+/** The reason on the last condition's Remove button (UX 7.2 item 7, UX 8.4). @internal */
 export const LAST_CONDITION_REASON = "A rule needs at least one condition"
 
 interface ConditionRowProps {

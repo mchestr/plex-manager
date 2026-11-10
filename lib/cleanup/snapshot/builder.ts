@@ -69,6 +69,7 @@ export interface PlexAccessInput {
   machineIdentifier: string | null
 }
 
+/** @internal Exported for the tests. */
 export interface SnapshotFinishInput {
   /** Every `SourceStatus` of the read. Plex `part: "shares"` is the share list. */
   sources: readonly SourceStatus[]

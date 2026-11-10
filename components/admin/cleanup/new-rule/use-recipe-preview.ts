@@ -10,7 +10,7 @@ import type { RecipePreview } from "@/lib/cleanup/types/preview"
 import type { Level } from "@/lib/validations/cleanup-vocabulary"
 
 /** A refusal of `previewCleanupRecipe`. `message` is the action's own safe copy. */
-export class RecipePreviewFailed extends Error {
+class RecipePreviewFailed extends Error {
   readonly code: string
   constructor(code: string, message: string) {
     super(message)

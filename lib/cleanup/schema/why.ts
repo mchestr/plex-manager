@@ -15,6 +15,7 @@ const epoch = z.number().int().nonnegative() // Unix seconds
 
 export const REQUESTER_KINDS = ["member", "former", "owner", "unknown"] as const
 
+/** @internal Exported for the tests. */
 export const whySnapshotSchema = z.object({
   v: z.literal(1),
   snapshotId: z.string(), takenAt: z.iso.datetime(), checkedAt: z.iso.datetime(),

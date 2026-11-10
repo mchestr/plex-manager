@@ -90,7 +90,7 @@ interface TriggerProps {
   "data-testid"?: string
 }
 
-/** "Pause all cleanup" (UX 4.0): a secondary button with the pause icon that opens {@link PauseDialog}. */
+/** "Pause all cleanup" (UX 4.0): a secondary button with the pause icon that opens {@link PauseDialog}. @internal */
 export function PauseButton({ variant = "secondary", size = "default", "data-testid": testId = "admin-cleanup-pause" }: TriggerProps) {
   return (
     <PauseDialog

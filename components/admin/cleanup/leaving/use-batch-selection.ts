@@ -29,7 +29,7 @@ import { ACTION_IDS } from "@/lib/validations/cleanup-vocabulary"
  * @module components/admin/cleanup/leaving/use-batch-selection
  */
 
-/** The most unticked titles that a batch keeps (`excludeKeysSchema`). */
+/** The most unticked titles that a batch keeps (`excludeKeysSchema`). @internal */
 export const MAX_UNTICKED = 500
 const PREFIX = "cleanup:batch-selection:"
 const storageKey = (batchId: string) => `${PREFIX}${batchId}`
@@ -45,10 +45,10 @@ const storedSchema = z.object({
 })
 
 /** The stored selection of one batch. */
-export type StoredSelection = z.infer<typeof storedSchema>
+type StoredSelection = z.infer<typeof storedSchema>
 
 /** What the store holds for a batch: a value, or none; `invalid` while a value does not parse. */
-export interface SelectionSnapshot {
+interface SelectionSnapshot {
   value: StoredSelection | null
   invalid: boolean
 }
@@ -89,7 +89,7 @@ function parse(raw: string): SelectionSnapshot {
   return parsed.success ? { value: parsed.data, invalid: false } : { value: null, invalid: true }
 }
 
-/** The stored selection of a batch. The same object while its raw string does not change. */
+/** The stored selection of a batch. The same object while its raw string does not change. @internal */
 export function readBatchSelection(batchId: string): SelectionSnapshot {
   const raw = readRaw(batchId)
   if (raw === null) return NONE
@@ -100,7 +100,7 @@ export function readBatchSelection(batchId: string): SelectionSnapshot {
   return snapshot
 }
 
-/** Writes or removes the selection of a batch. A value whose set is empty is removed. */
+/** Writes or removes the selection of a batch. A value whose set is empty is removed. @internal */
 export function writeBatchSelection(batchId: string, value: StoredSelection | null): void {
   const raw = value && value.unticked.length > 0 ? JSON.stringify(value) : null
   try {
@@ -137,10 +137,10 @@ export function pruneBatchSelections(batchIds: readonly string[]): void {
 }
 
 /** An untick changes nothing at the limit (TS 12.6 `leaving/` item 2.5). */
-export type UntickResult = { ok: true } | { ok: false; reason: "limit" }
+type UntickResult = { ok: true } | { ok: false; reason: "limit" }
 
 /** "changed": the numbers changed. "lost": a stored selection did not parse. */
-export type SelectionAlert = "changed" | "lost" | null
+type SelectionAlert = "changed" | "lost" | null
 
 export interface BatchSelection {
   /** Before the client read the store, and while a read of the batch runs: the three footer buttons wait. */

@@ -15,7 +15,7 @@ import { cleanup, cleanupTurnOn } from "@/lib/admin/routes"
 import { useFormat } from "@/lib/format-context"
 import type { Level, Mode } from "@/lib/validations/cleanup-vocabulary"
 
-/** The reason on every button that needs the job queue (TS 9.5 item 4). */
+/** The reason on every button that needs the job queue (TS 9.5 item 4). @internal */
 export const REDIS_REASON = "Redis is not set up. Library reads and runs need the job queue."
 
 /** The rule's name allows 80 characters (TS 3.5). */

@@ -28,7 +28,7 @@ const date = (t: number, zone: string) => dateWords(new Date(t * 1000).toISOStri
 const ORDINALS = ["", "", "2nd", "3rd"]
 const ordinal = (n: number) => ORDINALS[n] ?? `${n}th`
 
-/** The fact phrase of a field from the stored facts (TS 4.5), or none when the run did not know it. */
+/** The fact phrase of a field from the stored facts (TS 4.5), or none when the run did not know it. @internal */
 export function storedFact(field: FieldId, facts: Facts, level: Level, zone: string): string[] {
   const newestRequest = facts.requests.reduce<number | null>((best, r) => (best === null || r.at > best ? r.at : best), null)
   const nobody = facts.importList ? "Came from an import list." : "Nobody requested it."
@@ -67,7 +67,7 @@ export function storedFact(field: FieldId, facts: Facts, level: Level, zone: str
 }
 
 /** The outcome columns that the Sheet reads. */
-export interface StoredOutcome {
+interface StoredOutcome {
   ref: ItemRef
   kind: string
   runId: string | null

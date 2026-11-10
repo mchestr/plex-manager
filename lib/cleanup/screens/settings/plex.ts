@@ -35,7 +35,7 @@ import type { CleanupOptions } from "@/lib/validations/cleanup-options"
 import { LEVELS } from "@/lib/validations/cleanup-vocabulary"
 
 /** The wall time of the nightly read and run (`NIGHTLY_PATTERN`, 03:07). */
-export const NIGHTLY_TIME = "03:07"
+const NIGHTLY_TIME = "03:07"
 /** An Overseerr requester tag: `<id>-<username>`. */
 const REQUESTER_TAG = /^\d+-/
 const OWN_COLLECTIONS = new Set(Object.values(COLLECTION_TITLES).map(normTitle))

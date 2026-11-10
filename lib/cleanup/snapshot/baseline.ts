@@ -53,7 +53,7 @@ const SERVICE_OF: Record<RowCounter, Service> = { overseerrRequests: "overseerr"
 
 const statusOf = (sources: readonly SourceStatus[], service: Service) => sources.find((s) => s.service === service && s.part !== "shares")
 
-/** The count of `counter` in a snapshot, or null when its service did not answer `ok` (or gave no count). */
+/** The count of `counter` in a snapshot, or null when its service did not answer `ok` (or gave no count). @internal */
 export function counterValue(snapshot: Pick<BaselineSnapshot, "sources" | "facts">, counter: RowCounter): number | null {
   const status = statusOf(snapshot.sources, SERVICE_OF[counter])
   if (status?.state !== "ok") return null
@@ -70,12 +70,12 @@ export function isShrink(count: number, baseline: number | undefined): boolean {
   return baseline !== undefined && count * 10 < baseline * 9
 }
 
-/** Whether `count` is within 10 % of `previous`: an admin read that agrees. */
+/** Whether `count` is within 10 % of `previous`: an admin read that agrees. @internal */
 export function agrees(count: number, previous: number): boolean {
   return Math.abs(count - previous) * 10 <= previous
 }
 
-/** `shrank(s)` of TS 8.2: the snapshot's own count against its own baseline. A failed service never shrank. */
+/** `shrank(s)` of TS 8.2: the snapshot's own count against its own baseline. A failed service never shrank. @internal */
 export function shrank(snapshot: BaselineSnapshot, counter: RowCounter): boolean {
   const count = counterValue(snapshot, counter)
   return count !== null && isShrink(count, snapshot.facts.rowBaseline?.[counter])

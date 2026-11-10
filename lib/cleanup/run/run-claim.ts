@@ -44,7 +44,7 @@ import { type CleanupOptions, parseCleanupOptions } from "@/lib/validations/clea
 import { parseRuleDefinition } from "@/lib/validations/cleanup-draft"
 import type { Mode } from "@/lib/validations/cleanup-vocabulary"
 
-/** The reconcile rounds of the change check, before and after the release together. */
+/** The reconcile rounds of the change check, before and after the release together. @internal */
 export const CHANGE_CHECK_ROUNDS = 2
 
 /** Loads the reconcile context at `now`: the settings, the newest complete snapshot, its live facts and every live rule with `ruleBlocks()`. */
@@ -84,7 +84,7 @@ export function optionsHash(options: CleanupOptions): string {
   return createHash("sha256").update(stableJson(options), "utf8").digest("hex").slice(0, 16)
 }
 
-/** Reads the baseline: two small queries. */
+/** Reads the baseline: two small queries. @internal */
 export async function readRunBaseline(): Promise<RunBaseline> {
   const [rules, settings] = await Promise.all([
     prisma.cleanupRule.findMany({ select: { id: true, mode: true, revision: true }, orderBy: { id: "asc" } }),
@@ -93,7 +93,7 @@ export async function readRunBaseline(): Promise<RunBaseline> {
   return { rules, optionsHash: optionsHash(parseCleanupOptions(settings?.options)) }
 }
 
-/** True when nothing that reconcile reads changed. */
+/** True when nothing that reconcile reads changed. @internal */
 export function sameBaseline(a: RunBaseline, b: RunBaseline): boolean {
   return a.optionsHash === b.optionsHash && a.rules.length === b.rules.length &&
     a.rules.every((rule, i) => rule.id === b.rules[i].id && rule.mode === b.rules[i].mode && rule.revision === b.rules[i].revision)

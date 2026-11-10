@@ -294,7 +294,7 @@ export interface DiscordRoleReconcileResult {
  * `cleanup:run` follows it (also after a failed or busy read); a rule save
  * sets `thenDryRunRuleIds`, so a dry run of those rules follows it.
  */
-export interface CleanupReadPayload {
+interface CleanupReadPayload {
   trigger: "scheduled" | "admin" | "system"
   actorId?: string
   chain: boolean
@@ -305,6 +305,7 @@ export interface CleanupReadPayload {
  * One run over the rules. `dryRunRuleIds` limits it to a dry run of those
  * rules; `dryRunRevision` is the rule revision of a single-rule dry run, so a
  * dry run of a newer definition never joins one of an older definition.
+ * @internal Exported for the tests.
  */
 export interface CleanupRunPayload {
   trigger: "scheduled" | "admin" | "create"
@@ -321,7 +322,7 @@ export interface CleanupRunPayload {
 }
 
 /** The act step: it deletes the approved titles. The approval lives in the database, not here. */
-export interface CleanupActPayload {
+interface CleanupActPayload {
   trigger: "approval"
   actorId: string
   /** How many times the step has waited for the run claim; each retry gets its own id. */
@@ -329,7 +330,7 @@ export interface CleanupActPayload {
 }
 
 /** One sync of the Plex collections, on the hourly schedule or after a change. */
-export interface CleanupCollectionsPayload {
+interface CleanupCollectionsPayload {
   reason: "scheduled" | "change"
 }
 

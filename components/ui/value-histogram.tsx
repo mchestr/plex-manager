@@ -5,6 +5,7 @@ import { useId } from "react"
 import { useFormat } from "@/lib/format-context"
 import { cn } from "@/lib/utils"
 
+/** @internal Exported for the tests. */
 export interface HistogramBucket {
   /** "1 to 3 months" */
   label: string

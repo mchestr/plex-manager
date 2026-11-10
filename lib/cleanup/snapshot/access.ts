@@ -52,6 +52,7 @@ const logger = createLogger("CLEANUP_READ")
 
 const DIGITS = /^\d+$/
 
+/** @internal Exported for the tests. */
 export type Failure = { ok: false; code: string }
 export type Result<T> = { ok: true; data: T } | Failure
 type Endpoint = { url: string; apiKey: string }

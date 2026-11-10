@@ -25,6 +25,7 @@ const BASE = "home-leaving-soon"
 /**
  * "{N} titles leave soon. The {k} for you come first. Keep one to watch it
  * later." (UX 9.3). Without member Keeps, the last sentence goes.
+ * @internal Exported for the tests.
  */
 export function rowCaption(row: Pick<LeavingSoonRowData, "total" | "forYouCount">, keepsOn: boolean, format: FormatSettings): string {
   const total = row.total === 1 ? "1 title leaves soon." : `${formatNumber(row.total, format)} titles leave soon.`

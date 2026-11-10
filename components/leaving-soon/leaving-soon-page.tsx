@@ -13,7 +13,7 @@ import type { MemberLeavingSoonData, MyKeepRow } from "@/lib/cleanup/types/membe
 import { icons } from "@/lib/ui/icons"
 
 /** The words of the page while plex.tv does not answer (UX 9.1, TS 13.3 step 1). */
-export const PLEX_FAILED_WORDS = "Plex did not answer. Reload the page to try again."
+const PLEX_FAILED_WORDS = "Plex did not answer. Reload the page to try again."
 
 interface LeavingSoonPageProps {
   data: MemberLeavingSoonData

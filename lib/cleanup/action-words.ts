@@ -98,7 +98,7 @@ export function actionWords(action: ActionId, { exclusion, count, level, size }:
   }
 }
 
-/** The Automatic mode card (UX 8.7): "On {day} {modeSentence}, inside the daily budget. You can still ..." */
+/** The Automatic mode card (UX 8.7): "On {day} {modeSentence}, inside the daily budget. You can still ..." @internal */
 export function modeCardText(words: ActionWords, day: string, level: Level): string {
   return `On ${day} ${words.modeSentence}, inside the daily budget. You can still exclude or postpone any ${nounWord(1, level)} before then.`
 }
@@ -125,7 +125,7 @@ export interface BudgetWords {
   exclusionCount: number
 }
 
-/** The check sentence of every approve dialog (UX 8.6). */
+/** The check sentence of every approve dialog (UX 8.6). @internal */
 export const CHECK_SENTENCE = "Before each delete, the app checks again for plays, Keeps, new requests and rule changes. You cannot undo a delete."
 
 /** The approve dialog description of UX 8.6, sentence by sentence, for the least careful action of the selection (E35). */
@@ -141,7 +141,7 @@ export function approveDescription(action: ActionId, options: Omit<ActionWordsOp
   return [...lines, CHECK_SENTENCE]
 }
 
-/** The approve dialog's title list (UX 8.6): "{title}, {size}" for the first `max`, then "and {N} more". */
+/** The approve dialog's title list (UX 8.6): "{title}, {size}" for the first `max`, then "and {N} more". @internal */
 export function titleList(rows: readonly { title: string; size: string }[], max = 10): string[] {
   const lines = rows.slice(0, max).map((row) => `${row.title}, ${row.size}`)
   return rows.length > max ? [...lines, `and ${rows.length - max} more`] : lines

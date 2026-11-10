@@ -21,12 +21,12 @@ import type { BoundFormat } from "@/lib/utils/format"
 import type { Service } from "@/lib/validations/cleanup-vocabulary"
 
 /** At most this many alerts show; the rest fold (UX 4.1.4). */
-export const VISIBLE_ALERTS = 3
+const VISIBLE_ALERTS = 3
 
 const TONE_ORDER = { destructive: 0, warning: 1, info: 2 } as const
 
 /** UX 8.2 and 4.1.4. */
-export const OFF_WORDS = {
+const OFF_WORDS = {
   title: "Media cleanup is off",
   body: "Make rules and preview them now. A rule starts in Dry run: it records its matches and changes nothing. Members see nothing until you turn cleanup on in Settings and turn a rule on.",
 } as const

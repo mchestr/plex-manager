@@ -29,7 +29,7 @@ export interface DescribeContext extends DescribeWords {
   valuesOnly?: boolean
 }
 
-/** The mode sentence (UX 5.8 item 7). */
+/** The mode sentence (UX 5.8 item 7). @internal */
 export const MODE_SENTENCES: Record<Mode, string> = {
   dryRun: "This rule is in Dry run, so runs only record its matches.",
   reviewFirst: "At the leave date, items wait for your approval.",

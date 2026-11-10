@@ -26,7 +26,7 @@ import { type BoundFormat, formatBytes } from "@/lib/utils/format"
 import type { RuleDraft } from "@/lib/validations/cleanup-draft"
 import { LEVEL_ARR } from "@/lib/validations/cleanup-vocabulary"
 
-export type { WhyActionResult, WhySurface } from "@/components/admin/cleanup/why/why-footer"
+export type { WhyActionResult } from "@/components/admin/cleanup/why/why-footer"
 
 type TryValue = NonNullable<WhySheetData["tryValue"]>
 
@@ -53,7 +53,7 @@ export interface WhySheetProps {
 const capital = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
 const freesSpace = (state: WhySheetData["state"]) => state === "match" || state === "leaving" || state === "deleted"
 
-/** "Movies. 17.1 GB on disk, up to 17.1 GB freed. Added Mar 3, 2024." (UX 8.5). */
+/** "Movies. 17.1 GB on disk, up to 17.1 GB freed. Added Mar 3, 2024." (UX 8.5). @internal */
 export function metaLine(data: WhySheetData, f: BoundFormat): string {
   const { item, state } = data
   const kind = capital(NOUNS[item.level][1])
@@ -65,7 +65,7 @@ export function metaLine(data: WhySheetData, f: BoundFormat): string {
 
 const conditionsWord = (count: number) => (count === 1 ? "1 condition" : `${count} conditions`)
 
-/** The summary of UX 8.5, one sentence by state. */
+/** The summary of UX 8.5, one sentence by state. @internal */
 export function whySummary(data: WhySheetData, f: BoundFormat): string {
   const total = data.conditions.length
   switch (data.state) {

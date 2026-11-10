@@ -32,7 +32,7 @@ export type CleanupEditorInput =
   | { level: Level }
 
 /** The name of a blank start (TS 10.3 step 4). */
-export const BLANK_RULE_NAME = "New rule"
+const BLANK_RULE_NAME = "New rule"
 
 export interface EditorStart {
   name: string
@@ -40,7 +40,7 @@ export interface EditorStart {
 }
 
 /** The recipe's values from raw input: the values that parse, and the defaults for the rest. */
-export function recipeValuesOf(recipeId: RecipeId, raw: Readonly<Record<string, unknown>>): RecipeValues {
+function recipeValuesOf(recipeId: RecipeId, raw: Readonly<Record<string, unknown>>): RecipeValues {
   const schema = recipeValuesSchema(getRecipe(recipeId))
   const first = schema.safeParse(raw)
   if (first.success) return first.data

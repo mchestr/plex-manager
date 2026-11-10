@@ -24,10 +24,10 @@ import {
 import { FIELD_IDS, LEVELS } from "@/lib/validations/cleanup-vocabulary"
 
 /** What the editor and the preview send: a condition value can be incomplete. */
-export const draftConditionSchema = z.object({ id: conditionIdSchema, field: z.enum(FIELD_IDS), op: z.string().max(20), value: z.unknown() })
+const draftConditionSchema = z.object({ id: conditionIdSchema, field: z.enum(FIELD_IDS), op: z.string().max(20), value: z.unknown() })
 export type DraftCondition = z.infer<typeof draftConditionSchema>
 
-export const draftGroupSchema = z.object({ id: groupIdSchema, kind: z.literal("anyOf"), conditions: z.array(draftConditionSchema).max(10) })
+const draftGroupSchema = z.object({ id: groupIdSchema, kind: z.literal("anyOf"), conditions: z.array(draftConditionSchema).max(10) })
 export type DraftGroup = z.infer<typeof draftGroupSchema>
 
 export const ruleDraftSchema = z.object({

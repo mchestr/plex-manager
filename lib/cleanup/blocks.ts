@@ -23,7 +23,6 @@ import { SERVICES, type Service } from "@/lib/validations/cleanup-vocabulary"
 /** TS 8.2, plus `invalid`: a stored rule definition that does not parse, so the run skips the rule (TS 8.3 step 6). */
 export const BLOCK_CODES = ["off", "paused", "redis", "noData", "dataStale", "sourceFailed", "tautulliStale",
   "historyShort", "sourceShrank", "readFailed", "busy", "auditFailed", "stopped", "arrRefused", "invalid"] as const
-export type BlockCode = (typeof BLOCK_CODES)[number]
 
 export const blockSchema = z.object({
   code: z.string().max(40), // a BLOCK_CODES value; an unknown stored code shows raw
@@ -40,7 +39,7 @@ export type RunOutcome = (typeof RUN_OUTCOMES)[number]
 
 /** The source status `errorCode` of a Plex server with no owner account (TS 7.3 step 2). */
 export const NO_OWNER_ERROR_CODE = "NO_OWNER"
-/** The words of a `NO_OWNER` stop: the run outcome, and the footer cause and page alert (TS 8.2, safety-r2-11). */
+/** The words of a `NO_OWNER` stop: the run outcome, and the footer cause and page alert (TS 8.2, safety-r2-11). @internal */
 export const NO_OWNER_WORDS = {
   outcome: "Safety stop: Plex has no owner account for this server",
   cause: "Plex has no owner account for this server. Reconnect Plex in Settings.",

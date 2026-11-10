@@ -22,7 +22,7 @@ import type { SnapshotItem, SnapshotLibrary, SnapshotUser } from "@/lib/cleanup/
 import type { PlexServer } from "@/lib/generated/prisma/client"
 
 /** How long the turn-on page waits for plex.tv: the member page budget (TS 13.1, E29). */
-export const WHO_SEES_TIMEOUT_MS = 1500
+const WHO_SEES_TIMEOUT_MS = 1500
 
 type Users = Readonly<Record<string, SnapshotUser>>
 type Members = LiveFacts["members"]

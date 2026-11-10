@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
 import { SERVICES, type Service } from "@/lib/validations/cleanup-vocabulary"
 
 /** UX 8.2 and 4.1.4. */
-export const SOURCE_LINE_WORDS = {
+const SOURCE_LINE_WORDS = {
   firstRead: "Reading your library for the first time. This takes 1 to 3 minutes.",
   reading: "Reading the library. This takes 1 to 3 minutes.",
   noData: "No library data yet.",

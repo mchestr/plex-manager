@@ -22,7 +22,7 @@ export type RowPart = { kind: "field" | "operator" | "value"; text: string } | {
 /** The note beside an incomplete row (UX 8.4). */
 export const INCOMPLETE_NOTE = "Not used until complete."
 
-/** The parts of a complete condition, in row order. `words` names members of a `request.by` value. */
+/** The parts of a complete condition, in row order. `words` names members of a `request.by` value. @internal */
 export function rowParts(c: Condition, words?: DescribeWords): RowPart[] {
   const t = visit(c, (meta, condition) => meta.tokens(condition, words))
   const parts: RowPart[] = [{ kind: "field", text: t.field }]

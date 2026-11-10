@@ -16,7 +16,7 @@ import type { PersonRef } from "@/lib/cleanup/types/rule-parts"
 import { prisma } from "@/lib/prisma"
 
 /** The name of a user with no row, or with no name and no email. */
-export const UNKNOWN_PERSON = "Unknown member"
+const UNKNOWN_PERSON = "Unknown member"
 
 export interface People {
   /** The person of a user id, or null for no id. */

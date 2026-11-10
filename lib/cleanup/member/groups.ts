@@ -39,11 +39,7 @@ export interface MemberItemRow {
   leaveOn: string | null
 }
 
-/**
- * One visible title, in the budget order, with the member's reason and whether they keep it.
- *
- * @internal Exported for the tests.
- */
+/** One visible title, in the budget order, with the member's reason and whether they keep it: the input of `splitMemberItems()`. */
 export interface MemberEntry {
   row: MemberItemRow
   reason: MemberReasonFact | null

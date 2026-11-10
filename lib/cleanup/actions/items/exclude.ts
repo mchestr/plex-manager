@@ -36,7 +36,7 @@ import type { excludeInput } from "@/lib/validations/cleanup-actions"
 export type ExcludeInput = z.output<typeof excludeInput>
 
 /** The words of a single key that no item row and no library data knows. */
-export const NOT_IN_LIBRARY = "This title is not in the library data."
+const NOT_IN_LIBRARY = "This title is not in the library data."
 
 /** Excludes the keys or the batch, audits and asks for a collection sync (TS 10.3). */
 export async function excludeItems(input: ExcludeInput, { userId, now }: { userId: string; now: Date }): Promise<ItemsResult<ExcludeCleanupItemsResult>> {

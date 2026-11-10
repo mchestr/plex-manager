@@ -20,7 +20,7 @@ import type { DraftAction } from "@/lib/cleanup/editor/draft"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 
-/** A top-level condition, a member of an any-of group, or a rule protection. */
+/** A top-level condition, a member of an any-of group, or a rule protection. @internal */
 export type MenuRowKind = "condition" | "member" | "protection"
 
 interface ConditionMenuProps {

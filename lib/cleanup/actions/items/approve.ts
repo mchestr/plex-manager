@@ -42,14 +42,14 @@ import type { deleteCleanupBatchInput } from "@/lib/validations/cleanup-actions"
 export type DeleteBatchInput = z.output<typeof deleteCleanupBatchInput>
 
 /** One group of the approval write: keys that share the action and the exclusion that the hash check read. */
-export interface ApprovalGroup {
+interface ApprovalGroup {
   action: string
   importListExclusion: boolean
   keys: string[]
 }
 
 /** Groups the items by `(action, importListExclusion)`, at most 100 keys a group (TS 10.3 step 5.2). */
-export function approvalGroups(items: readonly Pick<CleanupItem, "itemKey" | "action" | "importListExclusion">[]): ApprovalGroup[] {
+function approvalGroups(items: readonly Pick<CleanupItem, "itemKey" | "action" | "importListExclusion">[]): ApprovalGroup[] {
   const pairs = new Map<string, ApprovalGroup>()
   for (const item of items) {
     const id = `${item.action}|${item.importListExclusion}`
@@ -79,7 +79,7 @@ class StopApproval extends Error {
  * that needs the feature on and no pause. It takes the row lock, so a pause
  * that commits first always wins. Null while live, else the code to stop with.
  */
-export async function guardWrite(tx: PrismaTransactionClient): Promise<"CLEANUP_OFF" | "CLEANUP_PAUSED" | null> {
+async function guardWrite(tx: PrismaTransactionClient): Promise<"CLEANUP_OFF" | "CLEANUP_PAUSED" | null> {
   const { count } = await tx.cleanupSettings.updateMany({ where: { id: CLEANUP_SETTINGS_ID, enabled: true, pausedAt: null }, data: { enabled: true } })
   if (count > 0) return null
   const row = await tx.cleanupSettings.findUnique({ where: { id: CLEANUP_SETTINGS_ID }, select: { enabled: true } })

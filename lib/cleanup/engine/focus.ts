@@ -57,7 +57,7 @@ function threshold(c: Condition): { low: boolean; value: number } | null {
   }
 }
 
-/** True when every value of the bucket passes the condition (TS 4.2). */
+/** True when every value of the bucket passes the condition (TS 4.2). @internal */
 export function bucketPasses(c: Condition, bucket: HistogramBucket): boolean {
   if (bucket.never) return c.field === "watch.lastPlayed" && (c.op === "never" || (c.op === "moreThan" && c.value.orNever))
   const edge = threshold(c)
@@ -71,7 +71,7 @@ function bucketIndex(buckets: readonly HistogramBucket[], value: number | "never
   return buckets.findIndex((b) => !b.never && (b.from === null || value >= b.from) && (b.to === null || value < b.to))
 }
 
-/** "Played before Nov 8, 2025, server time (America/Vancouver)." for a date field with a duration (UX 8.4). */
+/** "Played before Nov 8, 2025, server time (America/Vancouver)." for a date field with a duration (UX 8.4). @internal */
 export function computedDate(c: Condition, ctx: Pick<EvalContext, "now" | "zone">): string | undefined {
   if (!(c.field in DATE_WORDS) || c.op === "never" || !("duration" in c.value)) return undefined
   const date = formatDate(ctx.now - durationDays(c.value.duration) * DAY_MS, "short", { timeZone: ctx.zone, locale: DEFAULT_LOCALE })

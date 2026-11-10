@@ -24,20 +24,21 @@ const lastEvalSchema = z.object({
   blocks: z.array(blockSchema),
 })
 
-export const dryRunEntrySchema = z.object({
+const dryRunEntrySchema = z.object({
   at: z.iso.datetime(), runId: z.string(), snapshotId: z.string(), matches: z.number().int(), bytes: z.number().int(),
   definitionHash: z.string(), // first 16 hex of SHA-256 of stableJson(definition)
 })
 export type DryRunEntry = z.infer<typeof dryRunEntrySchema>
 
+/** @internal Exported for the tests. */
 export const ruleStatsSchema = z.object({
   v: z.literal(1).default(1),
   lastEval: lastEvalSchema.optional(),
   dryRuns: z.array(dryRunEntrySchema).max(DRY_RUNS_KEPT).default([]),
 })
 export type RuleStats = z.infer<typeof ruleStatsSchema>
-export type RuleLastEval = NonNullable<RuleStats["lastEval"]>
 
+/** @internal Exported for the tests. */
 export const runRuleEntrySchema = z.object({
   ruleId: z.string(), mode: z.enum(MODES), matches: z.number().int(), joined: z.number().int(), held: z.number().int(),
   rescued: z.number().int(), deleted: z.number().int(), failed: z.number().int(), blocks: z.array(blockSchema),
@@ -67,7 +68,7 @@ export function parseRuleStats(raw: unknown): RuleStats {
   return lastEval ? { v: 1, lastEval, dryRuns } : { v: 1, dryRuns }
 }
 
-/** A stored `CleanupRun.entries`. Never throws: bad entries are dropped and logged by issue path. */
+/** A stored `CleanupRun.entries`. Never throws: bad entries are dropped and logged by issue path. @internal */
 export function parseRunEntries(raw: unknown): RunRuleEntry[] {
   return parseStoredRows("runEntries", runRuleEntrySchema, raw).rows
 }

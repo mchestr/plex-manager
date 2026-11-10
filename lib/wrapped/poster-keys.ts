@@ -68,11 +68,7 @@ function pageKeys(value: unknown): string[] {
   return []
 }
 
-/**
- * The poster rating keys stored in one Rewind: v1 and v2 top movies and shows, v3 page data.
- *
- * @internal Read by lib/cleanup/live-facts.ts
- */
+/** The poster rating keys stored in one Rewind: v1 and v2 top movies and shows, v3 page data. Media cleanup's G10 reads them (`lib/cleanup/live-facts.ts`). */
 export function extractPosterKeys(data: string): string[] {
   const stored = parseStoredRewind(data)
   if (stored.version === 3) return stored.data.pages.flatMap((page) => pageKeys(page.data))

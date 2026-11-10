@@ -94,10 +94,10 @@ export function failedSources(preview: Pick<PreviewResponse, "sources" | "snapsh
 }
 
 /** The test id base of a condition or protection row (UX 10.2). Protection ids start with "p". */
-export const rowBase = (id: string): string => (id.startsWith("p") ? `admin-cleanup-protection-${id}` : `admin-cleanup-condition-${id}`)
+const rowBase = (id: string): string => (id.startsWith("p") ? `admin-cleanup-protection-${id}` : `admin-cleanup-condition-${id}`)
 
 /** The held-back words: "22 more without it", "Keeps 7 safe" (UX 8.4). */
-export function heldWords(held: RowView["held"], incomplete: boolean): string | null {
+function heldWords(held: RowView["held"], incomplete: boolean): string | null {
   if (incomplete) return INCOMPLETE_NOTE.replace(/\.$/, "")
   if (!held) return null
   return held.kind === "keeps" ? `Keeps ${held.count} safe` : `${held.count} more without it`
@@ -159,7 +159,7 @@ export function rowView(c: DraftCondition, position: RowPosition, kit: RowKit): 
   }
 }
 
-/** The name of the phone box (UX 4.3.8 item 2.1): "{sentence}. {held-back text}. Change condition {n} of {N}." */
+/** The name of the phone box (UX 4.3.8 item 2.1): "{sentence}. {held-back text}. Change condition {n} of {N}." @internal */
 export function boxName(view: RowView): string {
   const held = heldWords(view.held, view.incomplete)
   const change = view.caption.replace(/^(Condition|Protection)/, (word) => `Change ${word.toLowerCase()}`)
@@ -239,7 +239,7 @@ export function HeldText({ held }: { held: NonNullable<RowView["held"]> }) {
   return held.kind === "keeps" ? <>keeps {n} safe</> : <>{n} more without it</>
 }
 
-/** True when an element is in the layout: a phone box below `md`, a desktop token from `md`. */
+/** True when an element is in the layout: a phone box below `md`, a desktop token from `md`. @internal */
 export function shown(element: Element | null): element is HTMLElement {
   return element instanceof HTMLElement && (typeof element.checkVisibility !== "function" || element.checkVisibility())
 }

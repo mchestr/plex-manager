@@ -42,7 +42,7 @@ export interface TurnOnParts {
   stored: ReadonlyMap<string, StoredTitle>
 }
 
-/** The share of the level's library storage, in whole percent, or null without library data. */
+/** The share of the level's library storage, in whole percent, or null without library data. @internal */
 export function storagePercent(bytes: number, level: Level, libraries: readonly SnapshotLibrary[]): number | null {
   const type = level === "movie" ? "movie" : "show"
   const total = libraries.filter((l) => l.type === type).reduce((sum, l) => sum + l.bytes, 0)

@@ -25,7 +25,7 @@ import type { CleanupOptions } from "@/lib/validations/cleanup-options"
 import type { Service } from "@/lib/validations/cleanup-vocabulary"
 
 /** The services each global protection reads (TS 5.3 "Needs"). G9 reads the arr of the level. */
-export const GLOBAL_NEEDS: Record<GlobalProtectionId, readonly Service[]> = {
+const GLOBAL_NEEDS: Record<GlobalProtectionId, readonly Service[]> = {
   g1: [], g2: [], g3: [], g4: ["tautulli"], g5: ["tautulli"], g6: [], g7: ["overseerr"], g8: ["plex"], g9: ["radarr", "sonarr"], g10: [],
   g11: ["sonarr"], g12: ["tautulli"], g13: ["plex"],
 }

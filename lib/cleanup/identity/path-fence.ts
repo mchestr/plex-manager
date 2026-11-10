@@ -47,7 +47,7 @@ export function isInside(child: string, parent: string): boolean {
   return c === p || c.startsWith(p === "/" ? "/" : `${p}/`)
 }
 
-/** Whether `child` is inside `parent` and not `parent` itself. */
+/** Whether `child` is inside `parent` and not `parent` itself. @internal */
 export function isStrictlyInside(child: string, parent: string): boolean {
   return isInside(child, parent) && normalisePath(child) !== normalisePath(parent)
 }

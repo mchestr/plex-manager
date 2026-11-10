@@ -21,7 +21,7 @@ import type { CleanupOptions } from "@/lib/validations/cleanup-options"
 import type { Service } from "@/lib/validations/cleanup-vocabulary"
 
 /** Recipe card posters (UX 4.1.1). */
-export const RECIPE_POSTERS = 5
+const RECIPE_POSTERS = 5
 
 export interface RecipeCardsInput {
   snapshot: LoadedSnapshot | null

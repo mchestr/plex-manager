@@ -43,14 +43,14 @@ function optional<T>(schema: z.ZodType<T>, value: string | undefined): T | null 
   return parsed.success ? parsed.data : null
 }
 
-export interface ListParams {
+interface ListParams {
   /** The trimmed search text, "" when there is none. */
   q: string
   page: number
   size: number
 }
 
-/** `q`, `page` and the page size of a list tab: `pageSize` (the `DataTable` select), else `size`. */
+/** `q`, `page` and the page size of a list tab: `pageSize` (the `DataTable` select), else `size`. @internal */
 export function parseListParams(input: SearchParamsInput): ListParams {
   const table = parseTableParams(
     { q: first(input, "q"), page: first(input, "page"), pageSize: first(input, "pageSize") ?? first(input, "size") },

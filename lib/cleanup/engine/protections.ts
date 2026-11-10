@@ -24,7 +24,7 @@ import type { SnapshotItem } from "@/lib/cleanup/schema/snapshot"
 import type { CleanupOptions } from "@/lib/validations/cleanup-options"
 import { type Level, LEVELS } from "@/lib/validations/cleanup-vocabulary"
 
-export { coversKey, protectionKeys, type ProtectionKeys } from "@/lib/cleanup/engine/fields/global-kit"
+export { coversKey, protectionKeys } from "@/lib/cleanup/engine/fields/global-kit"
 
 /** Settings order (TS 5.3). */
 const BUILDERS: readonly (readonly [GlobalProtectionId, GlobalBuilder])[] = [
@@ -65,6 +65,7 @@ export function globalProtections(level: Level, options: CleanupOptions, reads: 
  * One global protection's verdict for one item, from the context's
  * protections (TS 6.1). A protection that is off, or that does not apply to
  * the item's level, is `clear`.
+ * @internal Exported for the tests.
  */
 export function evaluateGlobal(id: GlobalProtectionId, item: SnapshotItem, ctx: EvalContext): ProtectionVerdict {
   const protection = ctx.globals(item.level).find((g) => g.id === id)

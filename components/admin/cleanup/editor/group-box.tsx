@@ -12,7 +12,7 @@ import { MAX_GROUP } from "@/lib/cleanup/editor/draft-ops"
 import { icons } from "@/lib/ui/icons"
 import type { DraftGroup } from "@/lib/validations/cleanup-draft"
 
-/** The notice of a group with one condition (UX 7.4 item 5). */
+/** The notice of a group with one condition (UX 7.4 item 5). @internal */
 export const ONE_CONDITION_NOTICE = "Add a second condition. With one, the group works like a normal condition, and Save stores it as one."
 
 /** The reason on a group's remove button when it holds every condition of the rule. */

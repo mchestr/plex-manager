@@ -11,7 +11,7 @@ import { cleanupRule } from "@/lib/admin/routes"
 import type { CleanupTurnOnData } from "@/lib/cleanup/types/screens"
 
 /** What the view shows above the button after a press or a change of the numbers. */
-export type TurnOnNotice = { kind: "changed" } | { kind: "error"; text: string } | null
+type TurnOnNotice = { kind: "changed" } | { kind: "error"; text: string } | null
 
 /** The values the view follows: the numbers of E28 and the preselected mode. */
 interface Seen {

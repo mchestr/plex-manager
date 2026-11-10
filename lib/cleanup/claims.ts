@@ -36,7 +36,7 @@ import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("CLEANUP_CLAIMS")
 
-/** The claim columns of `CleanupSettings`. */
+/** The claim columns of `CleanupSettings`. @internal */
 export const CLAIM_COLUMNS = ["readClaimAt", "runClaimAt", "collectionsClaimAt"] as const
 export type ClaimColumn = (typeof CLAIM_COLUMNS)[number]
 
@@ -74,6 +74,7 @@ export function isClaimHeld(value: Date | null, now: Date = new Date()): boolean
  * {@link release}. A renewal that matches no row aborts `lost` and stops. A
  * renewal that throws keeps the claim, and the next one tries again with the
  * same value.
+ * @internal Exported for the tests.
  */
 export function holdClaim(column: ClaimColumn, taken: Date): Claim {
   let token = taken
@@ -134,7 +135,7 @@ export async function release(held: Claim): Promise<boolean> {
   return count > 0
 }
 
-export type TryClaimResult<T> = { claimed: true; value: T } | { claimed: false }
+type TryClaimResult<T> = { claimed: true; value: T } | { claimed: false }
 
 /**
  * Runs `work` under the claim of `column`, or skips it while the claim is
@@ -143,6 +144,7 @@ export type TryClaimResult<T> = { claimed: true; value: T } | { claimed: false }
  * given up in all cases, with `options.release` when given (the change
  * check of `run-claim.ts`), else {@link release}. An error of `work` is
  * thrown after the release.
+ * @internal Exported for the tests.
  */
 export async function tryClaim<T>(
   column: ClaimColumn,

@@ -14,7 +14,7 @@ import type { FieldId, Level } from "@/lib/validations/cleanup-vocabulary"
 export type Form = "plural" | "singular"
 
 /** The row grammar of TS 4.2: `[field] [operator] [value] after`. */
-export interface RowTokens {
+interface RowTokens {
   field: string
   operator?: string
   value?: string
@@ -22,16 +22,16 @@ export interface RowTokens {
 }
 
 /** The control of the value editor that takes focus (UX 4.3.8 item 2.2). "none": the operator takes it. */
-export type ValueControl = "number" | "radio" | "combobox" | "none"
+type ValueControl = "number" | "radio" | "combobox" | "none"
 
 /** One choice of a `RadioGroup` value (Requested in Overseerr, The requesters, Show status). */
-export interface ValueChoice {
+interface ValueChoice {
   value: unknown
   label: string
 }
 
 /** The context of a row help line. `zone` formats an instant; a day key needs none. */
-export interface RowHelpContext {
+interface RowHelpContext {
   historyStart: string | null
   level: Level
   zone?: string

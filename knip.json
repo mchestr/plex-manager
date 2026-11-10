@@ -33,7 +33,9 @@
     // the judge's backlog loaders (MCP's list_conversation_findings uses listFindings); the Findings tab is the others' first caller, drop this then
     "lib/data/conversation-findings.ts!",
     // the judge's per-conversation loaders; the conversation page (getConversationReview) and the Calls badges (reviewBadgesFor) are their first callers, drop this then
-    "lib/data/conversation-review.ts!"
+    "lib/data/conversation-review.ts!",
+    // the media cleanup rule preview as an action (MCP's preview_cleanup_rule sees it only through a namespace import); the editor posts to /api/admin/cleanup/preview instead
+    "actions/admin/cleanup-preview.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",

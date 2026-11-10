@@ -29,7 +29,7 @@ const PAGE_SIZES = [...LIST_PAGE_SIZES].sort((a, b) => a - b)
 /** "Season 2" or the year under the title. */
 const subLine = (row: HistoryTitle) => (row.level === "season" && row.seasonNumber !== null ? `Season ${row.seasonNumber}` : row.year === null ? null : String(row.year))
 
-/** "Automatic", "You", the admin's name, or "No one" (UX 4.9 item 2). */
+/** "Automatic", "You", the admin's name, or "No one" (UX 4.9 item 2). @internal */
 export function approvedWords(value: HistoryTitle["approvedBy"]): string {
   if (value === "automatic") return "Automatic"
   if (value === null) return "No one"
@@ -37,7 +37,7 @@ export function approvedWords(value: HistoryTitle["approvedBy"]): string {
 }
 
 /** Deleted, Failed with its cause, or "Still unmonitored in {Service}" with the reason (UX 4.9 item 2). */
-export function ResultCell({ row }: { row: HistoryTitle }) {
+function ResultCell({ row }: { row: HistoryTitle }) {
   if (row.result === "stillUnmonitored") {
     const service = SERVICE_NAMES[row.stillUnmonitored ?? (row.level === "movie" ? "radarr" : "sonarr")]
     return <StatusBadge tone="warning" icon={icons.warning} label={`Still unmonitored in ${service}`} sub={row.cause ?? undefined} />

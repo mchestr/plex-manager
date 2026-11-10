@@ -43,7 +43,7 @@ export interface ResultsPage {
 }
 
 /** The class each tab lists. */
-export const TAB_CLASS: Record<PreviewTab, ItemClass> = {
+const TAB_CLASS: Record<PreviewTab, ItemClass> = {
   matches: "match",
   nearMisses: "nearMiss",
   protected: "protected",

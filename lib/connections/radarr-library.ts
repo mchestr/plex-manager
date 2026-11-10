@@ -35,7 +35,7 @@ export interface ArrReadConfig {
   apiKey: string
 }
 
-export type ArrReadCode = ServiceErrorCode | "ROWS_INVALID" | "INVALID_KEY"
+type ArrReadCode = ServiceErrorCode | "ROWS_INVALID" | "INVALID_KEY"
 export type ArrReadResult<T> = ServiceResult<T, ArrReadCode>
 type ArrService = "Radarr" | "Sonarr"
 

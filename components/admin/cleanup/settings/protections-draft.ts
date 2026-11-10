@@ -83,7 +83,7 @@ function isOn(draft: ProtectionsDraft, id: GlobalProtectionId): boolean {
 /** How many protections are on: the badge "{N} on" (UX 8.8). */
 export const onCount = (draft: ProtectionsDraft): number => SETTINGS_ORDER.filter((id) => isOn(draft, id)).length
 
-/** The draft with one protection changed. */
+/** The draft with one protection changed. @internal */
 export function withProtection<K extends OptionId>(draft: ProtectionsDraft, id: K, patch: Partial<ProtectionsDraft[K]>): ProtectionsDraft {
   return { ...draft, [id]: { ...draft[id], ...patch } }
 }

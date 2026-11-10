@@ -2,8 +2,8 @@
 
 import { buildOptions, buildSnapshotFacts } from "@/lib/cleanup/__tests__/helpers/builders"
 import { RECIPE_IDS, type RecipeId } from "@/lib/cleanup/constants"
+import { defaultLibraries } from "@/lib/cleanup/recipes/build"
 import {
-  defaultLibraries,
   getRecipe,
   type Recipe,
   RECIPES,

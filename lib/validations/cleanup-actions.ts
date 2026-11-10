@@ -25,8 +25,11 @@ const RULE_ID_SOURCE = "[A-Za-z0-9_-]{1,40}"
 /** A whole rule id. `rules/[id]/page.tsx` answers `notFound()` for an id that does not match. */
 export const RULE_ID_PATTERN = new RegExp(`^${RULE_ID_SOURCE}$`)
 export const ruleIdSchema = z.string().regex(RULE_ID_PATTERN)
+/** @internal Exported for the tests. */
 export const itemKeySchema = z.string().regex(/^(movie|show|season):[a-z]+:[A-Za-z0-9]+(:\d+)?$/).max(80)
+/** @internal Exported for the tests. */
 export const itemKeysSchema = z.array(itemKeySchema).min(1).max(500)
+/** @internal Exported for the tests. */
 export const dayKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 /** @internal Only the tests import it: each action input takes one batch kind (architecture-r6-6). */
 export const batchIdSchema = z.string().regex(new RegExp(`^(deletion|entry)-${RULE_ID_SOURCE}$`))
@@ -37,7 +40,7 @@ const entryBatchIdSchema = z.string().regex(new RegExp(`^entry-${RULE_ID_SOURCE}
 /** The Settings `returnTo` of the turn-on page (TS 12.7 item 10). */
 export const turnOnReturnToSchema = z.string().regex(new RegExp(`^/admin/cleanup/rules/${RULE_ID_SOURCE}/turn-on$`))
 
-export type BatchKind = "deletion" | "entry"
+type BatchKind = "deletion" | "entry"
 export interface ParsedBatchId {
   kind: BatchKind
   ruleId: string
@@ -52,6 +55,7 @@ export function parseBatchId(batchId: string): ParsedBatchId | null {
 
 const ruleNameSchema = z.string().trim().min(1).max(80)
 const reviewedAt = z.iso.datetime() // the action refuses a value older than APPROVAL_TTL_MS or later than now + 60 s (CLEANUP_REVIEW_STALE)
+/** @internal Exported for the tests. */
 export const keysHashSchema = z.string().regex(/^[a-f0-9]{64}$/) // SHA-256 of the sorted item keys, lower-case hex (lib/cleanup/keys-hash.ts)
 const revisionSchema = z.number().int().min(1)
 const excludeKeysSchema = z.array(itemKeySchema).max(500).default([])
@@ -83,7 +87,7 @@ export const turnOnCleanupRuleInput = z.object({
 
 export const PREVIEW_TABS = ["matches", "nearMisses", "protected", "missing", "cannotDelete"] as const
 export type PreviewTab = (typeof PREVIEW_TABS)[number]
-export const PREVIEW_SORTS = ["largest", "closest", "oldestPlay", "title"] as const
+const PREVIEW_SORTS = ["largest", "closest", "oldestPlay", "title"] as const
 export type PreviewSort = (typeof PREVIEW_SORTS)[number]
 export const previewRequestSchema = z.object({
   definition: ruleDraftSchema, ruleId: ruleIdSchema.optional(),
@@ -96,7 +100,8 @@ export const previewRequestSchema = z.object({
 })
 /** The body that the editor sends to `POST /api/admin/cleanup/preview`. */
 export type PreviewRequest = z.input<typeof previewRequestSchema>
-export const previewRecipeInput = createCleanupRuleFromRecipeInput
+/** The body of a recipe preview: the same as a recipe create, as its own schema (TS 6.10). */
+export const previewRecipeInput = createCleanupRuleFromRecipeInput.extend({})
 export const protectionImpactInput = z.object({ protections: protectionsOptionsSchema }) // keepsEnabled no longer changes a protection (E30)
 export const itemWhyInput = z.object({
   itemKey: itemKeySchema, ruleId: ruleIdSchema.optional(), definition: ruleDraftSchema.optional(), outcomeId: z.string().max(40).optional(),
@@ -123,9 +128,9 @@ export const updateCleanupSettingsInput = z.discriminatedUnion("section", [
   z.object({ section: z.literal("cleanup-plex"), values: cleanupOptionsSchema.shape.plex.unwrap() }),
   z.object({ section: z.literal("cleanup-members"), values: cleanupOptionsSchema.shape.members.unwrap() }),
 ])
-/** The Settings tab sections (UX 4.10): the `?section=` ids and the `updateCleanupSettings` sections. */
+/** The Settings tab sections (UX 4.10): the `?section=` ids and the `updateCleanupSettings` sections. @internal */
 export const CLEANUP_SETTINGS_SECTIONS = ["cleanup-feature", "cleanup-protections", "cleanup-budget", "cleanup-defaults", "cleanup-plex", "cleanup-members"] as const
-export type CleanupSettingsSection = (typeof CLEANUP_SETTINGS_SECTIONS)[number]
+type CleanupSettingsSection = (typeof CLEANUP_SETTINGS_SECTIONS)[number]
 type InputSection = z.infer<typeof updateCleanupSettingsInput>["section"]
 type SameSections = [InputSection] extends [CleanupSettingsSection] ? ([CleanupSettingsSection] extends [InputSection] ? true : never) : never
 const sameSections: SameSections = true

@@ -18,6 +18,7 @@ import { NOUNS, SERVICE_NAMES } from "@/lib/cleanup/fields/words"
 import type { Condition, ConditionOf } from "@/lib/validations/cleanup-rule"
 import { FIELD_IDS, type FieldId, type Level, type Service } from "@/lib/validations/cleanup-vocabulary"
 
+/** @internal Exported for the tests. */
 export const FIELD_CATALOG: FieldCatalog = {
   "watch.lastPlayed": lastPlayedField,
   "watch.plays": playsField,

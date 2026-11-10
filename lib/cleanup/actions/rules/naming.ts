@@ -14,7 +14,7 @@ import { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 
 /** The longest rule name (`ruleNameSchema`). */
-export const RULE_NAME_MAX = 80
+const RULE_NAME_MAX = 80
 
 /** `base` cut so that `suffix` fits after it within {@link RULE_NAME_MAX}. */
 const fit = (base: string, suffix = "") => `${base.slice(0, RULE_NAME_MAX - suffix.length).trimEnd()}${suffix}`

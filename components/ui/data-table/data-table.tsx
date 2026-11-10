@@ -27,8 +27,6 @@ import {
   selectionOptions,
 } from "./selection-column"
 
-export type { DataTableGrouping, DataTableSelection }
-
 /** How a row links out: its first cell's href, its action menu, and the name that heads the menu. */
 interface RowLinks<T> {
   /** The first cell renders a real Link to it; rows never take an onClick (UI-23). */

@@ -13,7 +13,7 @@ import "server-only"
 import { stableJson } from "@/lib/cleanup/editor/stable-json"
 import type { RuleDefinition } from "@/lib/validations/cleanup-rule"
 
-export type ChangedPart = "name" | "scope" | "conditions" | "protections" | "then"
+type ChangedPart = "name" | "scope" | "conditions" | "protections" | "then"
 
 export interface RuleChanges {
   changed: ChangedPart[]

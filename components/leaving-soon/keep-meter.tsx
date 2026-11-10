@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 /** The id of the Your Keeps heading (`components/leaving-soon/your-keeps.tsx`), which takes focus with `tabIndex={-1}`. */
 const KEEPS_HEADING_ID = "leaving-soon-my-keeps-heading"
 
-/** The line under the meter at the Keep limit (UX 9.2). */
+/** The line under the meter at the Keep limit (UX 9.2). @internal */
 export const meterLimitWords = (limit: number) => `You keep ${limit} ${limit === 1 ? "title" : "titles"}. End a Keep to keep another.`
 
 /**

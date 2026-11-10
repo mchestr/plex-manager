@@ -27,7 +27,7 @@ import type { MatchCause } from "@/lib/cleanup/schema/snapshot"
 import type { RadarrMovie, SonarrSeries } from "@/lib/cleanup/schema/upstream"
 
 /** The external ids of an arr record; a missing or empty id is left out. */
-export type ArrIds = Partial<Record<ExternalIdKind, number | string | null | undefined>>
+type ArrIds = Partial<Record<ExternalIdKind, number | string | null | undefined>>
 
 export interface ArrIndex<R> {
   /** The id kinds of this arr in key order. */
@@ -47,7 +47,7 @@ export function idText(value: number | string | null | undefined): string | null
   return typeof value === "number" ? String(value) : value.toLowerCase()
 }
 
-/** An index of `records` over `kinds`. */
+/** An index of `records` over `kinds`. @internal */
 export function indexArr<R>(records: readonly R[], kinds: readonly ExternalIdKind[], idsOf: (record: R) => ArrIds): ArrIndex<R> {
   const byId = new Map<ExternalIdKind, Map<string, R[]>>(kinds.map((kind) => [kind, new Map()]))
   for (const record of records) {

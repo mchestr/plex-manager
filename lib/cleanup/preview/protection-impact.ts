@@ -63,7 +63,7 @@ export function protectsCounts({ levels, libraries, draft }: Pick<ProtectionImpa
   return protects
 }
 
-/** The impact on loaded data. Pure. */
+/** The impact on loaded data. Pure. @internal */
 export function protectionImpact(data: ProtectionImpactData): ProtectionImpactResult {
   const { levels, current, draft } = data
   const rules = data.rules.map((rule) => {

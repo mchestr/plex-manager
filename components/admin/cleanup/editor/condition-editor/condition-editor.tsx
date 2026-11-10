@@ -16,8 +16,6 @@ import { EditorFooter } from "./editor-footer"
 import { captionFor, type ConditionEditorFocus, EDITOR_ID, withField } from "./editor-parts"
 import { useConditionSession } from "./use-condition-session"
 
-export type { ConditionEditorFocus } from "./editor-parts"
-
 /** The reason on the phone Remove button of a rule's only condition (UX 7.2 item 7, UX 8.4). */
 const LAST_CONDITION_REASON = "A rule needs at least one condition"
 

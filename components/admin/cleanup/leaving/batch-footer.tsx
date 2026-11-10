@@ -18,7 +18,7 @@ export const FOOTER_REASONS = {
 
 const toBigInt = (value: string) => (/^\d+$/.test(value) ? BigInt(value) : 0n)
 
-/** How many days the daily budget needs for the selection, largest first: at least 1. */
+/** How many days the daily budget needs for the selection, largest first: at least 1. @internal */
 export function budgetDays(summary: Pick<SelectedSummary, "count" | "bytes">, budget: { items: number; bytes: string }): number {
   const byItems = budget.items > 0 ? Math.ceil(summary.count / budget.items) : 1
   const perDay = toBigInt(budget.bytes)

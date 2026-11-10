@@ -72,10 +72,6 @@ export interface DeleteCleanupBatchResult {
   actQueued: boolean
 }
 
-export interface ApproveCleanupEntryBatchResult {
-  joined: number
-}
-
 /** `skipped` counts keys that are being deleted, or whose show is (TS 10.3). */
 export interface PostponeCleanupItemsResult {
   postponed: number

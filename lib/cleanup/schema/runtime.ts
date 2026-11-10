@@ -12,6 +12,7 @@ import { z } from "zod"
 import { issuePaths, logParseDropped, parseStoredRows } from "@/lib/cleanup/schema/snapshot"
 import { ACTION_IDS } from "@/lib/validations/cleanup-vocabulary"
 
+/** @internal Exported for the tests. */
 export const arrRefSchema = z.object({ service: z.enum(["radarr", "sonarr"]), id: z.number().int(), titleSlug: z.string(), path: z.string(),
   unmonitored: z.boolean().optional() }) // true after a failed delete that left the record unmonitored (8.9 step 6)
 export type ArrRef = z.infer<typeof arrRefSchema>
@@ -24,6 +25,7 @@ const lastSyncSchema = z.object({ at: z.iso.datetime(), ok: z.boolean(), errorCo
 const noticeSchema = z.object({ kind: z.literal("collectionRemoved"), key: z.string(), title: z.string(), sectionId: z.string(),
   detectedAt: z.iso.datetime(), recreatedAt: z.iso.datetime().nullable() })
 
+/** @internal Exported for the tests. */
 export const runtimeSchema = z.object({
   collections: z.record(z.string(), collectionSchema).default({}),
   lastSync: lastSyncSchema.optional(),

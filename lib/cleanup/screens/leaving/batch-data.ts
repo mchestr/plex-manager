@@ -63,7 +63,7 @@ export function deletionCard(batch: Batch, input: CardInput): DeletionBatchData 
   }
 }
 
-/** When the entry check held the batch: the oldest `heldAt` of its items, else the oldest `createdAt`. */
+/** When the entry check held the batch: the oldest `heldAt` of its items, else the oldest `createdAt`. @internal */
 export function heldAtOf(batch: Pick<Batch, "items">): Date {
   const times = batch.items.map((item) => (item.heldAt ?? item.createdAt).getTime())
   return new Date(Math.min(...times))

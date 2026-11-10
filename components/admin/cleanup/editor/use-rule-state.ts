@@ -21,7 +21,7 @@ import type { Mode } from "@/lib/validations/cleanup-vocabulary"
 type EditorRule = CleanupEditorData["rule"]
 
 /** The rule as the editor last knew it on the server: the base of "Unsaved changes" and of a discard. */
-export interface SavedRule {
+interface SavedRule {
   /** The compare-and-set revision (E25). Null for a new rule. */
   revision: number | null
   mode: Mode
@@ -30,7 +30,7 @@ export interface SavedRule {
 }
 
 /** A save that went through: the new revision, and the name and definition the server stored. */
-export interface SavedAs {
+interface SavedAs {
   revision: number
   name: string
   definition: RuleDraft
@@ -53,7 +53,7 @@ const savedOf = (rule: EditorRule): SavedRule => ({ revision: rule.revision, mod
 /** A server render whose rule has a higher revision than the editor's own (E34). */
 const isNewer = (rule: EditorRule, own: SavedRule) => rule.revision !== null && own.revision !== null && rule.revision > own.revision
 
-/** True when the draft differs from the saved rule: its name, or its definition with keys in any order. */
+/** True when the draft differs from the saved rule: its name, or its definition with keys in any order. @internal */
 export const isDirty = (state: DraftState, saved: Pick<SavedRule, "name" | "definition">): boolean =>
   state.name !== saved.name || stableJson(state.draft) !== stableJson(saved.definition)
 
@@ -135,7 +135,7 @@ export function useRuleState(rule: EditorRule): RuleState {
 /** The rule whose page title takes focus when its editor mounts: the rule just created (UX 7.9 "Create rule"). */
 let titleFocusFor: string | null = null
 
-/** Asks the editor of `ruleId` to focus its `h1` when it mounts. */
+/** Asks the editor of `ruleId` to focus its `h1` when it mounts. @internal */
 export function focusTitleOnArrival(ruleId: string): void {
   titleFocusFor = ruleId
 }
@@ -156,10 +156,10 @@ export const EDITOR_TOASTS = {
 } as const
 
 /** "Save rule" and Ctrl S, or "Save and turn on..." and "Save and change mode...", which open the turn-on page after the save. */
-export type SaveIntent = "save" | "turnOn"
+type SaveIntent = "save" | "turnOn"
 
 /** A live save that waits for the impact dialog (UX 7.7 item 3.2). */
-export interface PendingImpact {
+interface PendingImpact {
   impact: PreviewImpact
   definition: RuleDefinition
   sent: RuleDraft

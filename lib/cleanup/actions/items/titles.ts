@@ -19,7 +19,7 @@ import { LEVELS, type Level } from "@/lib/validations/cleanup-vocabulary"
 
 type ExternalIds = NonNullable<ProtectionTitle["externalIds"]>
 
-/** The id that a title key names: `tmdb:1` gives `{ tmdb: 1 }`. Null for `rk:` keys and anything else. */
+/** The id that a title key names: `tmdb:1` gives `{ tmdb: 1 }`. Null for `rk:` keys and anything else. @internal */
 export function idsOfTitleKey(titleKey: string): ExternalIds | null {
   const [kind, value = ""] = titleKey.split(":", 2)
   if (kind === "imdb" && value) return { imdb: value }

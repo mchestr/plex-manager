@@ -56,7 +56,7 @@ function partMessage(draft: RuleDraft, key: string, code: string): { label: stri
   }
 }
 
-/** The UX words of one issue. */
+/** The UX words of one issue. @internal */
 export function errorFor(draft: RuleDraft, issue: Pick<DraftIssue, "key" | "code">): EditorError {
   const { key, code } = issue
   const condition = findCondition(draft, key)
@@ -80,7 +80,7 @@ export function draftErrors(draft: RuleDraft, issues: readonly Pick<DraftIssue, 
   })
 }
 
-/** `fieldErrors` of a `VALIDATION` failure: the messages keyed by condition id or field name (TS 10.1). */
+/** `fieldErrors` of a `VALIDATION` failure: the messages keyed by condition id or field name (TS 10.1). @internal */
 export function toFieldErrors(errors: readonly Pick<EditorError, "key" | "message">[]): Record<string, string[]> {
   const out: Record<string, string[]> = {}
   for (const { key, message } of errors) (out[key] ??= []).push(message)

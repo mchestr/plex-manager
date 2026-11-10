@@ -48,7 +48,7 @@ export function editorFocusPart(c: Pick<DraftCondition, "field" | "op">, openedB
   return control === "number" ? "value" : control === "none" ? "operator" : control
 }
 
-/** After a removal: the next row, else the previous row, else the add button (UX 7.2 item 3). */
+/** After a removal: the next row, else the previous row, else the add button (UX 7.2 item 3). @internal */
 export function focusAfterRemove(draft: RuleDraft, id: string): FocusTarget | null {
   const place = locate(draft, id)
   if (!place) return null
@@ -93,7 +93,7 @@ export function focusAfter(action: DraftAction, before: DraftState, after: Draft
   }
 }
 
-/** Done, Cancel or Esc in the condition editor: back to the token (or box) that opened it. */
+/** Done, Cancel or Esc in the condition editor: back to the token (or box) that opened it. @internal */
 export const focusAfterClose = (id: string, openedBy: OpenedBy): FocusTarget => ({ kind: "token", id, part: openedBy })
 
 /** An error summary link (UX 7.7 item 5): the token with the error, with its editor open. */
@@ -109,7 +109,7 @@ export function focusForError(draft: RuleDraft, key: string): FocusTarget {
   return { kind: "summary" }
 }
 
-/** The editor events of UX 7.9 that are not draft actions. */
+/** The editor events of UX 7.9 that are not draft actions. @internal */
 export const EVENT_FOCUS = {
   saveWithErrors: { kind: "summary" },
   created: { kind: "title" },

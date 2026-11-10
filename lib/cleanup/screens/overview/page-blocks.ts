@@ -26,7 +26,7 @@ import { SERVICES } from "@/lib/validations/cleanup-vocabulary"
 const HOUR_MS = 3_600_000
 const DAY_MS = 24 * HOUR_MS
 /** A collection removal notice shows for 30 days (X9). */
-export const KOMETA_NOTICE_DAYS = 30
+const KOMETA_NOTICE_DAYS = 30
 
 const time = (value: Date | string) => (typeof value === "string" ? Date.parse(value) : value.getTime())
 

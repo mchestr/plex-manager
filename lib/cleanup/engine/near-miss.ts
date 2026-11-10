@@ -17,7 +17,7 @@ import type { Classification, CompiledRule, EvalContext, ItemResult } from "@/li
 import type { SnapshotItem } from "@/lib/cleanup/schema/snapshot"
 import { type Condition, conditionSchema } from "@/lib/validations/cleanup-rule"
 
-/** One near miss: its result, its failing clause id and its gap (lower is closer, null has no order). */
+/** One near miss: its result, its failing clause id and its gap (lower is closer, null has no order). @internal */
 export interface NearMiss {
   result: ItemResult
   failing: string
@@ -54,7 +54,7 @@ export function nearMissTryValue(compiled: CompiledRule, result: ItemResult, fai
   return parsed.success ? parsed.data : null
 }
 
-/** Closest first. A null gap sorts after every number. Ties sort by title, then by item key. */
+/** Closest first. A null gap sorts after every number. Ties sort by title, then by item key. @internal */
 export function byCloseness(a: NearMiss, b: NearMiss): number {
   if (a.gap !== b.gap) {
     if (a.gap === null) return 1
@@ -67,6 +67,7 @@ export function byCloseness(a: NearMiss, b: NearMiss): number {
 /**
  * The near misses of the results, closest first (the "Closest first" sort of
  * the Near misses tab). `classes` holds the class of each result in order.
+ * @internal Exported for the tests.
  */
 export function nearMisses(
   compiled: CompiledRule,

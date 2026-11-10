@@ -42,7 +42,7 @@ export interface FooterInput {
 }
 
 /** What the reason of a rescue needs: the rule's definition, the protection values and member names. */
-export interface RescueWords {
+interface RescueWords {
   definition: RuleDefinition | null
   protections: ProtectionsOptions
   names: DescribeWords
@@ -53,7 +53,7 @@ export const titleWords = (title: string, seasonNumber: number | null): string =
 
 const sentence = (text: string) => (/[.!?]$/.test(text) ? text : `${text}.`)
 
-/** The words of why a title was rescued: "A member played it." */
+/** The words of why a title was rescued: "A member played it." @internal */
 export function rescueReason(outcome: Pick<StoredOutcome, "reason" | "detail">, { definition, protections, names }: RescueWords): string {
   const level = definition?.level ?? "movie"
   const conditions = definition?.conditions.flatMap((c) => ("kind" in c ? c.conditions : [c])) ?? []

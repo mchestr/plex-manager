@@ -23,7 +23,7 @@ import { titleWords } from "@/lib/cleanup/screens/overview/rule-footer"
 import type { TurnOnLargestRow } from "@/lib/cleanup/types/rule-parts"
 
 /** Posters and rows of the page (UX 4.6): ten each. */
-export const TURN_ON_ROWS = 10
+const TURN_ON_ROWS = 10
 
 /** The stored title and poster of a Leaving soon row (`CleanupItem`). */
 export interface StoredTitle {

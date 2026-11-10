@@ -55,7 +55,7 @@ export const isGlobalId = (id: string): id is GlobalProtectionId => GLOBAL_IDS.h
 
 const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 
-/** A rule protection as a label: its singular predicate (TS 4.4 item 6), "Has at least 3 plays in total". */
+/** A rule protection as a label: its singular predicate (TS 4.4 item 6), "Has at least 3 plays in total". @internal */
 export function ruleProtectionLabel(p: Condition, level: Level, words: DescribeWords): string {
   return capitalise(describeCondition(p, level, words, "singular"))
 }

@@ -18,14 +18,14 @@ import type { BoundFormat } from "@/lib/utils/format"
 import type { Level } from "@/lib/validations/cleanup-vocabulary"
 
 /** The card shows the 10 largest rows, then "Show all {N}" pages the rest, 50 a page (UX 4.7.1). */
-export const FIRST_ROWS = 10
+const FIRST_ROWS = 10
 
 const HEADS: Record<Level, string> = { movie: "Movie", show: "Show", season: "Season" }
 const HEAD = "h-10 px-4 text-left text-label font-medium whitespace-nowrap text-muted-foreground"
 const CELL = "px-4 py-3 align-middle"
 
 /** What the batch table needs of the card's selection (`use-batch-selection.ts`). */
-export interface BatchTableSelection {
+interface BatchTableSelection {
   isTicked: (itemKey: string) => boolean
   /** Returns false when the untick would pass the limit of unticked titles. */
   setTicked: (rows: readonly BatchRow[], ticked: boolean) => { ok: boolean }

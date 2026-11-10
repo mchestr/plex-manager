@@ -17,18 +17,21 @@
 
 import type { Verdict } from "@/lib/cleanup/engine/types"
 
+/** @internal Exported for the tests. */
 export function and(a: Verdict, b: Verdict): Verdict {
   if (a === "fail" || b === "fail") return "fail"
   if (a === "unknown" || b === "unknown") return "unknown"
   return "pass"
 }
 
+/** @internal Exported for the tests. */
 export function or(a: Verdict, b: Verdict): Verdict {
   if (a === "pass" || b === "pass") return "pass"
   if (a === "unknown" || b === "unknown") return "unknown"
   return "fail"
 }
 
+/** @internal Exported for the tests. */
 export function not(a: Verdict): Verdict {
   if (a === "pass") return "fail"
   if (a === "fail") return "pass"

@@ -40,7 +40,7 @@ export const startMode = (data: CleanupTurnOnData): TurnOnChoice => (allowed(dat
 export const modeAllowed = allowed
 
 /** The words of the rule action for the set (TS 4.4). */
-export const ruleWords = (data: CleanupTurnOnData) =>
+const ruleWords = (data: CleanupTurnOnData) =>
   actionWords(data.rule.action, { exclusion: data.rule.importListExclusion, count: data.count, level: data.rule.level })
 
 /** The button names the result (UX 4.6 item 4, 8.7). */
@@ -55,7 +55,7 @@ export function noteText(data: CleanupTurnOnData, mode: TurnOnChoice): string {
 }
 
 /** "On Dec 8" from Dry run. In Change mode the titles have their own leave dates. */
-export const leaveWords = (data: CleanupTurnOnData, day: string): string => (isChangeMode(data) ? "At each leave date" : `On ${day}`)
+const leaveWords = (data: CleanupTurnOnData, day: string): string => (isChangeMode(data) ? "At each leave date" : `On ${day}`)
 
 /** The text of a mode card (UX 8.7 "Mode cards"). */
 export function modeCardText(data: CleanupTurnOnData, mode: TurnOnChoice, day: string): string {

@@ -19,6 +19,7 @@
 import { addDays } from "@/lib/ui/date-range"
 import type { Level } from "@/lib/validations/cleanup-vocabulary"
 
+/** @internal Exported for the tests. */
 export interface BudgetCandidate {
   itemKey: string
   level: Level

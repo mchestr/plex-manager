@@ -70,7 +70,7 @@ export type ReadLibraryResult =
 
 interface SourcesRead { sources: SourceStatus[]; build: SnapshotBuild | null; errorCode?: string }
 
-/** Whether `now` is in the window after the Rewind season opens, when reads skip (TS 7.1 step 2, R06 R10). */
+/** Whether `now` is in the window after the Rewind season opens, when reads skip (TS 7.1 step 2, R06 R10). @internal */
 export function inSeasonOpenWindow(now: Date, opensAt: Date): boolean {
   const since = now.getTime() - opensAt.getTime()
   return since >= SKIP_FROM_MS && since < SKIP_TO_MS

@@ -78,7 +78,7 @@ export function showLeaveFloor(showLeaveOn: string | null, seasonLeaveOns: reado
   return floor
 }
 
-export type OverlapKind = "same" | "inShow" | "hasSeasons"
+type OverlapKind = "same" | "inShow" | "hasSeasons"
 
 /** The items a rule matches. `showKey` is the show's item key of a season item, else null. */
 export interface RuleMatches {

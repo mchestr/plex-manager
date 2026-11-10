@@ -171,6 +171,7 @@ export function keysOf(document: SharedServersDocument): Map<string, SharedSecti
  * section keys.
  *
  * @returns The map, or `null` when the document has no `MediaContainer`
+ * @internal Exported for the tests.
  */
 export function parseSharedServersXml(xml: string): Map<string, SharedSectionKeys> | null {
   const document = parseSharedServersDocument(xml)

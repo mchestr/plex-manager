@@ -47,7 +47,7 @@ const lateEnough = (show: { state: string; leaveOn: string | null } | null, day:
  * postpone, false to roll the key back (the show is being deleted, or it
  * changed twice in the window).
  */
-export async function raiseShowOfSeason(tx: PrismaTransactionClient, showKey: string, day: string): Promise<boolean> {
+async function raiseShowOfSeason(tx: PrismaTransactionClient, showKey: string, day: string): Promise<boolean> {
   if ((await raiseShowLeaveOn(tx, showKey, day)) > 0) return true
   const show = await readShow(tx, showKey)
   if (show === null || show.state === "held") return true

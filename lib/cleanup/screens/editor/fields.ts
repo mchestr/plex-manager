@@ -18,9 +18,9 @@ import type { CleanupOptions } from "@/lib/validations/cleanup-options"
 import { FIELD_IDS, LEVEL_ARR, type Level, type Service } from "@/lib/validations/cleanup-vocabulary"
 
 /** The reason of a library with no arr root folder: "Radarr does not manage this library". */
-export const notManagedReason = (type: "movie" | "show") => `${SERVICE_NAMES[LEVEL_ARR[type]]} does not manage this library`
+const notManagedReason = (type: "movie" | "show") => `${SERVICE_NAMES[LEVEL_ARR[type]]} does not manage this library`
 /** The reason of a library whose titles have no external ids (agent `com.plexapp.agents.none`). */
-export const NO_IDS_REASON = "Its titles have no matchable ids"
+const NO_IDS_REASON = "Its titles have no matchable ids"
 
 /** Every field in Why order, with the words and default of `level` and the reason it is disabled. */
 export function editorFields(level: Level, setUp: ReadonlySet<Service>): EditorField[] {

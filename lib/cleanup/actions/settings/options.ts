@@ -17,13 +17,13 @@ import type { CleanupOptions } from "@/lib/validations/cleanup-options"
 import type { updateCleanupSettingsInput } from "@/lib/validations/cleanup-actions"
 
 /** One save of `updateCleanupSettings`. */
-export type SettingsSave = z.infer<typeof updateCleanupSettingsInput>
+type SettingsSave = z.infer<typeof updateCleanupSettingsInput>
 /** A save of a section that lives in the options document: every section but the feature switch. */
 export type OptionsSave = Exclude<SettingsSave, { section: "cleanup-feature" }>
 export type OptionsSection = OptionsSave["section"]
 
 /** A closed audit value. */
-export type ClosedValue = boolean | number
+type ClosedValue = boolean | number
 
 /** The audit details of a save (TS 11.1 `CLEANUP_SETTINGS_CHANGED`). */
 export interface SectionChanges {
@@ -61,7 +61,7 @@ function flatten(value: object, prefix = ""): Record<string, unknown> {
   return fields
 }
 
-/** The fields of one section, by the names that the audit row uses. */
+/** The fields of one section, by the names that the audit row uses. @internal */
 export function sectionFields(section: OptionsSection, options: CleanupOptions): Record<string, unknown> {
   switch (section) {
     case "cleanup-protections":

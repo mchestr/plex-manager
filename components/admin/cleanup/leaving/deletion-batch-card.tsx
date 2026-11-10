@@ -31,9 +31,9 @@ import { type BoundFormat, formatBytes } from "@/lib/utils/format"
 import { dayKey } from "@/lib/utils/zoned-time"
 import type { BatchTarget } from "@/lib/validations/cleanup-actions"
 
-/** The error toast of an untick at the limit of 500 (UX 4.7.1 item 1, 8.9). */
+/** The error toast of an untick at the limit of 500 (UX 4.7.1 item 1, 8.9). @internal */
 export const LIMIT_WORDS = "You can leave out at most 500 titles of a batch. Postpone the titles that you leave out, then approve."
-/** The `-changed` alert (UX 8.7). */
+/** The `-changed` alert (UX 8.7). @internal */
 export const CHANGED_WORDS = { changed: "The numbers changed. Check them again.", lost: "Your earlier selection is lost. Every title is selected. Check the selection again." }
 
 const DAY = "day-month-short" as const
@@ -50,7 +50,7 @@ export interface DeletionBatchCardProps {
 }
 
 /** "Today: 1 show, 410 GB. The rest go on Nov 9 to Nov 10." (TS 8.7, UX 8.7). */
-export function planLine(batch: DeletionBatchData, today: string, f: BoundFormat): string {
+function planLine(batch: DeletionBatchData, today: string, f: BoundFormat): string {
   const { today: now, lastDay } = batch.plan
   const first = now.count > 0 ? `Today: ${plural(now.count, batch.level)}, ${sizeText(now.bytes)}.` : "Today's budget is used."
   if (lastDay === null) return first

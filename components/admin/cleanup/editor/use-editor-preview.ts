@@ -10,13 +10,13 @@ import type { PreviewResponse } from "@/lib/cleanup/types/preview"
 import type { PreviewRequest } from "@/lib/validations/cleanup-actions"
 import type { RuleDraft } from "@/lib/validations/cleanup-draft"
 
-/** A typed number waits this long after the last key (UX 7.11 item 2, TS 10.7). */
+/** A typed number waits this long after the last key (UX 7.11 item 2, TS 10.7). @internal */
 export const TYPED_DELAY_MS = 500
 
 /** How long a preview of the same draft and view stays good enough for the impact of a save. */
 const IMPACT_FRESH_MS = 10_000
 
-/** The input of a typed number: the condition editor waits for its own numbers, so only numbers outside it count. */
+/** The input of a typed number: the condition editor waits for its own numbers, so only numbers outside it count. @internal */
 export function isTypedNumber(element: Element | null): boolean {
   return element instanceof HTMLElement && element.matches('[data-slot="number-field-input"]') && !element.closest('[data-testid="admin-cleanup-condition-editor"]')
 }
@@ -76,7 +76,7 @@ export interface EditorPreview {
   current: () => Promise<PreviewResponse>
 }
 
-/** The request of a draft in a view (TS 10.6, 10.7). */
+/** The request of a draft in a view (TS 10.6, 10.7). @internal */
 export function previewRequest(definition: RuleDraft, ruleId: string | null, view: ResultsView, focusId: string | null): PreviewRequest {
   return {
     definition,

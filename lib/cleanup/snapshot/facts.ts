@@ -91,7 +91,7 @@ function library(section: PlexSection, input: FactsInput): SnapshotFacts["librar
   }
 }
 
-/** The free and total space of the disks that hold the arr root folders, or null. */
+/** The free and total space of the disks that hold the arr root folders, or null. @internal */
 export function diskFacts(views: readonly ArrView<unknown>[]): SnapshotFacts["disk"] {
   const disks = new Map<string, ArrDisk>()
   for (const view of views) {
@@ -106,7 +106,7 @@ export function diskFacts(views: readonly ArrView<unknown>[]): SnapshotFacts["di
   return { freeBytes: sum((d) => d.freeSpace), totalBytes: sum((d) => d.totalSpace) }
 }
 
-/** The bytes a month that Plex added over the last 182 days (TS 7.7). */
+/** The bytes a month that Plex added over the last 182 days (TS 7.7). @internal */
 export function growthPerMonth(takenAt: string, added: Iterable<{ addedAt: number | null; size: number | null }>): number {
   const since = Math.floor(Date.parse(takenAt) / 1000) - GROWTH_DAYS * 86_400
   let bytes = 0

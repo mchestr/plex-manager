@@ -72,7 +72,7 @@ export interface ImpactInput {
 
 const DROPPED_STATES = new Set(["unmatched", "conflicted", "notManaged"])
 
-/** Reconcile's verdict steps (TS 8.4 step 3) for one result: true when the rule keeps the item. */
+/** Reconcile's verdict steps (TS 8.4 step 3) for one result: true when the rule keeps the item. @internal */
 export function keepsRule(result: ItemResult): boolean {
   if (result.protections.some((p) => p.verdict === "protects")) return false
   if (result.clauses.some((c) => c.verdict === "fail")) return false

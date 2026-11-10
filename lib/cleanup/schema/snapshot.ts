@@ -19,7 +19,7 @@ import { LEVELS, SERVICES } from "@/lib/validations/cleanup-vocabulary"
 
 const logger = createLogger("CLEANUP_PARSE")
 
-export const SOURCE_STATES = ["ok", "failed", "notConfigured"] as const
+const SOURCE_STATES = ["ok", "failed", "notConfigured"] as const
 export type SourceState = (typeof SOURCE_STATES)[number]
 
 export const sourceStatusSchema = z.object({
@@ -33,7 +33,7 @@ export const sourceStatusSchema = z.object({
 export type SourceStatus = z.infer<typeof sourceStatusSchema>
 
 const epoch = z.number().int().nonnegative() // Unix seconds
-export const viewerSchema = z.object({
+const viewerSchema = z.object({
   user: z.string().regex(/^\d+$/), // plex.tv account id (Tautulli user_id)
   lastCountedAt: epoch.nullable(),
   lastCountedFinished: z.boolean(), // the viewer's newest counted play is finished
@@ -43,7 +43,7 @@ export const viewerSchema = z.object({
 })
 export type Viewer = z.infer<typeof viewerSchema>
 
-export const requestFactSchema = z.object({
+const requestFactSchema = z.object({
   at: epoch, // createdAt
   by: z.string().regex(/^\d+$/).nullable(), // plex.tv account id; null when Overseerr has no Plex id for the user
   status: z.number().int(), // MediaRequestStatus; DECLINED (3) is dropped at read time
@@ -54,6 +54,7 @@ export type RequestFact = z.infer<typeof requestFactSchema>
 
 export const matchStateSchema = z.enum(["matched", "unmatched", "conflicted", "notManaged", "unknown"])
 export type MatchState = z.infer<typeof matchStateSchema>
+/** @internal Exported for the tests. */
 export const matchCauseSchema = z.enum([
   "noIds", "noArrRecord", "twoArrRecords", "conflictingIds", "outsideRoot", "outsideArrPath", "noPlexFile", "noSeasonNumber", "noArrSeason", "arrFailed",
   "seasonMismatch", // Plex and Sonarr number or fill the seasons of this show differently (7.4)
@@ -61,6 +62,7 @@ export const matchCauseSchema = z.enum([
 ])
 export type MatchCause = z.infer<typeof matchCauseSchema>
 
+/** @internal Exported for the tests. */
 export const snapshotItemSchema = z.object({
   key: z.string(), // itemKey
   level: z.enum(LEVELS),
@@ -100,11 +102,12 @@ export const snapshotItemSchema = z.object({
 })
 export type SnapshotItem = z.infer<typeof snapshotItemSchema>
 
-export const snapshotUserSchema = z.object({ hasAccess: z.boolean().nullable(), lastPlayAt: epoch.nullable(), owner: z.boolean() })
+const snapshotUserSchema = z.object({ hasAccess: z.boolean().nullable(), lastPlayAt: epoch.nullable(), owner: z.boolean() })
 export type SnapshotUser = z.infer<typeof snapshotUserSchema>
 export const ROW_COUNTERS = ["overseerrRequests", "tautulliRows", "usersWithPlay"] as const
 export type RowCounter = (typeof ROW_COUNTERS)[number]
 
+/** @internal Exported for the tests. */
 export const snapshotFactsSchema = z.object({
   version: z.literal(1),
   takenAt: z.iso.datetime(), // start of the first source read

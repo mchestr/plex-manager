@@ -26,7 +26,7 @@ import { dryRunSummary, turnOnChecks } from "@/lib/cleanup/turn-on"
 import type { RuleCardData } from "@/lib/cleanup/types/rule-parts"
 
 /** Rule card posters (UX 4.1.3 item 4). */
-export const RULE_POSTERS = 4
+const RULE_POSTERS = 4
 /** The sentence of a rule whose stored definition does not parse. */
 export const UNREADABLE_SENTENCE = "The saved rule could not be read."
 

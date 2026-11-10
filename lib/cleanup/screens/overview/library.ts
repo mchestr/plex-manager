@@ -43,7 +43,7 @@ export function libraryTiles(facts: SnapshotFacts | null): CleanupOverviewData["
   }
 }
 
-/** The one level of every item, or null for mixed levels or none. */
+/** The one level of every item, or null for mixed levels or none. @internal */
 export function levelOf(levels: Iterable<string>): Level | null {
   const distinct = new Set(levels)
   const [only] = distinct

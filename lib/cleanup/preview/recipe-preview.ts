@@ -57,7 +57,7 @@ function clauseSentence(definition: RuleDefinition, id: string): string | null {
   return "kind" in clause ? `Any of: ${clause.conditions.map((c) => lowerFirst(conditionSentence(c))).join(", or ")}` : conditionSentence(clause)
 }
 
-export interface RecipeCoreInput {
+interface RecipeCoreInput {
   recipe: Recipe
   values: RecipeValues
   level: Level
@@ -66,7 +66,7 @@ export interface RecipeCoreInput {
   ctx: EvalContext
 }
 
-/** The recipe preview on loaded data. Pure. */
+/** The recipe preview on loaded data. Pure. @internal */
 export function recipePreview({ recipe, values, level, data, ctx }: RecipeCoreInput): RecipePreview {
   const facts = data?.header.facts
   const rctx = { options: ctx.options, libraries: facts?.libraries ?? [] }

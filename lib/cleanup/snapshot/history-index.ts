@@ -45,7 +45,7 @@ import type { SnapshotFacts, SnapshotItem } from "@/lib/cleanup/schema/snapshot"
 import type { HistoryRow } from "@/lib/cleanup/schema/upstream"
 
 /** Where an episode, season or show row leads. `episodeKey` is null for a season or show match. */
-export interface EpisodeRef {
+interface EpisodeRef {
   showKey: string
   seasonKey: string | null
   episodeKey: string | null

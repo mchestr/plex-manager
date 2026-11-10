@@ -86,7 +86,7 @@ export const verbs = (form: Form): Record<keyof typeof PLURAL_VERBS, string> => 
 /** The name of a member with no name or no row (X8). */
 export const UNKNOWN_MEMBER = "Unknown member"
 
-/** One requester ref as list words (UX 5.8): "any member", "former members", "members inactive for 90 days", a name. */
+/** One requester ref as list words (UX 5.8): "any member", "former members", "members inactive for 90 days", a name. @internal */
 export function requesterRefWords(ref: RequesterRef, words?: DescribeWords): string {
   switch (ref.kind) {
     case "anyMember":

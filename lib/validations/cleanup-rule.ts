@@ -119,7 +119,6 @@ const sameFields: SameFields = true
 void sameFields
 
 export const groupSchema = z.object({ id: groupIdSchema, kind: z.literal("anyOf"), conditions: z.array(conditionSchema).min(2).max(10) })
-export type AnyOfGroup = z.infer<typeof groupSchema>
 
 export const thenSchema = z.object({
   graceDays: z.number().int().min(1).max(3650),
@@ -130,9 +129,9 @@ export type RuleThen = z.infer<typeof thenSchema>
 
 export const RULE_SCHEMA_VERSION = 1
 
-/** The stable codes of `checkDefinition` (TS 3.2). */
+/** The stable codes of `checkDefinition` (TS 3.2). @internal */
 export const CHECK_CODES = ["duplicate_id", "not_applicable", "action_level", "exclusion_action", "fewer_than_zero"] as const
-export type CheckCode = (typeof CHECK_CODES)[number]
+type CheckCode = (typeof CHECK_CODES)[number]
 
 const ruleDefinitionObject = z.object({
   schemaVersion: z.literal(RULE_SCHEMA_VERSION),
@@ -149,7 +148,7 @@ const ruleDefinitionObject = z.object({
 type DefinitionShape = z.infer<typeof ruleDefinitionObject>
 type Path = (string | number)[]
 
-/** The cross-field checks of TS 3.2, one issue per problem. */
+/** The cross-field checks of TS 3.2, one issue per problem. @internal */
 export function checkDefinition(def: DefinitionShape, ctx: z.core.$RefinementCtx<DefinitionShape>): void {
   const issue = (code: CheckCode, path: Path, id?: string) =>
     ctx.addIssue({ code: "custom", message: code, path, params: id === undefined ? { code } : { code, id } })

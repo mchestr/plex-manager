@@ -31,6 +31,7 @@ const logger = createLogger("CLEANUP_SCHEDULE")
 
 /** The scheduler ids (TS 9.4). @internal */
 export const CLEANUP_NIGHTLY_SCHEDULER_ID = "cleanup-nightly"
+/** @internal Exported for the tests. */
 export const CLEANUP_COLLECTIONS_SCHEDULER_ID = "cleanup-collections"
 
 const SCHEDULER_TIMEOUT_MS = 5000

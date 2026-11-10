@@ -67,10 +67,10 @@ export interface Batch extends ReturnType<typeof batchCounts> {
   oversize: { itemKey: string; day: string }[]
 }
 
-/** The rules a batch reads: the mode and `createdAt` decide the batch rule. */
+/** The rules a batch reads: the mode and `createdAt` decide the batch rule. @internal */
 export type BatchRules = ReadonlyMap<string, { mode: string; createdAt: Date }>
 
-/** The batch rule of an item (TS 6.8): its first holding Review first rule by `createdAt`, then id. */
+/** The batch rule of an item (TS 6.8): its first holding Review first rule by `createdAt`, then id. @internal */
 export function batchRuleOf(row: Pick<CleanupItem, "ruleIds">, rules: BatchRules): string | null {
   const ids = row.ruleIds.filter((id) => rules.get(id)?.mode === "reviewFirst")
   const at = (id: string) => rules.get(id)?.createdAt.getTime() ?? 0

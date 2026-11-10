@@ -13,7 +13,7 @@ import { joinAnd, LEVEL_NAMES, NOUNS, SERVICE_NAMES } from "@/lib/cleanup/fields
 import type { EditorLibrary } from "@/lib/cleanup/types/rule-parts"
 import { LEVEL_ARR, LEVELS, type Level } from "@/lib/validations/cleanup-vocabulary"
 
-/** The reason line of a live rule's level (UX 7.5 item 2, UX 8.4). */
+/** The reason line of a live rule's level (UX 7.5 item 2, UX 8.4). @internal */
 export const READ_ONLY_LEVEL = "To change the level, move the rule back to Dry run, or duplicate it."
 
 const LEVEL_HELP: Record<Level, string> = {
@@ -25,9 +25,9 @@ const LEVEL_HELP: Record<Level, string> = {
 const libraryType = (level: Level): EditorLibrary["level"] => (level === "movie" ? "movie" : "show")
 
 /** The libraries a level offers: its type, in the loader's order. */
-export const librariesOf = (all: readonly EditorLibrary[], level: Level) => all.filter((l) => l.level === libraryType(level))
+const librariesOf = (all: readonly EditorLibrary[], level: Level) => all.filter((l) => l.level === libraryType(level))
 
-/** The help line of a level (UX 5.2): it names the libraries out of scope on this server. */
+/** The help line of a level (UX 5.2): it names the libraries out of scope on this server. @internal */
 export function levelHelp(level: Level, libraries: readonly EditorLibrary[]): string {
   const out = librariesOf(libraries, level).filter((l) => l.disabledReason !== null).map((l) => l.title)
   if (out.length === 0) return LEVEL_HELP[level]
@@ -36,7 +36,7 @@ export function levelHelp(level: Level, libraries: readonly EditorLibrary[]): st
   return `${LEVEL_HELP[level]} ${joinAnd(out)} ${one ? "is" : "are"} never in scope, because ${arr} does not manage ${one ? "it" : "them"}.`
 }
 
-/** The libraries after a level change: kept within one library type, else every library the new level offers. */
+/** The libraries after a level change: kept within one library type, else every library the new level offers. @internal */
 export function librariesForLevel(next: Level, current: Level, selected: readonly string[], all: readonly EditorLibrary[]): string[] {
   if (libraryType(next) === libraryType(current)) return [...selected]
   return librariesOf(all, next).filter((l) => l.disabledReason === null).map((l) => l.sectionId)

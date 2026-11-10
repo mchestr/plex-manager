@@ -46,7 +46,7 @@ import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 
 /** The entry of one rule in the run (TS 8.5 step 4). */
-export interface RuleEntry {
+interface RuleEntry {
   ruleId: string
   checked: number
   candidates: number

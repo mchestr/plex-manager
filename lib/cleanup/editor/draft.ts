@@ -40,7 +40,7 @@ export function initDraftState(draft: RuleDraft, name: string): DraftState {
   return { name, draft, next: countersOf(draft), undo: null }
 }
 
-/** The action of the same kind at another level: delete stays delete, unmonitor stays unmonitor where the level has it. */
+/** The action of the same kind at another level: delete stays delete, unmonitor stays unmonitor where the level has it. @internal */
 export function actionForLevel(action: ActionId | undefined, level: Level): ActionId | undefined {
   const fits: readonly ActionId[] = ACTIONS[level]
   if (action === undefined || fits.includes(action)) return action

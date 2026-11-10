@@ -7,7 +7,7 @@ import { stableJson } from "@/lib/cleanup/editor/stable-json"
 import type { PreviewResponse } from "@/lib/cleanup/types/preview"
 import type { PreviewRequest } from "@/lib/validations/cleanup-actions"
 
-/** The route of the live preview (TS 10.6). */
+/** The route of the live preview (TS 10.6). @internal */
 export const CLEANUP_PREVIEW_URL = "/api/admin/cleanup/preview"
 
 /** How long the server render's preview stays fresh for its own key (TS 10.7). */
@@ -23,7 +23,7 @@ export class PreviewRateLimited extends Error {
   }
 }
 
-/** Any other answer that is not a preview. The message holds no server text. */
+/** Any other answer that is not a preview. The message holds no server text. @internal */
 export class PreviewFailed extends Error {
   readonly status: number
   constructor(status: number) {
@@ -33,7 +33,7 @@ export class PreviewFailed extends Error {
   }
 }
 
-/** The view part of the key (TS 10.7): tab, sort, page, search, near-miss chip and focus id. */
+/** The view part of the key (TS 10.7): tab, sort, page, search, near-miss chip and focus id. @internal */
 export function previewView(request: PreviewRequest): string {
   return [request.tab ?? "matches", request.sort ?? "largest", request.page ?? 1, request.search ?? "", request.nearMissCondition ?? "",
     request.focus?.conditionId ?? ""].join("|")

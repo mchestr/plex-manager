@@ -21,8 +21,6 @@ import { cn } from "@/lib/utils"
 import type { BoundFormat } from "@/lib/utils/format"
 import type { PreviewTab } from "@/lib/validations/cleanup-actions"
 
-export type { PreviewRefresh }
-
 interface PreviewCardProps {
   data: PreviewResponse
   labels: readonly ClauseLabel[]

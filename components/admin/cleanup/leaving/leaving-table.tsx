@@ -52,7 +52,7 @@ function subLine(row: LeavingRow): string | null {
 }
 
 /** The status with its sub-line (UX 4.12.6): the day of a planned delete, the budget day, who postponed it, or the cause. */
-export function StatusCell({ row, f }: { row: LeavingRow; f: BoundFormat }) {
+function StatusCell({ row, f }: { row: LeavingRow; f: BoundFormat }) {
   const day = row.statusValues.day ? f.dayKey(row.statusValues.day, DAY) : undefined
   const note = row.statusValues.note
   if (row.status === "deletesOn") return <StatusBadge tone="destructive" label={day ? `Deletes on ${day}` : "Deletes soon"} />
@@ -106,7 +106,7 @@ function columns(totals: CleanupLeavingData["totals"], f: BoundFormat): ColumnDe
 }
 
 /** "Nov 19: 12 seasons, 210 GB", and for the due group "Today, Nov 8: 6 shows, 1.24 TB. Shown above." (UX 4.7.2). */
-export function groupWords(key: string, group: LeavingGroup | undefined, today: string, f: BoundFormat): string {
+function groupWords(key: string, group: LeavingGroup | undefined, today: string, f: BoundFormat): string {
   const day = key === "due" ? `Today, ${f.dayKey(today, DAY)}` : f.dayKey(key, DAY)
   if (!group) return day
   const words = `${day}: ${plural(group.count, group.level ?? "title")}, ${sizeText(group.bytes)}`

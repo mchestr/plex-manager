@@ -12,7 +12,7 @@ import { settingsSavedToast } from "@/lib/cleanup/actions/settings/words"
 import { cn } from "@/lib/utils"
 
 /** The input of `updateCleanupSettings`: one section and its values (TS 3.5). */
-export type SettingsInput = Parameters<typeof updateCleanupSettings>[0]
+type SettingsInput = Parameters<typeof updateCleanupSettings>[0]
 
 /** The error of each field of a section, by field key. */
 export type FieldErrors = Partial<Record<string, string>>

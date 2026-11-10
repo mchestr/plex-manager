@@ -17,12 +17,12 @@ export interface EditEvent {
 }
 
 /** The rows after the edit: condition rows (group members included) and rule protections. */
-export interface RowCounts {
+interface RowCounts {
   conditions: number
   protections: number
 }
 
-/** What an id names: `p` protections, `a` any-of groups, else conditions. */
+/** What an id names: `p` protections, `a` any-of groups, else conditions. @internal */
 export const kindOf = (id: string): EditEvent["what"] => (id.startsWith("p") ? "protection" : id.startsWith("a") ? "group" : "condition")
 
 /** The live message an action queues (UX 7.10 item 2): add, remove and Undo only. */
@@ -54,6 +54,7 @@ const matchCount = (n: number) => `${n} ${n === 1 ? "match" : "matches"}`
  * "Condition added. 4 conditions. 191 matches, 1.2 terabytes." (UX 7.1 step
  * 8), "Condition removed. 2 conditions. 204 matches." (UX 7.2 step 4), and
  * "Condition restored. ..." after Undo. Sizes speak as words (TS 12.7 item 9).
+ * @internal Exported for the tests.
  */
 export function editMessage(event: Pick<EditEvent, "kind" | "what">, preview: PreviewResponse, rows: RowCounts): string {
   const list = event.what === "protection" ? count(rows.protections, "protection") : count(rows.conditions, "condition")
@@ -97,6 +98,7 @@ export function EditRegion({ text }: { text: string }) {
 /**
  * The settled count as words: "197 matches, 1.3 terabytes. 6 more than
  * before." (UX 7.3 step 5). `delta` is the change since the last edit.
+ * @internal Exported for the tests.
  */
 export function countMessage(preview: PreviewResponse, delta: number | null): string {
   const matches = matchCount(preview.matches)

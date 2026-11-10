@@ -2,7 +2,7 @@ import { sizeText } from "@/components/admin/cleanup/preview/sizes"
 import { itemName } from "@/components/admin/cleanup/results/view"
 import type { DeletionBatchData } from "@/lib/cleanup/types/list-parts"
 
-/** A phone shows this many titles of a batch before its buttons (UX 4.7.2 item 1). */
+/** A phone shows this many titles of a batch before its buttons (UX 4.7.2 item 1). @internal */
 export const PHONE_TITLES = 6
 
 /**

@@ -30,13 +30,13 @@ import type { Level } from "@/lib/validations/cleanup-vocabulary"
 
 const DAY_MS = 86_400_000
 
-export type ProtectionKind = "memberKeep" | "adminExclude"
+type ProtectionKind = "memberKeep" | "adminExclude"
 /** Who ended a row: the member, an admin, or the end date. */
-export type EndedBy = "self" | "admin" | "expired"
+type EndedBy = "self" | "admin" | "expired"
 
 /** The active key of a member's Keep of an item. */
 export const keepActiveKey = (itemKey: string, memberId: string) => `keep:${itemKey}:${memberId}`
-/** The active key of the exclusion of an item. */
+/** The active key of the exclusion of an item. @internal */
 export const excludeActiveKey = (itemKey: string) => `exclude:${itemKey}`
 
 /** The title facts a protection copies when it is made (from the item row, else the newest snapshot). */
@@ -66,6 +66,7 @@ export function activeProtectionWhere(now: Date): Prisma.CleanupProtectionWhereI
 /**
  * The protecting rows of the cascade of an item (TS 5.4): pass its item keys
  * with the keys that cascade to it, or its `cascadeWhere()`.
+ * @internal Exported for the tests.
  */
 export async function activeProtectionsFor(
   db: PrismaTransactionClient,

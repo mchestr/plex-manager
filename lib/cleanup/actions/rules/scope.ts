@@ -24,7 +24,7 @@ export async function newestLibraries(): Promise<readonly SnapshotLibrary[] | nu
   return header?.facts?.libraries ?? null
 }
 
-/** Whether a library can hold the rule's titles: the level's type and arr, and external ids. */
+/** Whether a library can hold the rule's titles: the level's type and arr, and external ids. @internal */
 export function libraryInScope(library: SnapshotLibrary, level: Level): boolean {
   const type = level === "movie" ? "movie" : "show"
   return library.type === type && library.arr === LEVEL_ARR[level] && !library.noIds
@@ -35,7 +35,7 @@ export function leafConditions(definition: Pick<RuleDefinition, "conditions" | "
   return [...definition.conditions.flatMap((clause) => ("kind" in clause ? clause.conditions : [clause])), ...definition.protections]
 }
 
-/** The services that the fields of the definition need, in `SERVICES` order (TS 4.2 "Needs"). */
+/** The services that the fields of the definition need, in `SERVICES` order (TS 4.2 "Needs"). @internal */
 export function neededServices(definition: Pick<RuleDefinition, "conditions" | "protections">): Service[] {
   const needs = new Set(leafConditions(definition).flatMap((condition) => FIELD_NEEDS[condition.field]))
   return SERVICES.filter((service) => needs.has(service))
