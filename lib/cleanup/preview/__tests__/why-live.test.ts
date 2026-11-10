@@ -91,9 +91,13 @@ describe("liveWhy", () => {
   })
 
   it("keeps the class in the editor for a Leaving soon title, and adds the show floor to a show", () => {
-    const editor = liveWhy(input(NEVER, buildDraft({ conditions: [LAST_PLAYED] }), { row: row(), rule: { id: "rule-1", mode: "dryRun" } }))
+    // Another rule holds the title in Leaving soon: the Then is still the edited Dry run rule's (UX review UX-02)
+    const editor = liveWhy(input(NEVER, buildDraft({ conditions: [LAST_PLAYED] }), { row: row({ ruleIds: ["rule-9"] }), rule: { id: "rule-1", mode: "dryRun" } }))
     expect(editor.state).toBe("match")
-    expect(editor.then?.dryRun).toBe(false)
+    expect(editor.then?.dryRun).toBe(true)
+    expect(editor.then?.text[0].text).toMatch(/^If the rule is turned on, Radarr deletes the movie/)
+    const live = liveWhy(input(NEVER, buildDraft({ conditions: [LAST_PLAYED] }), { row: row(), rule: { id: "rule-1", mode: "reviewFirst" } }))
+    expect(live.then).toMatchObject({ dryRun: false, text: [{ text: expect.stringMatching(/^Radarr deletes the movie/) }] })
     const show = buildShowItem({ plays: { lastCountedAt: null, countedAt: [], viewers: [] } })
     const draft = buildDraft({ level: "show", libraries: ["2"], conditions: [LAST_PLAYED], then: { graceDays: 30, action: "show.delete", importListExclusion: false } })
     const data = liveWhy(input(show, draft, { showFloor: "2026-12-20", links: { machineId: null, arrBase: null } }))

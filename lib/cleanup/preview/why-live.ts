@@ -7,8 +7,12 @@
  *    draft (the Leaving soon list) reads `leaving`.
  * 2. A near miss gets its forecast. In the editor it also gets the Try value
  *    and its effect on the rule (TS 6.5).
- * 3. A match or a Leaving soon title gets the Then line. Other rules name
- *    each rule of the level that matches the title or holds it.
+ * 3. A match or a Leaving soon title gets the Then line. In the editor the
+ *    Then line is the edited rule's: its action and its mode (a Dry run rule
+ *    "only records it"), also when another rule holds the title in Leaving
+ *    soon. Outside the editor a Leaving soon title reads its row's action.
+ *    Other rules name each rule of the level that matches the title or holds
+ *    it.
  *
  * @module lib/cleanup/preview/why-live
  */
@@ -94,10 +98,12 @@ export function liveWhy(input: LiveWhyInput): WhySheetData {
       data.tryValue = { conditionId: tried.id, value: tried.value, label: tryValueLabel(tried), addsCount: effect.addsCount, addsBytes: String(effect.addsBytes) }
     }
   }
-  const action = leaving ? row.action : compiled.then.action
-  if ((classification.class === "match" || leaving) && action) {
-    const exclusion = leaving ? row.importListExclusion : compiled.then.importListExclusion === true
-    const dryRun = !leaving && (input.rule === null || input.rule.mode === "dryRun")
+  // The editor explains the edited rule: its Then and its mode, never another rule's row (UX review UX-02)
+  const fromRow = leaving && !input.editor
+  const action = fromRow ? row.action : compiled.then.action
+  if ((classification.class === "match" || fromRow) && action) {
+    const exclusion = fromRow ? row.importListExclusion : compiled.then.importListExclusion === true
+    const dryRun = !fromRow && (input.rule === null || input.rule.mode === "dryRun")
     data.then = whyThen({ action, exclusion, item, dryRun, showFloor: input.showFloor })
   }
   for (const other of input.others) {
