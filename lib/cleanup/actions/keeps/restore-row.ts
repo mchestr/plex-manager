@@ -8,8 +8,9 @@
  * the newest library data, as a new row of a run does (`snapshotFields`).
  * The Why is the one that the Keep's exit stored, else none.
  *
- * While cleanup is paused, the row comes back as `leaving` with its
- * approval cleared, as a pause does to every approved row.
+ * While cleanup is paused, or after a pause or a Feature off that came
+ * after the Keep, the row comes back as `leaving` with its approval
+ * cleared, as a pause does to every approved row.
  *
  * @module lib/cleanup/actions/keeps/restore-row
  */
@@ -28,17 +29,18 @@ export interface RestoreInput {
   item: SnapshotItem & { arr: NonNullable<SnapshotItem["arr"]> }
   /** The Why of the Keep's exit, or null. */
   why: Prisma.JsonValue | null
-  paused: boolean
-  /** The leave day: the old one, raised to the show floor for a show. */
+  /** A pause now, or a pause or Feature off after the Keep, cleared the approval. */
+  approvalCleared: boolean
+  /** The leave day: the old one, raised to the show floor for a show and to the hold. */
   leaveOn: string
   now: Date
 }
 
 /** The row to create. */
 export function restoredRow(input: RestoreInput): Prisma.CleanupItemUncheckedCreateInput {
-  const { keep, restore, item, why, paused, leaveOn, now } = input
+  const { keep, restore, item, why, approvalCleared, leaveOn, now } = input
   const { service, id, titleSlug, path } = item.arr
-  const approved = !paused && restore.state === "approved"
+  const approved = !approvalCleared && restore.state === "approved"
   return {
     itemKey: keep.itemKey,
     level: keep.level,

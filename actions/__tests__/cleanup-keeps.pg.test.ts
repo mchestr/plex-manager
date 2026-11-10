@@ -16,6 +16,9 @@
  *    commit, the exit matches zero rows, and the Keep rolls back.
  * 3. The Keep commits first: the act step's optimistic `deleting` write
  *    (`{ id, updatedAt }`) matches zero rows, so the act step skips the show.
+ * 4. A member keeps an approved title, an admin pauses and resumes, and the
+ *    member presses Undo: the row comes back as `leaving` with no approval,
+ *    at the hold (TS 8.12; safety review S-1).
  *
  * Gated by `describePg` and run only by `npm run test:integration`. The suite
  * touches only rows it created, keyed by its own run id, and puts the shared
@@ -29,6 +32,10 @@ import { getServerSession } from "next-auth"
 import { keepCleanupTitle } from "@/actions/cleanup-keeps"
 import { buildCleanupItem } from "@/__tests__/helpers/cleanup-factories"
 import { describePg } from "@/__tests__/helpers/integration"
+import { buildMovieItem } from "@/lib/cleanup/__tests__/helpers/builders"
+import { writeKeep } from "@/lib/cleanup/actions/keeps/keep-tx"
+import { endMyKeep } from "@/lib/cleanup/actions/keeps/undo"
+import { pauseAll, resumeAll } from "@/lib/cleanup/actions/settings/pause"
 import { memberCleanupAccess } from "@/lib/cleanup/member/access"
 import { type CleanupItem, type CleanupSettings, type Prisma, PrismaClient } from "@/lib/generated/prisma/client"
 
@@ -48,6 +55,8 @@ jest.mock("@/lib/cleanup/collections/request", () => ({ requestCollectionSync: j
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }))
+const mockLevel = jest.fn()
+jest.mock("@/lib/cleanup/snapshot/cache", () => ({ ...jest.requireActual("@/lib/cleanup/snapshot/cache"), loadSnapshotLevel: (...a: unknown[]) => mockLevel(...a) }))
 
 // Item keys hold letters and digits only (`itemKeySchema`)
 const RUN = `k${randomUUID().replaceAll("-", "").slice(0, 12)}`
@@ -162,5 +171,59 @@ describePg("member Keeps against the act step on PostgreSQL", (databaseUrl) => {
       { itemKey: SEASON, kind: "rescued", reason: "kept" },
       { itemKey: SHOW, kind: "rescued", reason: "kept" },
     ])
+  })
+})
+
+describePg("a Keep Undo after a pause and a Resume on PostgreSQL", (databaseUrl) => {
+  const ADMIN = `${RUN}-admin`
+  const RULE = `${RUN}-undo-rule`
+  const MOVIE = `movie:tmdb:${RUN}`
+  let settings: CleanupSettings | null = null
+
+  beforeAll(async () => {
+    mockDb = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) })
+    settings = await mockDb.cleanupSettings.findUnique({ where: { id: "cleanup" } })
+    const live = { enabled: true, pausedAt: null, pausedBy: null, holdUntil: null, runClaimAt: null, options: {} }
+    await mockDb.cleanupSettings.upsert({ where: { id: "cleanup" }, create: { id: "cleanup", ...live }, update: live })
+    await mockDb.user.createMany({ data: [{ id: MEMBER, name: `${RUN} member`, plexUserId: `${RUN}-plex` }, { id: ADMIN, name: `${RUN} admin`, isAdmin: true }] })
+    await mockDb.cleanupRule.create({ data: { id: RULE, name: `${RUN} rule`, mode: "reviewFirst", revision: 2, definition: {}, schemaVersion: 1, stats: {},
+      createdBy: ADMIN, updatedBy: ADMIN } as never })
+  })
+
+  afterAll(async () => {
+    if (!mockDb) return
+    await mockDb.cleanupItem.deleteMany({ where: { itemKey: MOVIE } })
+    await mockDb.cleanupOutcome.deleteMany({ where: { itemKey: MOVIE } })
+    await mockDb.cleanupProtection.deleteMany({ where: { memberId: MEMBER } })
+    await mockDb.cleanupRule.deleteMany({ where: { id: RULE } })
+    await mockDb.auditLog.deleteMany({ where: { actorUserId: { in: [MEMBER, ADMIN] } } })
+    await mockDb.user.deleteMany({ where: { id: { in: [MEMBER, ADMIN] } } })
+    if (settings) {
+      const { enabled, pausedAt, pausedBy, holdUntil, runClaimAt } = settings
+      await mockDb.cleanupSettings.update({ where: { id: "cleanup" }, data: { enabled, pausedAt, pausedBy, holdUntil, runClaimAt,
+        options: settings.options as Prisma.InputJsonValue } })
+    } else {
+      await mockDb.cleanupSettings.deleteMany({ where: { id: "cleanup" } })
+    }
+    await mockDb.$disconnect()
+  })
+
+  it("brings the row back as leaving at the hold, without the approval that the pause cleared", async () => {
+    const titleKey = `tmdb:${RUN}`
+    const item = buildCleanupItem({ id: `${RUN}-undo`, itemKey: MOVIE, level: "movie", titleKey, seasonNumber: null, sectionId: "1", state: "approved",
+      approvedAt: new Date(Date.now() - 3_600_000), approvedBy: ADMIN, needsApproval: true, ruleIds: [RULE], leaveOn: "2026-01-02", firstLeaveOn: "2026-01-02" })
+    const row = await mockDb.cleanupItem.create({ data: { ...item, arr: item.arr as Prisma.InputJsonValue, why: item.why as Prisma.InputJsonValue } })
+    const listed = buildMovieItem({ key: MOVIE, titleKey })
+    mockLevel.mockResolvedValue({ byKey: new Map([[MOVIE, listed]]), items: [listed] })
+
+    const kept = await writeKeep(MOVIE, [row], { memberId: MEMBER, keepDays: 90, now: new Date() })
+    if (kept.kind !== "kept") throw new Error(`The Keep gave ${kept.kind}`)
+    await pauseAll(ADMIN, new Date())
+    expect(await resumeAll(ADMIN, new Date())).toMatchObject({ status: "resumed" })
+
+    expect(await endMyKeep({ keepId: kept.keep.id, restore: true }, { userId: MEMBER, now: new Date() })).toEqual({ success: true, data: { restored: true } })
+    const { holdUntil } = await mockDb.cleanupSettings.findUniqueOrThrow({ where: { id: "cleanup" } })
+    expect(holdUntil).not.toBeNull()
+    expect(await read(MOVIE)).toMatchObject({ state: "leaving", approvedAt: null, approvedBy: null, needsApproval: true, leaveOn: holdUntil })
   })
 })

@@ -30,6 +30,8 @@ import { getActiveService } from "@/lib/data/active-service"
 import { type CleanupItem, type CleanupProtection, type CleanupSettings, Prisma } from "@/lib/generated/prisma/client"
 import { AuditEventType } from "@/lib/security/audit-log"
 import { consume } from "@/lib/security/rate-limit"
+import { addDays } from "@/lib/ui/date-range"
+import { dayKey } from "@/lib/utils/zoned-time"
 
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
@@ -481,6 +483,8 @@ describe("keepCleanupTitle cascade and deleting check", () => {
 
 describe("removeMyCleanupKeep", () => {
   const KEPT_AT = new Date(Date.now() - 60_000)
+  /** The day `n` days after the Keep's day (the zone is UTC). */
+  const dayAfter = (n: number) => addDays(dayKey(KEPT_AT.getTime(), "UTC"), n)
 
   /** The member's active Keep of `key` with the restore of the row that it took out. */
   function kept(key: string, restore: Record<string, unknown> | null = {}) {
@@ -532,6 +536,24 @@ describe("removeMyCleanupKeep", () => {
     kept(MOVIE, { state: "approved", approvedAt: "2026-11-01T00:00:00.000Z", approvedBy: "admin-1" })
     expect(await removeMyCleanupKeep({ keepId: "keep-1", restore: true })).toEqual({ success: true, data: { restored: true } })
     expect(row(MOVIE)).toMatchObject({ state: "leaving", approvedAt: null, approvedBy: null })
+  })
+
+  it.each([
+    ["a Resume", {}],
+    ["a Feature on", { enabledAt: new Date() }],
+  ])("brings the row back as leaving at the hold when %s came after the Keep (the pause cleared the approval)", async (_case, settings) => {
+    const holdUntil = dayAfter(7)
+    store.settings = { ...store.settings, ...settings, holdUntil }
+    kept(MOVIE, { state: "approved", approvedAt: "2026-11-01T00:00:00.000Z", approvedBy: "admin-1", needsApproval: true, leaveOn: dayAfter(2) })
+    expect(await removeMyCleanupKeep({ keepId: "keep-1", restore: true })).toEqual({ success: true, data: { restored: true } })
+    expect(row(MOVIE)).toMatchObject({ state: "leaving", approvedAt: null, approvedBy: null, leaveOn: holdUntil, needsApproval: true })
+  })
+
+  it("keeps the approval and the leave date when the newest Resume came before the Keep's day", async () => {
+    store.settings = { ...store.settings, holdUntil: dayAfter(6) }
+    kept(MOVIE, { state: "approved", approvedAt: "2026-11-01T00:00:00.000Z", approvedBy: "admin-1", leaveOn: dayAfter(30) })
+    expect(await removeMyCleanupKeep({ keepId: "keep-1", restore: true })).toEqual({ success: true, data: { restored: true } })
+    expect(row(MOVIE)).toMatchObject({ state: "approved", approvedBy: "admin-1", leaveOn: dayAfter(30) })
   })
 
   it.each([
