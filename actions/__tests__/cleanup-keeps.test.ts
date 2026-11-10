@@ -297,7 +297,24 @@ describe("keepCleanupTitle", () => {
   it("refuses a title that is being deleted", async () => {
     setup([item(MOVIE, { state: "deleting" })])
     expect(await keepCleanupTitle({ itemKey: MOVIE })).toEqual({ success: false, code: "CLEANUP_DELETING", error: DELETING_WORDS })
-    expect(memberCleanupAccess).not.toHaveBeenCalled()
+    expect(store.protections).toEqual([])
+  })
+
+  it.each([
+    ["is being deleted", "deleting"],
+    ["is in Leaving soon", "leaving"],
+    ["is held", "held"],
+  ])("gives a hidden title that %s the answer of a key with no row (no state oracle)", async (_case, state) => {
+    jest.mocked(memberCleanupAccess).mockResolvedValue(new Map([["9", null]]))
+    setup([item(MOVIE, { state })])
+    const hidden = await keepCleanupTitle({ itemKey: MOVIE })
+    expect(hidden).toEqual(await keepCleanupTitle({ itemKey: "movie:tmdb:4040" }))
+    expect(hidden).toMatchObject({ success: false, code: "CLEANUP_NOT_LEAVING" })
+  })
+
+  it("gives UPSTREAM_UNAVAILABLE for a key with no row too while plex.tv does not answer", async () => {
+    jest.mocked(memberCleanupAccess).mockResolvedValue(null)
+    expect(await keepCleanupTitle({ itemKey: "movie:tmdb:4040" })).toMatchObject({ success: false, code: "UPSTREAM_UNAVAILABLE" })
   })
 
   it("refuses a title in a section that is not shared, and never says why", async () => {

@@ -5,15 +5,18 @@
  * 1. The feature is on and not paused, and the member options "Members can
  *    keep titles" and "Leaving soon page and Home row" are on. Else
  *    `CLEANUP_NOT_LEAVING`.
- * 2. The item row is in `leaving` or `approved`. `deleting` gives
- *    `CLEANUP_DELETING`, anything else `CLEANUP_NOT_LEAVING`. The rows of its
- *    cascade are read with it.
- * 3. The member sees the title (`memberSeesItem`). If not,
- *    `CLEANUP_NOT_LEAVING`, which never says why. plex.tv silent:
- *    `UPSTREAM_UNAVAILABLE` with words that name no title.
- * 4. The member's active Keeps are below the limit. Else `CLEANUP_KEEP_LIMIT`.
- * 5. The transaction of `writeKeep()`, with the deleting check of E33.
- * 6. A new Keep writes `CLEANUP_KEEP_ADDED` (the member is actor and target)
+ * 2. The member's access (`readKeepAccess`), before any item row, so no
+ *    answer depends on the key until step 3 passed. plex.tv silent:
+ *    `UPSTREAM_UNAVAILABLE` for any key, with words that name no title.
+ * 3. The item row exists and the member sees its title (`accessSeesRow`).
+ *    If not, `CLEANUP_NOT_LEAVING`, which never says why: a member learns
+ *    nothing of a title they cannot see (safety review S-5).
+ * 4. Only then the state: `deleting` gives `CLEANUP_DELETING`, a state other
+ *    than `leaving` or `approved` gives `CLEANUP_NOT_LEAVING`. The rows of
+ *    its cascade are read with it.
+ * 5. The member's active Keeps are below the limit. Else `CLEANUP_KEEP_LIMIT`.
+ * 6. The transaction of `writeKeep()`, with the deleting check of E33.
+ * 7. A new Keep writes `CLEANUP_KEEP_ADDED` (the member is actor and target)
  *    and asks for a Plex collection sync. A repeated Keep returns the
  *    existing one and writes nothing.
  *
@@ -23,7 +26,7 @@
 import "server-only"
 
 import { ok } from "@/lib/actions/result"
-import { memberSeesItem } from "@/lib/cleanup/actions/keeps/access"
+import { accessSeesRow, readKeepAccess } from "@/lib/cleanup/actions/keeps/access"
 import { readCascade, writeKeep } from "@/lib/cleanup/actions/keeps/keep-tx"
 import { keepLimit, type KeepsResult, plexSilent, refuse } from "@/lib/cleanup/actions/keeps/result"
 import { requestCollectionSync } from "@/lib/cleanup/collections/request"
@@ -45,14 +48,13 @@ export async function keepTitle(itemKey: string, { userId, now }: { userId: stri
   const { members } = settings.options
   if (!isLive(settings) || !members.keepsEnabled || !members.pageEnabled) return refuse("CLEANUP_NOT_LEAVING")
 
+  const access = await readKeepAccess(userId)
+  if (access === null) return plexSilent()
   const row = await prisma.cleanupItem.findUnique({ where: { itemKey } })
-  if (row?.state === "deleting") return refuse("CLEANUP_DELETING")
-  if (!row || (row.state !== "leaving" && row.state !== "approved")) return refuse("CLEANUP_NOT_LEAVING")
+  if (!row || !(await accessSeesRow(access, row))) return refuse("CLEANUP_NOT_LEAVING")
+  if (row.state === "deleting") return refuse("CLEANUP_DELETING")
+  if (row.state !== "leaving" && row.state !== "approved") return refuse("CLEANUP_NOT_LEAVING")
   const rows = await readCascade(row)
-
-  const sees = await memberSeesItem(userId, row)
-  if (sees === null) return plexSilent()
-  if (!sees) return refuse("CLEANUP_NOT_LEAVING")
 
   if ((await countActiveKeeps(prisma, userId, now)) >= members.keepLimit) return keepLimit(members.keepLimit)
 
