@@ -143,6 +143,9 @@ async function seedMember(db: PrismaClient) {
     data: { ...title, reporterId: ADMIN, problem: 'no_sound', plexRatingKey: '45', titleKey: `${RUN}-other`, activeKey: `${RUN}-other` },
   })
   await db.problemReportEvent.create({ data: { reportId: others.id, kind: 'ALSO_REPORTED', actorUserId: MEMBER, data: { problem: 'no_sound', note: 'their note' } } })
+  await db.problemFixLedger.create({
+    data: { id: `${RUN}-fix`, target: 'sonarr:series:42', action: 'LOOK_FOR_MISSING', trigger: 'automatic', reporterId: MEMBER, actorUserId: MEMBER, reportId: own.id },
+  })
   return { wrappedId: wrapped.id, generationId: generation.id, shareId: share.id, conversationId: conversation.id }
 }
 
@@ -162,6 +165,7 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
   afterAll(async () => {
     await mockDb.lLMUsage.deleteMany({ where: { userId: ADMIN } })
     await mockDb.invite.deleteMany({ where: { code: { startsWith: RUN } } })
+    await mockDb.problemFixLedger.deleteMany({ where: { id: `${RUN}-fix` } })
     await mockDb.user.deleteMany({ where: { id: { in: [ADMIN, MEMBER] } } })
     await mockDb.auditLog.deleteMany({ where: { OR: [{ actorUserId: { in: [ADMIN, MEMBER] } }, { targetUserId: MEMBER }] } })
     await mockDb.affiliateBlock.deleteMany({ where: { createdBy: ADMIN } })
@@ -230,6 +234,13 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
     // The admin's report stays, without the member's note
     await expect(mockDb.problemReport.count({ where: { titleKey: `${RUN}-other` } })).resolves.toBe(1)
     await expect(mockDb.problemReportEvent.count({ where: { report: { titleKey: `${RUN}-other` } } })).resolves.toBe(0)
+    // The fix ledger keeps what was done, with no one's id
+    await expect(mockDb.problemFixLedger.findUniqueOrThrow({ where: { id: `${RUN}-fix` } })).resolves.toMatchObject({
+      reporterId: null,
+      actorUserId: null,
+      reportId: null,
+      action: 'LOOK_FOR_MISSING',
+    })
 
     const adminUsage = await mockDb.lLMUsage.findFirstOrThrow({ where: { userId: ADMIN } })
     expect(adminUsage).toMatchObject({ prompt: null, response: null, cost: 0.5, generationId: null, wrappedId: null })
