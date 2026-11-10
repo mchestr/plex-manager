@@ -77,7 +77,8 @@ export function TurnOnView({ data, redis }: TurnOnViewProps) {
         </div>
         {/* Sticky at 16 px and never taller than the window: only the Ready card scrolls, so both cards, the button and its note stay whole (UX 4.6) */}
         <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)]" data-testid="admin-cleanup-turn-on-side">
-          <div className="flex min-h-0 flex-col lg:overflow-y-auto" data-slot="turn-on-ready-scroll">
+          {/* Focusable, so a keyboard can scroll the checks when they are taller than the room (axe scrollable-region-focusable) */}
+          <div className="flex min-h-0 flex-col rounded-lg lg:overflow-y-auto" tabIndex={0} role="region" aria-label="Ready to turn on checks" data-slot="turn-on-ready-scroll">
             <ReadyChecks checks={data.checks} ctx={ctx} idBase={idBase} />
           </div>
           <div className="shrink-0">
