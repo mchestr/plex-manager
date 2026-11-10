@@ -58,6 +58,7 @@ model User {
   lastSeenAt            DateTime? // Start of the member's newest play in Tautulli (last_seen), or the time of a read that found a play still open; never moves back (lib/inactivity/sync.ts)
   lastSeenReadAt        DateTime? // When the daily activity read last found the member in Tautulli
   inactivityExcluded    Boolean                @default(false) // The inactivity sweep never removes this member's Plex access
+  swapsNeedApproval     Boolean                @default(false) // A swap of the copy for one of this member's problem reports waits for an admin (docs/problem-reports.md)
   inactivityEmailsOff   Boolean                @default(false) // The member turned off the warning emails before removal for inactivity
   inactivityNotices     InactivityNotice[]
   problemReports        ProblemReport[]
@@ -1317,6 +1318,7 @@ model ProblemReport {
   memberNote    String?              @db.VarChar(500) // The server admin's note the member sees
   adminNote     String?              @db.VarChar(2000) // Internal
   resolvedAt    DateTime?
+  alertedAt     DateTime? // When the admins' Discord alert claimed this report (lib/queue/jobs/problem-report-notify.ts)
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
   events        ProblemReportEvent[]

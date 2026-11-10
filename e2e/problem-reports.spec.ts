@@ -1,10 +1,12 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
+import type { Locator, Page } from '@playwright/test';
+
 import { expect, test } from './fixtures/auth';
 import { signInAs } from './fixtures/session';
 import { createE2EPrismaClient } from './helpers/prisma';
-import { WAIT_TIMEOUTS } from './helpers/test-utils';
+import { WAIT_TIMEOUTS, waitForStablePage } from './helpers/test-utils';
 import { MOCK_HISTORY_MEMBER } from './mocks/tautulli-server';
 
 /**
@@ -14,7 +16,9 @@ import { MOCK_HISTORY_MEMBER } from './mocks/tautulli-server';
  * The regular member reports a title from Find a title, the admin finds it
  * already reported and follows it, and the member cancels their report.
  * Then a member with plays in the Tautulli mock reports from Recently
- * watched, and the sheet asks about their player.
+ * watched, and the sheet asks about their player. Last, the admin closes
+ * that report from Automations > Problem reports with a note, and the
+ * member reads the note on `/report`.
  */
 
 const SHARED = { ratingKey: '93001', section: 1, title: 'Harbour Lights', guid: 'plex://movie/e2e-harbour-lights' };
@@ -62,6 +66,20 @@ async function withDb<T>(run: (prisma: ReturnType<typeof createE2EPrismaClient>)
   } finally {
     await prisma.$disconnect();
   }
+}
+
+/**
+ * Opens a confirm dialog once the page has settled: its trigger is
+ * server-rendered before React hydrates it, and a click before then does
+ * nothing, so click until the dialog shows.
+ */
+async function openDialog(page: Page, trigger: Locator, dialog: Locator): Promise<void> {
+  await waitForStablePage(page);
+  await expect(async () => {
+    if (await dialog.isVisible()) return;
+    await trigger.click();
+    await expect(dialog).toBeVisible({ timeout: 1000 });
+  }).toPass();
 }
 
 const clearReports = () => withDb((prisma) => prisma.problemReport.deleteMany({ where: { titleKey: { in: MOVIES.map((movie) => movie.guid) } } }));
@@ -140,7 +158,7 @@ test.describe('Problem reports', () => {
 
   test('the member cancels their report, and the title is free again', async ({ regularUserPage: page }) => {
     await page.goto('/report');
-    await page.locator('[data-testid^="report-cancel-"]').click();
+    await openDialog(page, page.locator('[data-testid^="report-cancel-"]'), page.getByTestId('report-cancel-dialog'));
     await page.getByTestId('report-cancel-confirm').click();
 
     await expect(page.locator('[data-testid^="report-row-status-"]')).toContainText('Closed');
@@ -173,6 +191,35 @@ test.describe('Problem reports', () => {
       expect(event.data).toMatchObject({ problem: 'wont_start', device: 'others_play', evidence: { lastPlay: { player: 'Living Room', transcoded: false } } });
       expect(JSON.stringify(event.data)).not.toContain('10.0.0.9');
     });
+    await context.close();
+  });
+
+  test('the admin closes the report with a note, and the member reads it on /report', async ({ adminPage: page, browser, baseURL }) => {
+    const report = await withDb((prisma) =>
+      prisma.problemReport.findFirstOrThrow({ where: { reporterId: HISTORY_MEMBER.id, status: 'WITH_ADMIN' }, select: { id: true } })
+    );
+
+    await page.goto('/admin/problem-reports');
+    await expect(page.getByTestId(`admin-problem-reports-row-${report.id}`)).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await page.getByTestId(`admin-problem-reports-link-${report.id}`).click();
+
+    await expect(page.getByTestId('admin-problem-report-status')).toHaveText('With the server admin', { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await openDialog(page, page.getByTestId('admin-problem-report-closed'), page.getByTestId('admin-problem-report-closed-dialog'));
+    await page.getByTestId('admin-problem-report-closed-member-note').fill('This is the only copy we have. A better one comes out in March.');
+    await page.getByTestId('admin-problem-report-closed-admin-note').fill('Checked every indexer');
+    await page.getByTestId('admin-problem-report-closed-confirm').click();
+    await expect(page.getByTestId('admin-problem-report-status')).toHaveText(/Closed/, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('admin-problem-report-closed')).toHaveCount(0);
+
+    const context = await browser.newContext();
+    await signInAs(context, baseURL ?? '', HISTORY_MEMBER.id);
+    const member = await context.newPage();
+    await member.goto('/report');
+    await expect(member.getByTestId(`report-row-note-${report.id}`)).toContainText('This is the only copy we have. A better one comes out in March.', {
+      timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+    });
+    await expect(member.getByTestId(`report-row-status-${report.id}`)).toContainText('By the server admin');
+    await expect(member.getByTestId('report-yours')).not.toContainText('Checked every indexer');
     await context.close();
   });
 });

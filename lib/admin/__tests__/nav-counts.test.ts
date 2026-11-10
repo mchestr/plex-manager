@@ -26,10 +26,12 @@ beforeEach(() => {
   jest.mocked(readyWithin).mockResolvedValue(true)
   prismaMock.user.count.mockResolvedValue(7)
   prismaMock.affiliateApplication.count.mockResolvedValue(2)
+  prismaMock.problemReport.count.mockResolvedValue(3)
 })
 
-it('counts the members and the pending applications, and no longer the invites', async () => {
-  await expect(getAdminNavCounts()).resolves.toStrictEqual({ users: 7, pendingAffiliates: 2, failedJobs: null })
+it('counts the members, the pending applications and the reports with the server admin, and no longer the invites', async () => {
+  await expect(getAdminNavCounts()).resolves.toStrictEqual({ users: 7, pendingAffiliates: 2, failedJobs: null, reportsToReview: 3 })
+  expect(prismaMock.problemReport.count).toHaveBeenCalledWith({ where: { status: 'WITH_ADMIN' } })
   expect(prismaMock.affiliateApplication.count).toHaveBeenCalledWith({ where: { status: 'PENDING' } })
   expect(prismaMock.invite.count).not.toHaveBeenCalled()
 })

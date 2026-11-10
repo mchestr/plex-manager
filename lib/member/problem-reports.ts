@@ -35,9 +35,13 @@ export interface ReportRow {
   title: string
   problem: string
   status: ProblemReportStatus
-  /** The latest event in words, and when: "You sent it", "You cancelled it", "You're following it". */
+  /** The latest event in words, and when: "You sent it", "You cancelled it", "The server admin fixed it". */
   latest: { words: string; at: string }
   canCancel: boolean
+  /** The status badge's second line: why a closed report closed. */
+  statusSub: string | null
+  /** The server admin's note, for the member who reported it once it is fixed or closed; plain text. */
+  note: string | null
 }
 
 /** The title whose sheet is open. */
@@ -65,16 +69,26 @@ export interface ReportPageData {
 
 const isReportable = (type: string): type is ReportableType => type === "movie" || type === "show" || type === "episode"
 
-async function listReports(userId: string): Promise<ReportRow[]> {
+/** The latest step in the member's words, and why a closed report closed. */
+function latestWords(event: { kind: string; data: unknown } | undefined, own: boolean): { words: string; statusSub: string | null } {
+  if (event?.kind === "FIXED") return { words: "The server admin fixed it", statusSub: null }
+  const closed = event?.kind === "CLOSED" ? closedEventDataSchema.safeParse(event.data) : null
+  if (closed?.success && closed.data.reason === "admin") return { words: "The server admin closed it", statusSub: "By the server admin" }
+  if (closed?.success) return { words: own ? "You cancelled it" : "Cancelled", statusSub: "Cancelled" }
+  return { words: own ? "You sent it" : "You're following it", statusSub: null }
+}
+
+/** The member's reports and the ones they follow, newest first: what the list on `/report` and its switched-off view show. */
+export async function listMemberReports(userId: string): Promise<ReportRow[]> {
   const rows = await prisma.problemReport.findMany({
     where: { OR: [{ reporterId: userId }, { events: { some: { kind: "ALSO_REPORTED", actorUserId: userId } } }] },
     orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     take: REPORT_LIMIT,
     select: {
       id: true, reporterId: true, problem: true, status: true, title: true, year: true, showTitle: true, seasonNumber: true,
-      episodeNumber: true, createdAt: true,
+      episodeNumber: true, createdAt: true, memberNote: true,
       events: {
-        where: { OR: [{ kind: "CLOSED" }, { kind: "ALSO_REPORTED", actorUserId: userId }] },
+        where: { OR: [{ kind: { in: ["CLOSED", "FIXED"] } }, { kind: "ALSO_REPORTED", actorUserId: userId }] },
         orderBy: { createdAt: "desc" },
         take: 1,
         select: { kind: true, data: true, createdAt: true },
@@ -84,8 +98,7 @@ async function listReports(userId: string): Promise<ReportRow[]> {
   return rows.map((row) => {
     const own = row.reporterId === userId
     const event = row.events[0]
-    const cancelled = event?.kind === "CLOSED" && closedEventDataSchema.safeParse(event.data).success
-    const words = cancelled ? (own ? "You cancelled it" : "Cancelled") : own ? "You sent it" : "You're following it"
+    const { words, statusSub } = latestWords(event, own)
     return {
       id: row.id,
       title: reportTitle(row),
@@ -93,6 +106,9 @@ async function listReports(userId: string): Promise<ReportRow[]> {
       status: row.status,
       latest: { words, at: (event?.createdAt ?? row.createdAt).toISOString() },
       canCancel: own && CANCELLABLE.has(row.status),
+      statusSub,
+      // Written for the member who reported it; followers see the status only
+      note: own ? row.memberNote : null,
     }
   })
 }
@@ -151,7 +167,7 @@ export async function getReportPageData(userId: string, params: { q?: string; it
   const plexUserId = user?.plexUserId ?? null
   const member = { plexUserId, isOwner: !!server && plexUserId === server.adminPlexUserId }
   const [reports, watching, recent, search, selected] = await Promise.all([
-    listReports(userId),
+    listMemberReports(userId),
     server && access ? watchingNow(server, member, access) : null,
     access ? recentlyWatched(plexUserId, access) : null,
     query ? searchTitles(server, access, query) : null,

@@ -41,7 +41,7 @@ These are decided. Do not write code against them; if a task asks for one, say s
 - **Styling**: Tailwind CSS v4 with utility-first approach; primitives in `components/ui/` are built on Base UI (`@base-ui/react`)
 - **Animation**: Motion (`motion/react`)
 - **Charts**: Recharts, through `ChartCard`
-- **Jobs**: BullMQ on Redis (Rewind generation, Stripe access, watchlist sync, retention, last seen and the inactivity sweep)
+- **Jobs**: BullMQ on Redis (Rewind generation, Stripe access, watchlist sync, retention, last seen and the inactivity sweep, problem report alerts)
 - **LLM**: Vercel AI SDK (OpenAI, Anthropic, Google and OpenAI-compatible servers)
 - **Validation**: Zod schemas for all inputs/responses
 - **Testing**: Jest + Testing Library + Playwright (E2E)
@@ -1015,7 +1015,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - MCP endpoint (API tokens, connecting Claude Code, the tool catalog): See `docs/mcp.md`
 - Affiliate invites (tiers, slots, server cap, the switch): See `docs/affiliate-invites.md`
 - Inactive members (last seen from Tautulli, the inactivity sweep and its safety rules): See `docs/inactive-members.md`
-- Problem reports (members report a problem with a title from `/report`; the switch, the sheet, the rules): See `docs/problem-reports.md`
+- Problem reports (members report a problem with a title from `/report`; Automations > Problem reports, the switch, the sheet, the rules, the admins' Discord alerts): See `docs/problem-reports.md`
 - Email (the SMTP variables, the transport in `lib/email/`, the test email, unsubscribe links): See `docs/email.md`
 - Audit log (who can read it, categories, what Support sees): See `docs/roles.md` and `docs/privacy.md`
 - Appearance (server name, login subtitle, accent colour, uploaded logos and images): See `docs/appearance.md`

@@ -47,6 +47,8 @@ export interface NavCounts {
   /** Affiliate applications waiting for a decision. */
   pendingAffiliates: number
   failedJobs: number | null
+  /** Problem reports with the server admin. */
+  reportsToReview: number
 }
 
 interface AdminNavBadge {
@@ -173,15 +175,18 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   {
     id: "automations",
     label: "Automations",
-    href: "/admin/watchlist",
+    href: "/admin/problem-reports",
     icon: icons.automations,
-    // Its other tabs sit beside /admin/watchlist, not below it, so `also` lights it on their paths
+    // Its other tabs sit beside /admin/problem-reports, not below it, so `also` lights it on their paths
     match: "prefix",
-    also: ["/admin/inactivity", "/admin/request-limits", "/admin/queues"],
+    also: ["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues"],
     // The tab bar follows nav order, so Automations sits after Rewind
     mobile: "tab",
-    badge: ({ failedJobs }) => (failedJobs ? { text: `${failedJobs} failed`, tone: "destructive" } : null),
+    // Failed jobs keep priority over the reports to review
+    badge: ({ failedJobs, reportsToReview }) =>
+      failedJobs ? { text: `${failedJobs} failed`, tone: "destructive" } : reportsToReview > 0 ? { text: `${reportsToReview} to review` } : null,
     children: [
+      { id: "problem-reports", label: "Problem reports", href: "/admin/problem-reports" },
       { id: "watchlist", label: "Watchlist sync", href: "/admin/watchlist" },
       { id: "inactivity", label: "Inactive members", href: "/admin/inactivity" },
       { id: "request-limits", label: "Request limits", href: "/admin/request-limits" },

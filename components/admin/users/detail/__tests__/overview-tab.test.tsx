@@ -23,6 +23,7 @@ jest.mock('@/actions/user-queries', () => ({ getUserActivityTimeline: jest.fn() 
 jest.mock('@/actions/admin/inactivity', () => ({ setMemberInactivityExcluded: jest.fn() }))
 jest.mock('@/lib/data/member-inactivity', () => ({ getMemberInactivityEmails: jest.fn() }))
 jest.mock('@/actions/admin/request-tiers', () => ({ setMemberTiersExcluded: jest.fn() }))
+jest.mock('@/actions/admin/problem-reports', () => ({ setSwapsNeedApproval: jest.fn() }))
 jest.mock('@/components/admin/users/user-activity-timeline', () => ({ UserActivityTimeline: () => null }))
 jest.mock('@/components/admin/users/detail/request-tier-check', () => ({ RequestTierCheck: () => null }))
 jest.mock('@/components/admin/users/detail/remove-member-dialog', () => ({ RemoveMemberDialog: () => null }))
@@ -48,6 +49,7 @@ function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeader
     lastSeenAt: null,
     lastSeenReadAt: null,
     inactivityExcluded: false,
+    swapsNeedApproval: false,
     plexAccess: 'shared',
     subscription: null,
     stripeEnabled: false,
@@ -123,6 +125,25 @@ describe('OverviewTab, Plex activity', () => {
     expect(screen.queryByTestId('admin-user-inactivity-excluded')).not.toBeInTheDocument()
     expect(screen.queryByTestId('admin-user-inactivity-emails')).not.toBeInTheDocument()
     expect(getMemberInactivityEmails).not.toHaveBeenCalled()
+  })
+})
+
+describe('OverviewTab, problem reports', () => {
+  it('offers Swaps need approval, in its saved state, for a member', async () => {
+    await renderTab({ swapsNeedApproval: true })
+
+    expect(screen.getByText('Problem reports')).toBeInTheDocument()
+    expect(screen.getByTestId('admin-user-swaps-need-approval')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('offers it for a member without a Plex account too', async () => {
+    await renderTab({ plexUserId: null, services: [] })
+    expect(screen.getByTestId('admin-user-swaps-need-approval')).toBeInTheDocument()
+  })
+
+  it('never offers it for an admin, whose own reports wait for no one', async () => {
+    await renderTab({ isAdmin: true })
+    expect(screen.queryByTestId('admin-user-swaps-need-approval')).not.toBeInTheDocument()
   })
 })
 

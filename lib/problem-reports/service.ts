@@ -27,7 +27,8 @@
  * added) on its `REPORTED` event, or on its `ALSO_REPORTED` event when it
  * joins an open report. A second member's problem and note go on that event
  * for the server admin; they never change the open report. Followers see status
- * words only, never who else reported.
+ * words only, never who else reported. A new report also queues the admins'
+ * Discord alert (`queueReportAlert`); a join adds to a report they know of.
  *
  * ## Cancel
  *
@@ -49,6 +50,7 @@ import { inSerializable } from "@/lib/db/serializable"
 import { prisma } from "@/lib/prisma"
 import { isUniqueConflict } from "@/lib/prisma-errors"
 import { readMemberItem } from "@/lib/problem-reports/access"
+import { queueReportAlert } from "@/lib/problem-reports/alerts"
 import { readEvidence, type Evidence } from "@/lib/problem-reports/evidence"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
 import { asksDevice, needsNote, PROBLEMS, REPORTABLE_MEDIA_TYPES, type ProblemCode, type ReportableType } from "@/lib/problem-reports/taxonomy"
@@ -174,6 +176,7 @@ export async function reportProblem(input: {
         })
         return created
       })
+      await queueReportAlert(report.id)
       return { ok: true, outcome: "reported", reportId: report.id }
     } catch (error) {
       if (!isUniqueConflict(error, { index: "ProblemReport_activeKey_key", field: "activeKey" })) throw error
