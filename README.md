@@ -208,6 +208,7 @@ The guides in `docs/` give the full details:
 | [MCP endpoint](docs/mcp.md) | API tokens, and connecting Claude Code or another MCP client to run admin actions |
 | [Request limits](docs/request-limits.md) | Request limits from watch time, and the Discord stat channels |
 | [Inactive members](docs/inactive-members.md) | Last seen from Tautulli, and removing Plex access from members who stopped watching |
+| [Media cleanup](docs/media-cleanup.md) | Rules that find media nobody watches, Leaving soon and member Keeps, deletion through Radarr and Sonarr, the safety stops and the Kometa change |
 | [Stripe](docs/stripe.md) | Subscriptions, the webhook, and Plex access |
 | [Discord bot](docs/discord-bot.md) | The bot, slash commands and linked roles |
 | [Email](docs/email.md) | The mail server, its environment variables, and the test email |

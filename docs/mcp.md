@@ -48,12 +48,12 @@ header works the same way.
 
 ## Tools
 
-`tools/list` returns every tool the token's owner may use, about 190 for an admin:
+`tools/list` returns every tool the token's owner may use, about 235 for an admin:
 
 | Source | What | Module |
 |---|---|---|
 | Server Actions | every admin and member action, named in snake case (`createInvite` is `create_invite`), with its Zod input as JSON Schema and its JSDoc summary as the description | `lib/mcp/action-tools.ts` |
-| Admin reads | the lists and details the admin pages show (`list_users`, `list_invites`, `get_user`, `get_admin_settings`, `list_llm_usage`, ...), so a client can find the ids that actions take | `lib/mcp/read-tools.ts`, `read-tools-llm.ts`, `read-tools-community.ts` |
+| Admin reads | the lists and details the admin pages show (`list_users`, `list_invites`, `get_user`, `get_admin_settings`, `list_llm_usage`, ...), so a client can find the ids that actions take | `lib/mcp/read-tools.ts`, `read-tools-llm.ts`, `read-tools-community.ts`, `read-tools-cleanup.ts` |
 | Assistant tools | the admin assistant's Plex, Tautulli, Sonarr, Radarr, Overseerr, media marking, app data and knowledge base tools, but not its skill tools | `lib/mcp/assistant-tools.ts` |
 
 The skill tools, `load_skill` and `read_skill_file`, are web chat only: the
@@ -108,7 +108,10 @@ Left out, with the reasons in `lib/mcp/action-modules.ts` and
 `lib/mcp/action-tools.ts`: public actions and forms, actions that need a
 browser (cookies, the setup claim and the setup Plex PIN), ones that only
 record what a browser showed, the assistant's own chat turn, and making or
-revoking tokens, so a token cannot mint another.
+revoking tokens, so a token cannot mint another. Turning a media cleanup rule
+on and approving a deletion batch are left out too: typed approval is a check
+in the admin UI, and it proves nothing about a person behind an MCP client.
+A person does both on the admin pages.
 
 Every call writes `MCP_TOOL_CALLED` with the tool, its source, the token's row
 id and whether it succeeded, never its arguments or output.
@@ -140,6 +143,41 @@ The judge's actions (`review_conversation`, `get_conversation_review_status`,
 `set_finding_status` and `save_judge_settings`) are action tools like any
 other. `review_conversation` keeps its `judge-review` rate limit, because it
 spends money.
+
+### Media cleanup
+
+Eight reads in `lib/mcp/read-tools-cleanup.ts` give the state of media
+cleanup (`docs/media-cleanup.md`, "MCP tools"). Each calls the loader of its
+admin tab, so the loader's `assertAdmin()` and audit rows apply.
+
+| Tool | Reads |
+|---|---|
+| `get_cleanup_overview` | The Rules tab: the feature state, the library data, the safety stops, the batches, the recipes, and the rules with their `revision` (25 rules a page at most) |
+| `get_cleanup_rule` | One rule: its definition, plain words, stats and `revision`, which `save_cleanup_rule` takes as `expectedRevision` |
+| `get_cleanup_turn_on` | The turn-on review of a rule: its checks, counts, `revision` and `keysHash` |
+| `list_cleanup_leaving_soon` | Every batch with its `count`, `keysHash` and `reviewedAt`, and one page of the titles in Leaving soon, by rule, status, library and search. With `batch`, the titles of one deletion batch |
+| `list_cleanup_protections` | The Keeps and exclusions, by kind and search |
+| `list_cleanup_runs` | The newest 30 runs |
+| `list_cleanup_deleted` | The deleted and failed titles, and records left unmonitored, by rule and search |
+| `get_cleanup_settings` | The Settings tab |
+
+The lists page with `page` and `pageSize` (at most 50). A tool page reads the
+loader pages of 50 that hold it, so any page size gives the same rows as the
+admin tab. Rows leave out poster keys and Plex links, and sentences come as
+text.
+
+Every cleanup action is an action tool, except `turnOnCleanupRule` and
+`deleteCleanupBatch`. The previews (`preview_cleanup_rule`,
+`preview_cleanup_recipe`, `preview_cleanup_protection_impact`,
+`get_cleanup_item_why`) and `get_cleanup_batch_selection` are on the reviewed
+read-only list. The delete and remove actions carry `destructiveHint` by
+their names. The actions that start or widen deletions without such a name
+carry it through the reviewed `DESTRUCTIVE_ACTIONS` set in
+`lib/mcp/action-tools.ts`: `save_cleanup_rule`, `approve_cleanup_entry_batch`,
+`update_cleanup_settings`, `resume_cleanup` and `set_cleanup_exclusion_end`.
+The server instructions say that a person turns rules on and approves
+deletions. They also tell the client to ask a person to check each change
+that a tool marks destructive.
 
 ## Context use
 
@@ -176,8 +214,9 @@ Each connected client pays for the tool list and for every result it reads.
   reads its first 50 items. Status and detail tools return one record; the
   Plex and Tautulli library lists and the Sonarr and Radarr root folders and
   quality profiles are short and return whole. Only reads of one whole record
-  that cannot be split (`get_user_plex_wrapped`, `get_rewind_dry_run`) may
-  return up to 120,000 characters.
+  that cannot be split can return more: `get_user_plex_wrapped`,
+  `get_rewind_dry_run` and `preview_cleanup_rule` up to 120,000 characters,
+  and `get_cleanup_item_why` up to 60,000.
 
 ## Limits and transport
 
@@ -199,6 +238,13 @@ under `actions/` must be added to `ACTION_MODULES` or `EXCLUDED_MODULES` in
 `lib/mcp/action-modules.ts`; `lib/mcp/__tests__/catalog.test.ts` fails until it
 is. After changing an action's JSDoc summary, run `npm run mcp:docs`; a unit
 test fails while `lib/mcp/action-docs.generated.ts` is stale.
+
+Five name starts mark a read: `get`, `list`, `preview`, `estimate` and
+`discover`. An action with such a name must be on `READ_ONLY_ACTIONS` or
+`WRITES_DESPITE_READ_NAME` in `lib/mcp/action-tools.ts`. A name that starts
+with `delete`, `remove`, `revoke`, `unshare`, `rollback`, `cancel`, `disable`
+or `adminCancel` gives `destructiveHint`. An action that deletes, or starts or
+widens deletions, under another name goes on `DESTRUCTIVE_ACTIONS`.
 
 An action must use `expireTag()` and `refreshView()` from
 `@/lib/actions/invalidate` rather than `updateTag()` and `refresh()`, which
