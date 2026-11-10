@@ -68,7 +68,8 @@ export const deleteCleanupBatch = adminAction({
  * Put the new matches of a rule that the entry check held into Leaving
  * soon, with a full grace period, so members can see and keep them. The
  * batch must still have the count and hash that the page showed. Keys in
- * `excludeKeys` stay held. Nothing is deleted now.
+ * `excludeKeys` stay held. Nothing is deleted now. Not an MCP tool: the
+ * entry check needs a person to approve a large batch.
  */
 export const approveCleanupEntryBatch = adminAction({
   input: approveEntryBatchInput,

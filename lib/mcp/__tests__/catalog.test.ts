@@ -110,7 +110,7 @@ describe('the catalog', () => {
 describe('the media cleanup tools', () => {
   const CLEANUP_MODULES = ['admin/cleanup-items', 'admin/cleanup-preview', 'admin/cleanup-protections', 'admin/cleanup-rules', 'admin/cleanup-settings', 'cleanup-keeps']
   const cleanupActions = CLEANUP_MODULES.flatMap((file) => Object.keys(ACTION_MODULES[file] ?? {}))
-  const NO_TOOL = ['deleteCleanupBatch', 'turnOnCleanupRule']
+  const NO_TOOL = ['approveCleanupEntryBatch', 'deleteCleanupBatch', 'turnOnCleanupRule']
   const byName = allTools()
 
   it('offers every cleanup action module', () => {
@@ -118,24 +118,24 @@ describe('the media cleanup tools', () => {
     expect(cleanupActions).toEqual(expect.arrayContaining([...NO_TOOL, 'saveCleanupRule', 'keepCleanupTitle', 'startCleanupFirstRead']))
   })
 
-  it('makes every cleanup action a tool, except turning a rule on and approving a deletion batch (E24)', () => {
+  it('makes every cleanup action a tool, except turning a rule on and approving an entry or deletion batch (E24)', () => {
     expect(cleanupActions.filter((name) => !NO_TOOL.includes(name) && !byName.has(toolName(name)))).toEqual([])
-    for (const name of NO_TOOL) {
-      expect(EXCLUDED[name]).toBe('a deletion needs a person on the review page')
-      expect(byName.has(toolName(name))).toBe(false)
-    }
+    for (const name of NO_TOOL) expect(byName.has(toolName(name))).toBe(false)
+    expect(EXCLUDED.deleteCleanupBatch).toBe('a deletion needs a person on the review page')
+    expect(EXCLUDED.turnOnCleanupRule).toBe('a deletion needs a person on the review page')
+    expect(EXCLUDED.approveCleanupEntryBatch).toBe('the entry check needs a person to approve a large batch')
   })
 
   it('offers no tool that turns a rule on or approves a deletion batch', () => {
     const changes = [...byName.values()].filter((tool) => !tool.annotations.readOnlyHint).map((tool) => tool.name)
     expect(changes.filter((name) => /turn_on|delete_cleanup_batch|approve_cleanup_batch/.test(name))).toEqual([])
-    expect(changes.filter((name) => /^approve_cleanup/.test(name))).toEqual(['approve_cleanup_entry_batch'])
+    expect(changes.filter((name) => /^approve_cleanup/.test(name))).toEqual([])
     // The turn-on review is a read: it shows what the review page shows
     expect(byName.get('get_cleanup_turn_on')?.annotations).toEqual({ readOnlyHint: true })
   })
 
   it('lists only real actions as destructive, and gives each the hint (E24)', () => {
-    expect([...DESTRUCTIVE_ACTIONS].sort()).toEqual(['approveCleanupEntryBatch', 'resumeCleanup', 'saveCleanupRule', 'setCleanupExclusionEnd', 'updateCleanupSettings'])
+    expect([...DESTRUCTIVE_ACTIONS].sort()).toEqual(['resumeCleanup', 'saveCleanupRule', 'setCleanupExclusionEnd', 'updateCleanupSettings'])
     for (const name of DESTRUCTIVE_ACTIONS) {
       expect(cleanupActions).toContain(name)
       expect([name, byName.get(toolName(name))?.annotations]).toEqual([name, { readOnlyHint: false, destructiveHint: true }])
@@ -197,7 +197,7 @@ describe('the media cleanup tools', () => {
 
   it('tells clients in the server instructions that a person turns rules on and approves deletions', () => {
     const source = readFileSync(join(ROOT, 'lib/mcp/server.ts'), 'utf8')
-    expect(source).toContain('Turning a cleanup rule on and approving a deletion batch need a person on the admin pages: no tool does them.')
+    expect(source).toContain('Turning a cleanup rule on, approving an entry batch that the entry check held and approving a deletion batch need a person on the admin pages: no tool does them.')
     expect(source).toContain('Ask a person to check each cleanup change that a tool marks destructive.')
     // An Automatic rule deletes with no review page (security review S-04)
     expect(source).toContain('A rule that is already Automatic deletes its new matches at the end of their grace period with no review page')

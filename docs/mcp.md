@@ -166,17 +166,16 @@ loader pages of 50 that hold it, so any page size gives the same rows as the
 admin tab. Rows leave out poster keys and Plex links, and sentences come as
 text.
 
-Every cleanup action is an action tool, except `turnOnCleanupRule` and
-`deleteCleanupBatch`. The previews (`preview_cleanup_rule`,
+Every cleanup action is an action tool, except `turnOnCleanupRule`,
+`approveCleanupEntryBatch` and `deleteCleanupBatch`. The previews (`preview_cleanup_rule`,
 `preview_cleanup_recipe`, `preview_cleanup_protection_impact`,
 `get_cleanup_item_why`) and `get_cleanup_batch_selection` are on the reviewed
 read-only list. The delete and remove actions carry `destructiveHint` by
 their names. The actions that start or widen deletions without such a name
 carry it through the reviewed `DESTRUCTIVE_ACTIONS` set in
-`lib/mcp/action-tools.ts`: `save_cleanup_rule`, `approve_cleanup_entry_batch`,
-`update_cleanup_settings`, `resume_cleanup` and `set_cleanup_exclusion_end`.
-The server instructions say that a person turns rules on and approves
-deletions. They also tell the client to ask a person to check each change
+`lib/mcp/action-tools.ts`: `save_cleanup_rule`, `update_cleanup_settings`,
+`resume_cleanup` and `set_cleanup_exclusion_end`. The server instructions say
+that a person turns rules on and approves entry batches and deletions. They also tell the client to ask a person to check each change
 that a tool marks destructive.
 
 ## Context use

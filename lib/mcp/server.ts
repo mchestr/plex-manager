@@ -52,13 +52,13 @@ const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26"] as const
 const TOOL_FAILED = "The tool failed. Check the server log for its request id."
 
 /**
- * The two media cleanup steps that stay with a person (TS E24, 10.8): typed
+ * The three media cleanup steps that stay with a person (TS E24, 10.8): typed
  * approval is a check in the admin UI, and it proves nothing about a person
  * behind an MCP client.
  */
 const CLEANUP_HUMAN_STEPS = [
-  "Turning a cleanup rule on and approving a deletion batch need a person on the admin pages: no tool does them.",
-  "A rule that is already Automatic deletes its new matches at the end of their grace period with no review page, so a tool that widens such a rule, approves its entry batch or turns a protection off can lead to deletions.",
+  "Turning a cleanup rule on, approving an entry batch that the entry check held and approving a deletion batch need a person on the admin pages: no tool does them.",
+  "A rule that is already Automatic deletes its new matches at the end of their grace period with no review page, so a tool that widens such a rule or turns a protection off can lead to deletions. The entry check still holds a large batch of new matches for a person.",
   "Ask a person to check each cleanup change that a tool marks destructive.",
 ]
 

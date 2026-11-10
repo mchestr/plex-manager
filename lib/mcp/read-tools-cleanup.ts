@@ -8,11 +8,11 @@
  * sentences come as text, so a result stays under the size cap
  * (`lib/mcp/result-limit.ts`).
  *
- * No tool turns a rule on or approves a deletion batch (TS E24): a person
- * does both on the admin pages. `get_cleanup_turn_on` reads what the review
- * page shows, and `list_cleanup_leaving_soon` gives each batch's `count`,
- * `keysHash` and `reviewedAt`, which `approve_cleanup_entry_batch` and the
- * batch form of Postpone and Exclude take.
+ * No tool turns a rule on or approves an entry batch or a deletion batch
+ * (TS E24): a person does these on the admin pages. `get_cleanup_turn_on`
+ * reads what the review page shows, and `list_cleanup_leaving_soon` gives
+ * each batch's `count`, `keysHash` and `reviewedAt`, which the batch form of
+ * Postpone and Exclude takes.
  *
  * @module lib/mcp/read-tools-cleanup
  */
@@ -153,7 +153,7 @@ export function cleanupReadTools(): McpTool[] {
     }),
     readTool({
       name: "list_cleanup_leaving_soon",
-      description: "Media cleanup Leaving soon: every deletion batch and entry batch that waits for an admin, with its `id`, `count`, `keysHash` and `reviewedAt` (approve_cleanup_entry_batch, and the `batch` form of postpone_cleanup_items and exclude_cleanup_items, take them), and one page of the other titles in Leaving soon with their status and leave date. Filter the titles by rule (a rule id), status, library (a section id) and q (part of a title); a filter never hides a batch. With batch (a deletion batch id), it pages the titles of that batch instead, largest first. Pages with page and pageSize.",
+      description: "Media cleanup Leaving soon: every deletion batch and entry batch that waits for an admin, with its `id`, `count`, `keysHash` and `reviewedAt` (the `batch` form of postpone_cleanup_items and exclude_cleanup_items takes them; a person approves batches on the admin page), and one page of the other titles in Leaving soon with their status and leave date. Filter the titles by rule (a rule id), status, library (a section id) and q (part of a title); a filter never hides a batch. With batch (a deletion batch id), it pages the titles of that batch instead, largest first. Pages with page and pageSize.",
       input: z.object({ rule: ruleIdSchema.optional(), status: z.enum(ITEM_STATUSES).optional(),
         library: z.string().regex(/^[A-Za-z0-9_-]{1,40}$/).optional().describe("A Plex section id"), q: qArg,
         batch: deletionBatchArg.optional().describe("A deletion batch id: list its titles"), ...pageFields(25, 50) }),

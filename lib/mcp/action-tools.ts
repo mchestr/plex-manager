@@ -47,6 +47,7 @@ import { hasPermission, type Permission } from "@/lib/permissions"
  */
 export const EXCLUDED: Readonly<Record<string, string>> = {
   adoptBrowserTimezone: "reads the browser's zone",
+  approveCleanupEntryBatch: "the entry check needs a person to approve a large batch",
   chatWithAdminBot: "the assistant itself; the MCP client is the assistant",
   completeSetup: "the setup wizard's last step",
   deleteCleanupBatch: "a deletion needs a person on the review page",
@@ -127,15 +128,14 @@ const DESTRUCTIVE_PREFIXES = ["delete", "remove", "revoke", "unshare", "rollback
  * tools carry `destructiveHint` beside the {@link DESTRUCTIVE_PREFIXES}
  * matches. A reviewed list, like {@link READ_ONLY_ACTIONS} (TS E24): a save
  * of a live cleanup rule can put titles in Leaving soon or make their action
- * less careful, an entry batch approval puts titles in Leaving soon, a
- * settings save can turn cleanup on or weaken a protection, a resume restarts
- * deletions, and a new exclusion end lets rules match the title again.
+ * less careful, a settings save can turn cleanup on or weaken a protection, a
+ * resume restarts deletions, and a new exclusion end lets rules match the
+ * title again.
  *
  * @internal Exported for the catalog test.
  */
 export const DESTRUCTIVE_ACTIONS: ReadonlySet<string> = new Set([
   "saveCleanupRule",
-  "approveCleanupEntryBatch",
   "updateCleanupSettings",
   "resumeCleanup",
   "setCleanupExclusionEnd",

@@ -505,21 +505,23 @@ state with eight tools in `lib/mcp/read-tools-cleanup.ts`:
 | `get_cleanup_settings` | The Settings tab |
 
 Every cleanup action is also a tool, with the same checks and audit rows as
-the admin pages: the previews, rule changes, Postpone, Exclude, entry batch
-approval, Keeps, pause, resume and settings. Turning a rule on and approving a
-deletion batch have no tool: they need a person on the admin pages. The
+the admin pages: the previews, rule changes, Postpone, Exclude, Keeps,
+pause, resume and settings. Turning a rule on, approving an entry batch that
+the entry check held, and approving a deletion batch have no tool: they need
+a person on the admin pages. The
 previews and the batch selection read only. These tools are marked
 destructive: delete a rule, remove a Keep or an exclusion, and the actions
-that start or widen deletions. Those actions are: save a rule, approve an
-entry batch, save settings, resume, and change an exclusion end
+that start or widen deletions. Those actions are: save a rule, save
+settings, resume, and change an exclusion end
 (`DESTRUCTIVE_ACTIONS` in `lib/mcp/action-tools.ts`). A read-only token gets
 only the reads.
 
 A rule that is already Automatic needs no review page to delete. A full
-token can save a wider definition of such a rule, run all rules, approve
-its entry batch, or turn a global protection off. The nightly run then
-deletes the new matches at the end of their grace period (at least 7
-days for Automatic). Members can Keep the titles in that time, and each
+token can save a wider definition of such a rule, run all rules, or turn
+a global protection off. The entry check still holds a large batch of new
+matches until a person approves it on the admin page. Smaller additions
+join Leaving soon, and the nightly run deletes them at the end of their
+grace period (at least 7 days for Automatic). Members can Keep the titles in that time, and each
 change has its audit row. Ask a person to check these changes.
 
 ## Limits
