@@ -189,4 +189,31 @@ describe("ChoiceChips", () => {
     expect(screen.getByRole("radio", { name: "Other" })).toHaveAttribute("aria-checked", "true")
     expect(screen.getByRole("radio", { name: "14 days" })).toHaveAttribute("aria-disabled", "true")
   })
+
+  it("stays controlled with null: a pick the owner does not take checks nothing, and a value going to null logs nothing", async () => {
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {})
+    const onValueChange = jest.fn()
+    const options: ChoiceChipsOption<"14" | "30">[] = [
+      { value: "14", label: "14 days" },
+      { value: "30", label: "30 days" },
+    ]
+    const chips = (value: "14" | "30" | null) => (
+      <>
+        <p id="null-label">Grace period</p>
+        <ChoiceChips<"14" | "30"> aria-labelledby="null-label" value={value} onValueChange={onValueChange} options={options} data-testid="null-chips" />
+      </>
+    )
+    const { rerender } = render(chips(null))
+
+    await userEvent.click(screen.getByRole("radio", { name: "30 days" }))
+    expect(onValueChange).toHaveBeenCalledWith("30")
+    expect(screen.getAllByRole("radio").every((radio) => radio.getAttribute("aria-checked") === "false")).toBe(true)
+
+    rerender(chips("14"))
+    expect(screen.getByRole("radio", { name: "14 days" })).toHaveAttribute("aria-checked", "true")
+    rerender(chips(null))
+    expect(screen.getAllByRole("radio").every((radio) => radio.getAttribute("aria-checked") === "false")).toBe(true)
+    expect(consoleError).not.toHaveBeenCalled()
+    consoleError.mockRestore()
+  })
 })

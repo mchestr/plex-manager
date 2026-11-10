@@ -25,8 +25,7 @@ export function ChoiceValue({ condition, level, onChange, labelId }: ValueEditor
   return (
     <RadioGroup<string>
       aria-labelledby={labelId}
-      // "" checks no radio and keeps the group controlled: `RadioGroup` turns null into undefined.
-      value={checked ? kebab(checked.label) : ""}
+      value={checked ? kebab(checked.label) : null}
       onValueChange={(next) => {
         const choice = choices.find((c) => kebab(c.label) === next)
         if (choice) onChange({ ...condition, value: { [key]: choice.value } }, "now")

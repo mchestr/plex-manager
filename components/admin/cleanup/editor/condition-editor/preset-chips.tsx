@@ -31,8 +31,7 @@ export function PresetChips({ condition, level, counts, onPick, labelId }: Prese
   return (
     <ChoiceChips
       aria-labelledby={labelId}
-      // "" checks no chip and keeps the group controlled: `ChoiceChips` turns null into undefined.
-      value={checked ? presetKey(checked.label) : ""}
+      value={checked ? presetKey(checked.label) : null}
       onValueChange={(key) => {
         const preset = presets.find((p) => presetKey(p.label) === key)
         if (preset) onPick(preset.value)

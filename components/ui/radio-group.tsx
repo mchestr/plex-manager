@@ -20,10 +20,13 @@ interface RadioGroupProps<T extends string> {
 /** A single choice among cards, on Base UI RadioGroup: arrow keys move, Space picks. */
 export function RadioGroup<T extends string>({ value, onValueChange, className, children, ...props }: RadioGroupProps<T>) {
   return (
-    <RadioGroupPrimitive<T>
+    <RadioGroupPrimitive<T | null>
       data-slot="radio-group"
-      value={value ?? undefined}
-      onValueChange={(next) => onValueChange(next)}
+      // null stays controlled with no card checked; undefined would make the group uncontrolled
+      value={value}
+      onValueChange={(next) => {
+        if (next !== null) onValueChange(next)
+      }}
       className={cn("flex flex-col gap-2", className)}
       {...props}
     >

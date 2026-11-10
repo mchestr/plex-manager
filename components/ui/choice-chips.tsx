@@ -90,13 +90,14 @@ export function ChoiceChips<T extends string>({
 
   return (
     <div data-slot="choice-chips" className={cn("flex flex-col gap-3", className)}>
-      <RadioGroupPrimitive<string>
+      <RadioGroupPrimitive<string | null>
         data-testid={testId}
         aria-labelledby={labelledBy}
-        value={checked ?? undefined}
+        // null stays controlled with no chip checked; undefined would make the group uncontrolled
+        value={checked}
         onValueChange={(next) => {
           if (next === OTHER) other?.onSelect()
-          else onValueChange(next as T)
+          else if (next !== null) onValueChange(next as T)
         }}
         disabled={disabled}
         className="flex flex-wrap gap-2"
