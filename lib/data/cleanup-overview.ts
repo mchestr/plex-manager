@@ -6,9 +6,11 @@
  *
  * Every rule and recipe is evaluated live on the cached snapshot (TS 12.7
  * items 1 and 2): "Matches today" never reads the stored `lastEval`. It
- * reads stored data only and calls no upstream service. It lists no member
- * name, so it writes no audit row. With a warm cache it renders in under
- * 1 s for 50 rules and 10 recipes (TS 17.1).
+ * reads stored data only and calls no upstream service. A rule sentence or
+ * footer of a `request.by` rule names its members, so then the read writes
+ * `auditMemberListed("cleanup-requesters")`, at most once per admin and
+ * hour (security review S-05). With a warm cache it renders in under 1 s
+ * for 50 rules and 10 recipes (TS 17.1).
  *
  * @module lib/data/cleanup-overview
  */
@@ -16,6 +18,7 @@
 import "server-only"
 
 import { assertAdmin } from "@/lib/admin"
+import { namesMember } from "@/lib/cleanup/preview/draft"
 import { groupBatches } from "@/lib/cleanup/run/batches"
 import { loadScreenContext } from "@/lib/cleanup/screens/overview/context"
 import { overviewBatches } from "@/lib/cleanup/screens/overview/batches"
@@ -26,6 +29,7 @@ import { recipeCards } from "@/lib/cleanup/screens/overview/recipe-cards"
 import { blockSnapshotOf, ruleCards } from "@/lib/cleanup/screens/overview/rule-cards"
 import { featureState, isReading, setUpServices, snapshotState } from "@/lib/cleanup/screens/settings/feature"
 import type { CleanupOverviewData } from "@/lib/cleanup/types/screens"
+import { auditMemberListed } from "@/lib/security/audit-log"
 
 /**
  * The Rules tab data at `now`.
@@ -42,6 +46,7 @@ export async function getCleanupOverview(now: Date = new Date()): Promise<Cleanu
   const groups = groupBatches({ rows: rows.items, rules: batchRules, today, holdUntil: settings.holdUntil, budget: settings.options.budget,
     usedToday: { items: 0, bytes: 0 } })
   const kometa = kometaNotice(settings.runtime, now.getTime())
+  if (rows.rules.some((rule) => rule.definition && namesMember(rule.definition, screen.live))) await auditMemberListed("cleanup-requesters", session.user.id)
   return {
     feature: await featureState(settings, session.user.id),
     sources: header?.sources ?? [],

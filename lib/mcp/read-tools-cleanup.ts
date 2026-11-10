@@ -24,7 +24,7 @@ import { z } from "zod"
 import { ITEM_STATUSES, RESULTS_PAGE_SIZE } from "@/lib/cleanup/constants"
 import { describeRule, plainText } from "@/lib/cleanup/describe"
 import type { WhyPart } from "@/lib/cleanup/engine/types"
-import { describeContext, ruleRequesterIds } from "@/lib/cleanup/preview/draft"
+import { describeContext, namesMember, ruleRequesterIds } from "@/lib/cleanup/preview/draft"
 import { parseRuleStats } from "@/lib/cleanup/schema/stats"
 import { UNREADABLE_SENTENCE } from "@/lib/cleanup/screens/overview/rule-cards"
 import { loadPreviousCompleteHeader } from "@/lib/cleanup/snapshot/store"
@@ -40,6 +40,7 @@ import { type Page, pageFields, paginate } from "@/lib/mcp/paging"
 import { clip, readTool } from "@/lib/mcp/read-tool"
 import type { McpTool } from "@/lib/mcp/types"
 import { prisma } from "@/lib/prisma"
+import { auditMemberListed } from "@/lib/security/audit-log"
 import { parseBatchId, ruleIdSchema } from "@/lib/validations/cleanup-actions"
 import { parseRuleDefinition } from "@/lib/validations/cleanup-draft"
 import type { RuleDefinition } from "@/lib/validations/cleanup-rule"
@@ -101,21 +102,23 @@ function protectionRow({ posterKey: _posterKey, note, ...row }: ProtectionRow) {
 }
 
 /** The rule in plain words, with the library titles of the newest library data and the member names of its requester conditions. */
-async function ruleSentence(definition: RuleDefinition, mode: Mode | null): Promise<string> {
+async function ruleSentence(definition: RuleDefinition, mode: Mode | null, actorId: string): Promise<string> {
   const ids = ruleRequesterIds(definition)
   const [header, users] = await Promise.all([loadPreviousCompleteHeader(), ids.length === 0 ? []
     : prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, plexUserId: true, name: true, accessEndedAt: true } })])
   const live = { members: users.map(({ id, ...user }) => ({ userId: id, ...user })) }
+  // The words name a requester, as the editor's do (TS 10.4, security review S-05)
+  if (namesMember(definition, live)) await auditMemberListed("cleanup-requesters", actorId)
   return plainText(describeRule(definition, describeContext(header?.facts?.libraries ?? [], live, mode)))
 }
 
 /** One rule (TS 10.8), or null. `revision` is the `expectedRevision` that `saveCleanupRule` needs (architecture-r3-3). */
-async function readRule(ruleId: string) {
+async function readRule(ruleId: string, actorId: string) {
   const select = { id: true, name: true, mode: true, revision: true, definition: true, stats: true, turnedOnAt: true } as const
   const rule = await prisma.cleanupRule.findUnique({ where: { id: ruleId }, select })
   if (!rule) return null
   const parsed = parseRuleDefinition(rule.definition)
-  const sentence = parsed.ok ? await ruleSentence(parsed.definition, MODES.find((mode) => mode === rule.mode) ?? null) : UNREADABLE_SENTENCE
+  const sentence = parsed.ok ? await ruleSentence(parsed.definition, MODES.find((mode) => mode === rule.mode) ?? null, actorId) : UNREADABLE_SENTENCE
   return { id: rule.id, name: rule.name, mode: rule.mode, revision: rule.revision, definition: parsed.ok ? parsed.definition : null, sentence,
     stats: parseRuleStats(rule.stats), turnedOnAt: rule.turnedOnAt?.toISOString() ?? null }
 }
@@ -134,7 +137,7 @@ export function cleanupReadTools(): McpTool[] {
         return { ...overview, recipes: recipes.map(asText), rules: paginate(rules.map(asText), page, pageSize) }
       },
     }),
-    readTool({ name: "get_cleanup_rule", input: z.object({ ruleId: ruleIdSchema }), read: ({ ruleId }) => readRule(ruleId),
+    readTool({ name: "get_cleanup_rule", input: z.object({ ruleId: ruleIdSchema }), read: ({ ruleId }, { session }) => readRule(ruleId, session.user.id),
       description: "One media cleanup rule by id: its name, mode, `revision`, whole definition, the rule in plain words, its stats (the newest evaluation and up to 30 dry runs) and when it was last turned on. save_cleanup_rule takes the id as `ruleId`, the name, the definition, and `revision` as `expectedRevision`." }),
     readTool({
       name: "get_cleanup_turn_on",

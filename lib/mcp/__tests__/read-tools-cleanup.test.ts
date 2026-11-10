@@ -32,6 +32,7 @@ import { getCleanupSettings } from "@/lib/data/cleanup-settings"
 import { getCleanupTurnOn } from "@/lib/data/cleanup-turn-on"
 import { cleanupReadTools } from "@/lib/mcp/read-tools-cleanup"
 import { MAX_RESULT_CHARS } from "@/lib/mcp/result-limit"
+import { auditMemberListed } from "@/lib/security/audit-log"
 import { saveCleanupRuleInput } from "@/lib/validations/cleanup-actions"
 
 jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
@@ -43,6 +44,7 @@ jest.mock("@/lib/data/cleanup-protections", () => ({ getCleanupProtections: jest
 jest.mock("@/lib/data/cleanup-history", () => ({ getCleanupHistory: jest.fn() }))
 jest.mock("@/lib/data/cleanup-settings", () => ({ getCleanupSettings: jest.fn() }))
 jest.mock("@/lib/cleanup/snapshot/store", () => ({ loadPreviousCompleteHeader: jest.fn() }))
+jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), auditMemberListed: jest.fn() }))
 
 const AT = "2026-11-08T03:07:00.000Z"
 const admin: Session = { user: { id: "admin-1", isAdmin: true, role: null }, expires: "" }
@@ -293,10 +295,15 @@ describe("get_cleanup_rule", () => {
     expect(prismaMock.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: { in: ["user-ann"] } } }))
   })
 
-  it("reads no member for a rule without requester conditions", async () => {
+  it("reads no member for a rule without requester conditions, and audits only the words that name one (security review S-05)", async () => {
+    await call("get_cleanup_rule", { ruleId: "cleanup-rule-1" })
+    expect(auditMemberListed).toHaveBeenCalledWith("cleanup-requesters", "admin-1")
+    jest.mocked(auditMemberListed).mockClear()
+    prismaMock.user.findMany.mockClear()
     prismaMock.cleanupRule.findUnique.mockResolvedValue(buildCleanupRule({ definition: buildDefinition() }))
     await call("get_cleanup_rule", { ruleId: "cleanup-rule-1" })
     expect(prismaMock.user.findMany).not.toHaveBeenCalled()
+    expect(auditMemberListed).not.toHaveBeenCalled()
   })
 
   it("gives no definition and the unreadable words for a stored definition that does not parse", async () => {

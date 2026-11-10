@@ -48,6 +48,16 @@ export function ruleRequesterIds(rule: Pick<RuleDraft, "conditions" | "protectio
   return [...ids]
 }
 
+/**
+ * Whether the words of the rule name a member: a `request.by` member whose
+ * name the live facts hold. A read that returns such words writes
+ * `auditMemberListed("cleanup-requesters")` (TS 10.4).
+ */
+export function namesMember(rule: Pick<RuleDraft, "conditions" | "protections">, live: Pick<LiveFacts, "members">): boolean {
+  const named = new Set(live.members.filter((m) => m.name).map((m) => m.userId))
+  return ruleRequesterIds(rule).some((id) => named.has(id))
+}
+
 /** Member display names from the live facts (`User.name`), for `request.by` words. Null is "Unknown member". */
 export function memberWords(live: Pick<LiveFacts, "members">): DescribeWords {
   const names = new Map(live.members.map((m) => [m.userId, m.name]))

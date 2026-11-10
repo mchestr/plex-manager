@@ -30,6 +30,7 @@ import { getActiveService } from "@/lib/data/active-service"
 import { getCleanupOverview } from "@/lib/data/cleanup-overview"
 import type { CleanupOutcome } from "@/lib/generated/prisma/client"
 import { isRedisConfigured } from "@/lib/queue/connection"
+import { auditMemberListed } from "@/lib/security/audit-log"
 import { GiB } from "@/lib/validations/cleanup-vocabulary"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -38,6 +39,7 @@ jest.mock("@/lib/cleanup/snapshot/cache", () => ({ loadNewestSnapshot: jest.fn()
 jest.mock("@/lib/cleanup/live-facts", () => ({ loadLiveFacts: jest.fn() }))
 jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
 jest.mock("@/lib/queue/connection", () => ({ isRedisConfigured: jest.fn() }))
+jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), auditMemberListed: jest.fn() }))
 jest.mock("@/lib/utils/logger", () => ({ createLogger: () => ({ debug: jest.fn(), info: jest.fn(), error: jest.fn(), warn: jest.fn() }) }))
 
 const snapshotMock = jest.mocked(loadNewestSnapshot)
@@ -143,6 +145,19 @@ describe("rule cards", () => {
   })
 
   const card = (cards: RuleCardData[], id: string) => cards.find((c) => c.id === id)
+
+  it("audits the read when a rule sentence names a requester, and not for rules without one (TS 10.4, security review S-05)", async () => {
+    prismaMock.cleanupRule.findMany.mockResolvedValue([storedRule("rule-dry", "Dry movies")])
+    await getCleanupOverview(AT)
+    expect(auditMemberListed).not.toHaveBeenCalled()
+
+    const requested = { ...MOVIE_DEFINITION, conditions: [...MOVIE_DEFINITION.conditions,
+      { id: "c2", field: "request.by", op: "anyOf", value: { requesters: [{ kind: "member", userId: "u-1" }] } }] }
+    prismaMock.cleanupRule.findMany.mockResolvedValue([storedRule("rule-req", "Requested movies", { definition: requested })])
+    const { rules } = await getCleanupOverview(AT)
+    expect(JSON.stringify(rules[0].sentence)).toContain("Avery Example")
+    expect(auditMemberListed).toHaveBeenCalledWith("cleanup-requesters", ADMIN.user.id)
+  })
 
   it("sorts rules with a waiting batch first, then by name", async () => {
     const { rules } = await getCleanupOverview(AT)
