@@ -37,6 +37,7 @@ import { entryLeaveOn } from "@/lib/cleanup/engine/overlap"
 import { coversKey, protectionKeys } from "@/lib/cleanup/engine/protections"
 import type { ItemResult } from "@/lib/cleanup/engine/types"
 import { activeProtectionWhere } from "@/lib/cleanup/protections"
+import { exitedSince } from "@/lib/cleanup/run/exited"
 import { type LiveRule, matchingRules, type ReconcileContext, snapshotFields, whyOf, writeChecked } from "@/lib/cleanup/run/reconcile"
 import { keyList, mergeLive, mergeWrite, thensOf } from "@/lib/cleanup/run/release"
 import { insertItemRows, raiseShowLeaveOn, readShowLeaveFloor, ROWS_PER_TRANSACTION, seasonsFirst, showKeyOf, TRANSACTION_OPTIONS } from "@/lib/cleanup/run/show-raise"
@@ -89,19 +90,6 @@ function newRow(item: SnapshotItem, holders: readonly Holder[], joining: readonl
     importListExclusion: merged.importListExclusion, needsApproval: merged.needsApproval, heldAt: joining ? null : ctx.now,
     enteredAt: joining ? ctx.now : null, leaveOn, firstLeaveOn: leaveOn, why: why ?? Prisma.JsonNull, lastRunId: ctx.runId, checkedAt: ctx.now,
   } satisfies Prisma.CleanupItemCreateManyInput
-}
-
-/**
- * The item keys that left Leaving soon as `deleted` or `rescued` after
- * `takenAt`, the time of the snapshot that a run or a turn-on reads. That
- * snapshot does not know the exit, so its match of such a title is stale.
- */
-export async function exitedSince(takenAt: string | null | undefined): Promise<Set<string>> {
-  const at = takenAt ? new Date(takenAt) : null
-  if (!at || Number.isNaN(at.getTime())) return new Set()
-  const rows = await prisma.cleanupOutcome.findMany({ where: { kind: { in: ["deleted", "rescued"] }, actedAt: { gt: at } }, select: { itemKey: true },
-    distinct: ["itemKey"] })
-  return new Set(rows.map((row) => row.itemKey))
 }
 
 /** The candidates of each live rule without blocks, the entry check, and the rows (TS 8.5). */

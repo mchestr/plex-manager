@@ -7,8 +7,8 @@
  *
  * The compared set: from Dry run, the rule's matches on the newest complete
  * snapshot, without the titles deleted or rescued after that snapshot
- * (`exitedSince`, correctness review C-03). From a live mode (Change mode), its items in Leaving soon
- * (`leaving` or `approved`). The page sends back its `count` and
+ * (`exitedSince`, correctness review C-03). From a live mode (Change
+ * mode), its items in Leaving soon (`leaving` or `approved`). The page sends back its `count` and
  * `keysHash` (the SHA-256 of the sorted keys) with the rule `revision` it
  * read, never the keys. The review also holds the counts, the turn-on
  * checks, the modes, the leave date, the Automatic pace of the budget
@@ -31,7 +31,7 @@ import { evaluateRule } from "@/lib/cleanup/engine/evaluate"
 import { entryLeaveOn } from "@/lib/cleanup/engine/overlap"
 import type { ItemClass, ItemResult } from "@/lib/cleanup/engine/types"
 import { keysHash } from "@/lib/cleanup/keys-hash"
-import { exitedSince } from "@/lib/cleanup/run/entries"
+import { exitedSince } from "@/lib/cleanup/run/exited"
 import type { LiveRule, ReconcileContext } from "@/lib/cleanup/run/reconcile"
 import { loadReconcileContext } from "@/lib/cleanup/run/run-claim"
 import { parseRuleStats } from "@/lib/cleanup/schema/stats"
