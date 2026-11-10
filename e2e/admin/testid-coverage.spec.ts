@@ -1,9 +1,7 @@
-import type { Page } from '@playwright/test';
-
 import { expect, test, TEST_USERS } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
 import { clearVisualFixtures, seedVisualFixtures, VISUAL_INVITE_IDS } from '../helpers/seed-fixtures';
-import { WAIT_TIMEOUTS } from '../helpers/test-utils';
+import { scanTestIds, waitForScanRoot } from '../helpers/testid-scan';
 import { ADMIN_NAV } from '../../lib/admin/nav';
 
 /**
@@ -13,25 +11,16 @@ import { ADMIN_NAV } from '../../lib/admin/nav';
  * never have to select by DOM structure, class or text.
  *
  * Visits every admin route in `lib/admin/nav.ts` and one seeded detail route
- * per area. Popups that are closed are not in the DOM, and hidden inputs that
- * Base UI renders beside its controls are `aria-hidden`, so neither counts.
+ * per area, with the scan of `e2e/helpers/testid-scan.ts` inside
+ * `admin-shell`. Popups that are closed are not in the DOM, and hidden inputs
+ * that Base UI renders beside its controls are `aria-hidden`, so neither
+ * counts. The scan runs without `unique`: the admin tables repeat fixed cell
+ * ids. `cleanup-testids.spec.ts` checks the media cleanup routes with it.
  * The audit event is seeded here, by an admin about the regular member, so
  * its page and the member's Audit tab both have a row with every link.
  */
 
 const AUDIT_EVENT_ID = 'e2e-testid-audit-event';
-
-const INTERACTIVE = [
-  'button',
-  'a[href]',
-  'input',
-  'select',
-  'textarea',
-  '[role="switch"]',
-  '[role="tab"]',
-  '[role="menuitem"]',
-  '[role="checkbox"]',
-].join(', ');
 
 const DETAIL_ROUTES = [
   `/admin/users/${TEST_USERS.REGULAR.id}`,
@@ -47,24 +36,6 @@ const DETAIL_ROUTES = [
 const NAV_ROUTES = ADMIN_NAV.flatMap((item) => [item.href, ...(item.children ?? []).map((child) => child.href)]);
 
 const ROUTES = [...new Set<string>([...NAV_ROUTES, ...DETAIL_ROUTES])];
-
-/** Each interactive element in the shell without a test id, as a short description. */
-async function untagged(page: Page): Promise<string[]> {
-  return page.evaluate((selector) => {
-    const shell = document.querySelector('[data-testid="admin-shell"]');
-    if (!shell) return ['no admin shell on the page'];
-    return Array.from(shell.querySelectorAll<HTMLElement>(selector))
-      .filter((el) => el.closest('[aria-hidden="true"], [inert]') === null)
-      .filter((el) => !(el instanceof HTMLInputElement && el.type === 'hidden'))
-      .filter((el) => el.checkVisibility())
-      .filter((el) => !el.hasAttribute('data-testid') && !el.parentElement?.hasAttribute('data-testid'))
-      .map((el) => {
-        const name = el.getAttribute('aria-label') ?? el.textContent?.trim().slice(0, 40) ?? '';
-        const href = el.getAttribute('href');
-        return `<${el.tagName.toLowerCase()}${href ? ` href="${href}"` : ''}> ${name}`.trim();
-      });
-  }, INTERACTIVE);
-}
 
 test.describe('Admin test-id coverage', () => {
   test.describe.configure({ mode: 'serial' });
@@ -102,13 +73,10 @@ test.describe('Admin test-id coverage', () => {
   for (const route of ROUTES) {
     test(`every interactive element on ${route} has a data-testid`, async ({ adminPage }) => {
       await adminPage.goto(route);
-      await expect(adminPage.getByTestId('admin-shell')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
       // Streamed sections replace their skeletons; check the page they settle into
-      await expect
-        .poll(() => adminPage.locator('[data-slot$="skeleton"]').count(), { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION })
-        .toBe(0);
+      await waitForScanRoot(adminPage, 'admin-shell');
 
-      expect(await untagged(adminPage)).toEqual([]);
+      expect((await scanTestIds(adminPage, { root: 'admin-shell' })).untagged).toEqual([]);
     });
   }
 });
