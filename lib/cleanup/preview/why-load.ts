@@ -13,6 +13,7 @@ import { ITEM_STATES, type ItemState } from "@/lib/cleanup/constants"
 import { showLeaveFloor } from "@/lib/cleanup/engine/overlap"
 import type { DescribeWords } from "@/lib/cleanup/engine/types"
 import type { WhyRow } from "@/lib/cleanup/preview/why-live"
+import { readShowLeaveFloor, showKeyOf } from "@/lib/cleanup/run/show-raise"
 import { prisma } from "@/lib/prisma"
 import { ACTION_IDS, type ActionId } from "@/lib/validations/cleanup-vocabulary"
 
@@ -34,14 +35,12 @@ export async function readWhyRow(itemKey: string): Promise<WhyRow | null> {
 /**
  * The show floor of a show (E21): the latest of its own leave date and the
  * dates of its seasons in Leaving soon (`leaving`, `approved`, `deleting`),
- * or null when no season of it is there.
+ * or null when no season of it has a date there. The season rows are read by
+ * the one shared reader, `readShowLeaveFloor()` (safety-r8-2).
  */
 export async function readShowFloor(titleKey: string, showLeaveOn: string | null): Promise<string | null> {
-  const seasons = await prisma.cleanupItem.findMany({
-    where: { level: "season", titleKey, state: { in: ["leaving", "approved", "deleting"] } },
-    select: { leaveOn: true },
-  })
-  return seasons.length === 0 ? null : showLeaveFloor(showLeaveOn, seasons.map((s) => s.leaveOn))
+  const seasons = await readShowLeaveFloor(prisma, showKeyOf(titleKey))
+  return seasons === null ? null : showLeaveFloor(showLeaveOn, [seasons])
 }
 
 /** The public URL of the active Radarr or Sonarr, or null: the "Open in" button then hides (TS 13.4). */

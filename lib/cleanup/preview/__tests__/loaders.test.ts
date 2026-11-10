@@ -124,6 +124,11 @@ describe("the Why Sheet rows", () => {
     expect(prismaMock.cleanupItem.findMany.mock.calls[0][0]?.where).toEqual({ level: "season", titleKey: "tvdb:9", state: { in: ["leaving", "approved", "deleting"] } })
     prismaMock.cleanupItem.findMany.mockResolvedValueOnce([])
     expect(await readShowFloor("tvdb:9", "2026-12-08")).toBeNull()
+    // A season with no date (held) gives no floor; an earlier season keeps the show's own date
+    prismaMock.cleanupItem.findMany.mockResolvedValueOnce([{ leaveOn: null }] as never)
+    expect(await readShowFloor("tvdb:9", "2026-12-08")).toBeNull()
+    prismaMock.cleanupItem.findMany.mockResolvedValueOnce([{ leaveOn: "2026-12-01" }] as never)
+    expect(await readShowFloor("tvdb:9", "2026-12-08")).toBe("2026-12-08")
   })
 
   it("reads the public URL of the active arr, the member names and the outcome", async () => {
