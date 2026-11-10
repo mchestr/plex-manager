@@ -76,6 +76,15 @@ describe("pickCandidate: Radarr", () => {
     expect(pickCandidate(unknown, MOVIE_FILE, BAD, ORDER, "radarr")).toEqual({ ok: false, reason: "ONLY_LOWER" })
   })
 
+  it("ranks the qualities of one group as one, so a higher revision in it wins before seeders", async () => {
+    const good = (await searched(RADARR_JSON, "radarr")).filter((release) => release.title.endsWith("-GOOD"))
+    const webFile = { ...MOVIE_FILE, quality: { id: 3, name: "WEBDL-1080p", version: 1, real: 0 } }
+    const busy = good.map((release) => ({ ...release, title: "Heat.1995.1080p.WEB-DL-BUSY", guid: "busy", seeders: 500, infoHash: null, quality: { ...release.quality, id: 3, name: "WEBDL-1080p", version: 1 } }))
+    const proper = good.map((release) => ({ ...release, title: "Heat.1995.1080p.WEBRip.PROPER-FIX", guid: "proper", seeders: 5, infoHash: null, quality: { ...release.quality, id: 15, name: "WEBRip-1080p", version: 2 } }))
+
+    expect(titleOf(pickCandidate([...busy, ...proper], webFile, BAD, ORDER, "radarr"))).toBe("Heat.1995.1080p.WEBRip.PROPER-FIX")
+  })
+
   it("asks no language of a file whose languages aren't known", async () => {
     const french = (await searched(RADARR_JSON, "radarr")).filter((release) => release.title.endsWith("-FRENCH"))
 

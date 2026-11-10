@@ -19,6 +19,11 @@
  * delivered twice acts once. Each step that acts gates and records itself in
  * the ledger first (`gateAndRecord`).
  *
+ * A worker that stops after a run ends a report (fixed, or closed with no
+ * better copy) and before queueing the members' DMs loses them: the job,
+ * delivered again, finds the report no longer `FIXING` and stops. A lost DM
+ * is only a lost DM (`updates.ts`).
+ *
  * @module lib/problem-reports/run
  */
 

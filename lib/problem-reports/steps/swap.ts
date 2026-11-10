@@ -119,7 +119,8 @@ async function wait(server: PlexServer, report: StepReport, data: ProblemReportF
   if ("imported" in check) return finishReplace(server, report, check.config, { watch, replace }, { markFailed: true })
   // A step that ran again past its grab can't say whether the grab went out; one that did would be downloading by now
   if (replace.release === null) return { toAdmin: "INTERRUPTED" }
-  // The grab is in the history at once, so a day with no download means it never started
+  // Radarr and Sonarr write the grab to the history at once, and checkCopy waits while it's the latest step
+  // there, so nothing downloading means no download came of the grab; a day of that is a grab that didn't take
   return check.pastDeadline ? { toAdmin: "GRAB_FAILED" } : checkAgain(now)
 }
 

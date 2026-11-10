@@ -1,8 +1,8 @@
 /**
  * Telling people a report changed: a DM to each member who made or follows
  * a report when it is fixed or closed (`PROBLEM_REPORT_UPDATE`, one job per
- * member and state), and the admins' alert when a fix hands a report back
- * to them (`PROBLEM_REPORT_NOTIFY`).
+ * member and change, told apart by when it ended), and the admins' alert
+ * when a fix hands a report back to them (`PROBLEM_REPORT_NOTIFY`).
  *
  * Request paths queue through `enqueueFromRequest`; the fix job, which runs
  * in a worker, through `addJob`. Neither ever throws: the report has changed
@@ -25,16 +25,17 @@ const logger = createLogger("PROBLEM_REPORT_UPDATES")
 /** Three attempts, the second a minute after the first, as for the admins' alert. */
 const UPDATE_JOB_OPTIONS = { attempts: 3, backoff: { type: "exponential", delay: 60_000 } }
 
-/** The members to tell: the reporter and every follower, once each, without `except`. */
-async function membersOf(reportId: string, except: string | undefined): Promise<string[]> {
+/** When the report ended, and the members to tell: the reporter and every follower, once each, without `except`. */
+async function membersOf(reportId: string, except: string | undefined): Promise<{ resolvedAt: Date; members: string[] } | null> {
   const report = await prisma.problemReport.findUnique({
     where: { id: reportId },
-    select: { reporterId: true, events: { where: { kind: "ALSO_REPORTED", actorUserId: { not: null } }, select: { actorUserId: true } } },
+    select: { reporterId: true, resolvedAt: true, events: { where: { kind: "ALSO_REPORTED", actorUserId: { not: null } }, select: { actorUserId: true } } },
   })
-  if (!report) return []
+  // A report that opened again before its DMs were queued has nothing to tell
+  if (!report?.resolvedAt) return null
   const members = new Set([report.reporterId, ...report.events.flatMap((event) => (event.actorUserId ? [event.actorUserId] : []))])
   if (except) members.delete(except)
-  return [...members]
+  return { resolvedAt: report.resolvedAt, members: [...members] }
 }
 
 /**
@@ -50,8 +51,10 @@ export async function queueMemberUpdates(
 ): Promise<void> {
   if (!isRedisConfigured()) return
   try {
-    for (const userId of await membersOf(reportId, options.except)) {
-      const data = { reportId, userId, status }
+    const told = await membersOf(reportId, options.except)
+    if (!told) return
+    for (const userId of told.members) {
+      const data = { reportId, userId, status, resolvedAt: told.resolvedAt.toISOString() }
       if (options.from === "worker") await addJob(JOB_TYPES.PROBLEM_REPORT_UPDATE, data, UPDATE_JOB_OPTIONS)
       else if (!(await enqueueFromRequest(JOB_TYPES.PROBLEM_REPORT_UPDATE, data, UPDATE_JOB_OPTIONS)).ok) logger.warn("Could not queue a problem report update", { reportId })
     }

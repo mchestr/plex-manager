@@ -11,7 +11,9 @@
  * release: {@link gateReplace} gates that second step in its own
  * serializable transaction and marks the row `replacedAt`, which is what the
  * breaker counts. A removal deletes at once, so its row is created replacing.
- * A gate that trips the breaker queues the admins' alert.
+ * A row counts whatever follows: a grab Radarr or Sonarr refuses, or a
+ * removal that stops before deleting, still uses a replacement. A gate that
+ * trips the breaker queues the admins' alert.
  *
  * @module lib/problem-reports/ledger
  */
