@@ -87,8 +87,13 @@ export interface FieldEval<F extends FieldId = FieldId> {
   forecast?(item: SnapshotItem, c: ConditionOf<F>, ctx: EvalContext): string | null
   /** Near misses: one value change that includes the item, or null. */
   tryValue?(item: SnapshotItem, c: ConditionOf<F>, ctx: EvalContext): ConditionOf<F>["value"] | null
-  /** Histogram: the value used for bucketing, in days or bytes, or null (never, unknown). */
-  measure?(item: SnapshotItem, ctx: EvalContext): number | null
+  /**
+   * Histogram: the value used for bucketing, in days or bytes, or null
+   * (never, unknown). With the condition and its role, a field of two
+   * sources measures the value that decides the verdict (E16), so an item
+   * never sits in a passing bucket while it fails.
+   */
+  measure?(item: SnapshotItem, ctx: EvalContext, c?: ConditionOf<F>, role?: "condition" | "protection"): number | null
   /** Why: the real value as words, for the Why Sheet and the Results "Why" text. */
   fact(item: SnapshotItem, ctx: EvalContext): WhyPart[]
 }

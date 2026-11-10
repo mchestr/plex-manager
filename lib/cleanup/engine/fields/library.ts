@@ -24,11 +24,15 @@ const addedDates = (item: SnapshotItem) => [item.added.plex, item.added.arr].fil
 /** True when the arr source failed, so the arr date is missing but may exist. */
 const arrDateLost = (item: SnapshotItem, ctx: EvalContext) => item.added.arr === null && ctx.sources[LEVEL_ARR[item.level]] === "failed"
 
-/** The date that decides a condition: the newest for `moreThan`, the oldest for `lessThan`. */
-function decidingDate(item: SnapshotItem, op: ConditionOf<"library.added">["op"]): number | null {
+/**
+ * The date that decides (E16): for a condition, every date must pass, so the
+ * newest for `moreThan` and the oldest for `lessThan`. For a protection, one
+ * date is enough, so the other way round.
+ */
+function decidingDate(item: SnapshotItem, op: ConditionOf<"library.added">["op"], role: "condition" | "protection" = "condition"): number | null {
   const dates = addedDates(item)
   if (dates.length === 0) return null
-  return op === "moreThan" ? Math.max(...dates) : Math.min(...dates)
+  return (op === "moreThan") === (role === "condition") ? Math.max(...dates) : Math.min(...dates)
 }
 
 export const added: FieldEval<"library.added"> = {
@@ -56,8 +60,8 @@ export const added: FieldEval<"library.added"> = {
     const duration = at === null ? null : dateTry(c.op, at, c.value.duration, ctx.now)
     return duration ? { duration } : null
   },
-  measure(item, ctx) {
-    const at = newest(addedDates(item))
+  measure(item, ctx, c, role) {
+    const at = c ? decidingDate(item, c.op, role) : newest(addedDates(item))
     return at === null ? null : daysSince(at, ctx.now)
   },
   fact(item, ctx) {

@@ -24,6 +24,13 @@ function focusOf(condition: Condition, items: readonly SnapshotItem[] = ITEMS, z
 }
 
 describe("previewFocus buckets", () => {
+  it("puts a re-added title in the bucket of the date that decides it, so a failing item never sits in a passing bucket (correctness review C-06)", () => {
+    const readded = buildMovieItem({ key: "movie:tmdb:9", added: { plex: daysAgo(10), arr: daysAgo(700) } })
+    const focus = focusOf(buildCondition("library.added", { op: "lessThan", value: { duration: { amount: 30, unit: "days" } } }), [readded])
+    expect(focus?.summary).toBe("0 of 1 movie pass this condition.")
+    expect(focus?.buckets.filter((b) => b.count > 0)).toEqual([expect.objectContaining({ count: 1, passes: false })])
+  })
+
   it("counts each item in its bucket of days, and the never played ones in Never", () => {
     const focus = focusOf(buildCondition("watch.lastPlayed"))
     expect(focus?.buckets.map((b) => [b.label, b.count])).toEqual([

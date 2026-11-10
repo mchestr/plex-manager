@@ -78,6 +78,14 @@ describe("library.added (E16)", () => {
     expect(added.measure?.(movie(null, null), ctx)).toBeNull()
   })
 
+  it("measures the date that decides the verdict for the histogram (E16, correctness review C-06)", () => {
+    const readded = movie(daysAgo(10), daysAgo(700))
+    expect(added.measure?.(readded, ctx, addedC("moreThan", 90), "condition")).toBe(10)
+    expect(added.measure?.(readded, ctx, addedC("lessThan", 30), "condition")).toBe(700)
+    expect(added.measure?.(readded, ctx, addedC("lessThan", 30), "protection")).toBe(10)
+    expect(added.measure?.(readded, ctx, addedC("moreThan", 90), "protection")).toBe(700)
+  })
+
   it("states the newer date, and each date with its source in the Why Sheet (TS 4.5)", () => {
     const plex = Date.parse("2023-02-10T12:00:00Z") / 1000
     const arr = Date.parse("2023-02-12T12:00:00Z") / 1000

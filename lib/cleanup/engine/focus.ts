@@ -15,7 +15,7 @@
 
 import { plural } from "@/lib/cleanup/action-words"
 import { findCondition, replaceCondition } from "@/lib/cleanup/engine/compile"
-import { conditionVerdict } from "@/lib/cleanup/engine/evaluate"
+import { conditionVerdict, fieldEvalOf } from "@/lib/cleanup/engine/evaluate"
 import { matchTotals } from "@/lib/cleanup/engine/near-miss"
 import type { CompiledRule, EvalContext, HistogramBucket } from "@/lib/cleanup/engine/types"
 import { anyFieldMeta, withPreset } from "@/lib/cleanup/fields/catalog"
@@ -111,7 +111,7 @@ export function previewFocus({ compiled, items, ctx, conditionId }: FocusInput):
     }
     if (verdict === "pass") passing += 1
     if (list.length === 0) continue
-    const measured = ctx.evals[c.field].measure?.(item, ctx) ?? null
+    const measured = fieldEvalOf(ctx, c).measure?.(item, ctx, c, role) ?? null
     const never = c.field === "watch.lastPlayed" && item.plays?.lastCountedAt === null
     const index = measured !== null ? bucketIndex(list, measured) : never ? bucketIndex(list, "never") : -1
     if (index >= 0) counts[index] += 1

@@ -47,6 +47,7 @@ export interface FieldCalls {
   gap?(item: SnapshotItem, c: Condition, ctx: EvalContext): number | null
   forecast?(item: SnapshotItem, c: Condition, ctx: EvalContext): string | null
   tryValue?(item: SnapshotItem, c: Condition, ctx: EvalContext): unknown
+  measure?(item: SnapshotItem, ctx: EvalContext, c?: Condition, role?: "condition" | "protection"): number | null
 }
 
 /** The evaluator of a condition's field (D1). */

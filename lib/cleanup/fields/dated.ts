@@ -69,7 +69,8 @@ export const requestAgeField: FieldDef<"request.age"> = {
   withPreset: (c, value) => (isDuration(value) ? { ...c, value: { duration: value } } : c),
 }
 
-const ADDED_HELP = "The newer of the Plex and Radarr or Sonarr dates, so a re-added title counts from its new date."
+/** UX 8, and the rule of E16 for "less than": a condition needs every known date to pass (correctness review C-06). */
+const ADDED_HELP = "The newer of the Plex and Radarr or Sonarr dates, so a re-added title counts from its new date. In a condition, Less than needs every known date inside the range."
 
 export const addedField: FieldDef<"library.added"> = {
   ...fieldBase("library.added"),
