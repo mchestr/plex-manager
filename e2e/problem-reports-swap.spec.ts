@@ -81,7 +81,14 @@ async function withDb<T>(run: (prisma: ReturnType<typeof createE2EPrismaClient>)
   }
 }
 
-const clearReports = () => withDb((prisma) => prisma.problemReport.deleteMany({ where: { titleKey: MOVIE.guid } }));
+/** The reports and the ledger rows their fixes wrote, so the breaker and the caps count from nothing in each test. */
+const clearReports = () =>
+  withDb((prisma) =>
+    prisma.$transaction([
+      prisma.problemFixLedger.deleteMany({ where: { target: `radarr:movie:${MOCK_MOVIE.id}` } }),
+      prisma.problemReport.deleteMany({ where: { titleKey: MOVIE.guid } }),
+    ])
+  );
 
 /** A report that a copy won't start, with the server admin. */
 const reportWontStart = () =>

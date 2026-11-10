@@ -7,7 +7,7 @@ import type { AddressInfo } from 'node:net';
  * starts this on a free port and points an active `Radarr.url` at it.
  *
  * It knows one movie ({@link MOCK_MOVIE}) and answers the calls the fixes
- * make: the movie by TMDB id and by id with its file (from
+ * make: the movie by TMDB id, in the whole library and by id with its file (from
  * {@link MockRadarr.file}, which a test sets, or none), its quality profile,
  * an empty queue, the history and the releases a test sets, and the
  * blocklist. It records what the app asks of it: commands
@@ -18,7 +18,7 @@ import type { AddressInfo } from 'node:net';
  */
 
 /** The movie Radarr has: TMDB id 95101 is the stub Plex movie's id. */
-export const MOCK_MOVIE = { id: 7, titleSlug: 'harbour-heist-2024', tmdbId: 95101, qualityProfileId: 4 } as const;
+export const MOCK_MOVIE = { id: 7, titleSlug: 'harbour-heist-2024', tmdbId: 95101, imdbId: 'tt9510100', title: 'Harbour Heist', year: 2024, qualityProfileId: 4 } as const;
 
 export interface MockMovieFile {
   id: number;
@@ -101,13 +101,12 @@ export async function startMockRadarr(movieFolder: string): Promise<MockRadarr> 
     if (request.headers['x-api-key'] !== 'e2e-radarr-key') return json(401, { message: 'Unauthorized' });
     const movieId = Number(url.searchParams.get('movieId'));
     const route = `${request.method} ${url.pathname}`;
+    const movie = () => ({ ...MOCK_MOVIE, monitored: true, path: movieFolder, movieFile: mock.file && { ...mock.file, path: `${movieFolder}/${mock.file.relativePath}` } });
     if (route === 'GET /api/v3/movie') {
+      if (!url.searchParams.has('tmdbId')) return json(200, [movie()]);
       return json(200, Number(url.searchParams.get('tmdbId')) === MOCK_MOVIE.tmdbId ? [MOCK_MOVIE] : []);
     }
-    if (route === `GET /api/v3/movie/${MOCK_MOVIE.id}`) {
-      const file = mock.file && { ...mock.file, path: `${movieFolder}/${mock.file.relativePath}` };
-      return json(200, { ...MOCK_MOVIE, monitored: true, path: movieFolder, movieFile: file });
-    }
+    if (route === `GET /api/v3/movie/${MOCK_MOVIE.id}`) return json(200, movie());
     if (route === `GET /api/v3/qualityprofile/${MOCK_MOVIE.qualityProfileId}`) {
       return json(200, { id: MOCK_MOVIE.qualityProfileId, name: 'HD-1080p', upgradeAllowed: true, cutoffFormatScore: 0, items: PROFILE_ITEMS });
     }
