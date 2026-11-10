@@ -214,6 +214,15 @@ describe("WhySheet", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps focus on the title when the data arrives after the Sheet opened (UX review UX-04)", async () => {
+    answer(undefined)
+    const { rerender } = render(<WhySheet itemKey="movie:tmdb:1" onClose={onClose} scope="rule-1" ruleId="rule-1" surface="preview" title="Invented Movie" />)
+    await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "Invented Movie" })).toHaveFocus())
+    answer(MATCH)
+    rerender(<WhySheet itemKey="movie:tmdb:1" onClose={onClose} scope="rule-1" ruleId="rule-1" surface="preview" title="Invented Movie" />)
+    await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "Invented Movie (2023)" })).toHaveFocus())
+  })
+
   it("shows the given title while it loads, and the action's words when it fails", async () => {
     const user = userEvent.setup()
     answer(undefined)

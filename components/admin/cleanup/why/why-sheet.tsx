@@ -1,7 +1,7 @@
 "use client"
 
 import type { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import { type RefObject, useRef, useState } from "react"
+import { type RefObject, useEffect, useRef, useState } from "react"
 
 import { readTimeText } from "@/components/admin/cleanup/preview/read-time"
 import { WhyConditions } from "@/components/admin/cleanup/why/why-conditions"
@@ -256,6 +256,15 @@ export function WhySheet(props: WhySheetProps) {
   const why = useCleanupWhy({ itemKey: shown, scope: props.scope, ruleId: props.ruleId, definition: props.definition, outcomeId: props.outcomeId,
     enabled: itemKey !== null })
   const data = why.data
+  const loaded = data !== undefined
+
+  // The loaded Header renders a new title: when the loading one held focus, it went to the popup or the body. Put it on the new title (UX 7.9)
+  useEffect(() => {
+    const title = titleRef.current
+    if (!loaded || itemKey === null || !title) return
+    const active = document.activeElement
+    if (active === null || active === document.body || active === title.closest('[role="dialog"]')) title.focus()
+  }, [loaded, itemKey])
 
   const tryValue = onTry
     ? (value: TryValue) => {
