@@ -126,7 +126,8 @@ hit, so a wrong pick now touches only the member's own history.
 ## Registering slash commands
 
 Slash commands must be registered with Discord once, and again whenever the
-command set changes (the changelog says when):
+command set changes, as when `/report` replaced `/mark badquality` (the
+changelog says when):
 
 ```bash
 # From a checkout (reads .env):

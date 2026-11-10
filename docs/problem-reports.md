@@ -25,7 +25,7 @@ The feature is off until the switch is on (`ProblemReportSettings.enabled`, off 
 - The steps match the web sheet: which title, what kind, which problem, then the confirm with **Send to the server admin**, which goes through the same service as the web. A show hands off to `/report?item=<ratingKey>` to choose the episode, and "Something else" hands off to the web for its note. Discord doesn't ask the device question.
 - Each control's `custom_id` carries what the next step needs (`lib/discord/commands/report/ids.ts`), so nothing is stored between steps. Every step checks the member again and reads the title from Plex again, against their libraries.
 - `/watching` puts a **Report a problem** button on each movie or episode stream while the switch is on. The button carries the member's Discord id and the stream's rating key, and anyone else who presses it is told it belongs to someone else.
-- `/report` replaced `/mark badquality`. Earlier poor-quality marks stay, and `/mymarks type:badquality` still lists them.
+- `/report` replaced `/mark badquality`. Earlier poor-quality marks stay, and `/mymarks type:badquality` still lists them. After an upgrade that adds or changes commands, run `npm run register-discord-commands` (`node scripts/dist/register-discord-commands.cjs` in the image) so Discord shows them.
 
 ## For the server admin
 
