@@ -26,7 +26,9 @@ The words for a report's status are in `lib/ui/status.ts` (`problemReport`): Sen
 - the title must be in a library shared with the member, checked on the server for every rating key (SEC-21, `lib/problem-reports/access.ts`): admins and the server owner see every library, anyone else needs plex.tv's share list to name the item's section;
 - the title's type and details come from Plex, never from the request;
 - one open report per title: `ProblemReport.activeKey` holds the title's Plex guid under a unique index until the report closes. A second report of the title joins the open one with an `ALSO_REPORTED` event, written after the failed insert;
-- only the reporter can cancel, and only while the report is Sent or With the server admin. Every way of closing a report clears `activeKey`.
+- a member's `ALSO_REPORTED` event is written once: the same problem and note again, or a second follow, writes nothing;
+- following checks the title against the member's libraries too;
+- only the reporter can cancel, and only while the report is Sent or With the server admin. Cancelling works with the switch off or a lapsed membership, so a member can always withdraw their own report. Every way of closing a report clears `activeKey`, and closes it for the members who followed it too: they see it as Closed, Cancelled.
 
 Member notes are plain text: format characters (bidi controls, zero-width spaces) are dropped, other control characters become spaces, and they are at most 500 characters (`lib/validations/problem-reports.ts`). Followers see status words only, never who else reported.
 

@@ -1313,7 +1313,7 @@ model ProblemReport {
   seasonNumber  Int?
   episodeNumber Int?
   activeKey     String?              @unique // = titleKey until the report closes (stands in for a partial unique index)
-  status        ProblemReportStatus  @default(SENT)
+  status        ProblemReportStatus  @default(SENT) // The service saves a new report as WITH_ADMIN until fixes run on their own
   memberNote    String?              @db.VarChar(500) // The server admin's note the member sees
   adminNote     String?              @db.VarChar(2000) // Internal
   resolvedAt    DateTime?

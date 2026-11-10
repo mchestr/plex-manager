@@ -18,6 +18,9 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 jest.mock('@/lib/problem-reports/access', () => ({ readMemberItem: jest.fn() }))
 jest.mock('@/lib/actions/entitlement', () => ({ hasEntitlement: jest.fn() }))
 jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn() }))
+jest.mock('@/lib/db/serializable', () => ({
+  inSerializable: (fn: (tx: unknown) => Promise<unknown>) => fn(require('@/__tests__/helpers/prisma-mock').prismaMock),
+}))
 
 const SERVER = { name: 'Home', url: 'http://plex.local:32400', token: 'owner-token', adminPlexUserId: 'owner', machineIdentifier: 'm' }
 const EPISODE: PlexItemMetadata = {
@@ -93,17 +96,54 @@ describe('reportProblem', () => {
     )
   })
 
+  const OPEN = { id: 'report-open', reporterId: 'member-2', problem: 'out_of_sync', note: null, events: [] }
+
   it('joins the open report for the title, outside the failed transaction', async () => {
     prismaMock.problemReport.create.mockRejectedValue(conflict())
-    prismaMock.problemReport.findUnique.mockResolvedValue({ id: 'report-open' } as never)
+    prismaMock.problemReport.findFirst.mockResolvedValue(OPEN as never)
 
     expect(await report({ problem: 'no_sound', note: 'Cuts out at 10 min' })).toEqual({ ok: true, outcome: 'joined', reportId: 'report-open' })
 
-    expect(prismaMock.problemReport.findUnique).toHaveBeenCalledWith({ where: { activeKey: 'plex://episode/pilot' }, select: { id: true } })
+    expect(prismaMock.problemReport.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { activeKey: 'plex://episode/pilot' } }))
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledTimes(1)
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
       data: { reportId: 'report-open', kind: 'ALSO_REPORTED', actorUserId: 'member-1', data: { problem: 'no_sound', note: 'Cuts out at 10 min' } },
     })
+  })
+
+  it.each([
+    ['the reporter sending their own report again', { ...OPEN, reporterId: 'member-1', problem: 'no_sound', note: 'Cuts out' }],
+    ['a member sending the same problem and note again', { ...OPEN, events: [{ data: { problem: 'no_sound', note: 'Cuts out' } }] }],
+  ])('writes nothing for %s', async (_label, open) => {
+    prismaMock.problemReport.create.mockRejectedValue(conflict())
+    prismaMock.problemReport.findFirst.mockResolvedValue(open as never)
+
+    expect(await report({ problem: 'no_sound', note: 'Cuts out' })).toEqual({ ok: true, outcome: 'joined', reportId: 'report-open' })
+    expect(prismaMock.problemReportEvent.create).not.toHaveBeenCalled()
+  })
+
+  it('adds a different problem from the reporter', async () => {
+    prismaMock.problemReport.create.mockRejectedValue(conflict())
+    prismaMock.problemReport.findFirst.mockResolvedValue({ ...OPEN, reporterId: 'member-1' } as never)
+
+    await report({ problem: 'no_sound', note: null })
+
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports again as new when the open report closes before the join', async () => {
+    prismaMock.problemReport.create.mockRejectedValueOnce(conflict()).mockResolvedValueOnce({ id: 'report-2' } as never)
+    prismaMock.problemReport.findFirst.mockResolvedValue(null)
+
+    expect(await report()).toEqual({ ok: true, outcome: 'reported', reportId: 'report-2' })
+  })
+
+  it('gives up after a second race', async () => {
+    prismaMock.problemReport.create.mockRejectedValue(conflict())
+    prismaMock.problemReport.findFirst.mockResolvedValue(null)
+
+    expect(await report()).toEqual({ ok: false, refusal: 'UNAVAILABLE' })
+    expect(prismaMock.problemReport.create).toHaveBeenCalledTimes(2)
   })
 
   it('passes on any other database error', async () => {
@@ -131,8 +171,9 @@ describe('reportProblem', () => {
     expect(readMemberItem).not.toHaveBeenCalled()
   })
 
-  it('needs a note for something else', async () => {
+  it('needs a note for something else, without spending the rate limits', async () => {
     expect(await report({ problem: 'other', note: null })).toEqual({ ok: false, refusal: 'NOTE_REQUIRED' })
+    expect(consume).not.toHaveBeenCalled()
     expect(await report({ problem: 'other', note: 'The menus are in French' })).toMatchObject({ ok: true })
   })
 
@@ -144,16 +185,18 @@ describe('reportProblem', () => {
 })
 
 describe('followProblemReport', () => {
-  const OPEN = { id: 'report-open', reporterId: 'member-2', events: [] }
+  const OPEN = { id: 'report-open', reporterId: 'member-2', problem: 'out_of_sync', note: null, events: [] }
 
-  it('follows an open report once, without a note', async () => {
-    prismaMock.problemReport.findFirst.mockResolvedValue(OPEN as never)
+  beforeEach(() => {
+    prismaMock.problemReport.findFirst.mockResolvedValueOnce({ plexRatingKey: '7001' } as never)
+  })
+
+  it('follows an open report on a title in the member libraries, once, without a note', async () => {
+    prismaMock.problemReport.findFirst.mockResolvedValueOnce(OPEN as never)
 
     expect(await followProblemReport({ userId: 'member-1', reportId: 'report-open' })).toEqual({ ok: true })
 
-    expect(prismaMock.problemReport.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'report-open', activeKey: { not: null } } })
-    )
+    expect(readMemberItem).toHaveBeenCalledWith('member-1', '7001')
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
       data: { reportId: 'report-open', kind: 'ALSO_REPORTED', actorUserId: 'member-1', data: {} },
     })
@@ -161,15 +204,23 @@ describe('followProblemReport', () => {
 
   it.each([
     ['the reporter', { ...OPEN, reporterId: 'member-1' }],
-    ['a member already following it', { ...OPEN, events: [{ id: 'event-1' }] }],
+    ['a member already following it', { ...OPEN, events: [{ data: {} }] }],
   ])('writes nothing for %s', async (_label, report) => {
-    prismaMock.problemReport.findFirst.mockResolvedValue(report as never)
+    prismaMock.problemReport.findFirst.mockResolvedValueOnce(report as never)
 
     expect(await followProblemReport({ userId: 'member-1', reportId: 'report-open' })).toEqual({ ok: true })
     expect(prismaMock.problemReportEvent.create).not.toHaveBeenCalled()
   })
 
+  it("refuses a report on a title outside the member's libraries", async () => {
+    jest.mocked(readMemberItem).mockResolvedValue({ ok: false, reason: 'NOT_FOUND' })
+
+    expect(await followProblemReport({ userId: 'member-1', reportId: 'report-open' })).toEqual({ ok: false, refusal: 'NOT_FOUND' })
+    expect(prismaMock.problemReportEvent.create).not.toHaveBeenCalled()
+  })
+
   it('refuses a report that is closed or unknown', async () => {
+    prismaMock.problemReport.findFirst.mockReset()
     prismaMock.problemReport.findFirst.mockResolvedValue(null)
 
     expect(await followProblemReport({ userId: 'member-1', reportId: 'report-gone' })).toEqual({ ok: false, refusal: 'NOT_FOUND' })
