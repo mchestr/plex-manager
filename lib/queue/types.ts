@@ -497,7 +497,8 @@ interface JobPayloads {
   /** The run (`runToken`) and the step it is on; lib/problem-reports/run.ts reads everything else when it runs. */
   [JOB_TYPES.PROBLEM_REPORT_FIX]: ProblemReportFixPayload
   /** The member to tell, and the state the report reached. */
-  [JOB_TYPES.PROBLEM_REPORT_UPDATE]: { reportId: string; userId: string; status: "FIXED" | "CLOSED" }
+  /** `resolvedAt` is when it was fixed or closed, as ISO: a report that reopens and ends again is a new DM. */
+  [JOB_TYPES.PROBLEM_REPORT_UPDATE]: { reportId: string; userId: string; status: "FIXED" | "CLOSED"; resolvedAt: string }
   /** When the breaker tripped, as ISO; a later trip is a new alert. */
   [JOB_TYPES.PROBLEM_BREAKER_ALERT]: { trippedAt: string }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
@@ -560,7 +561,7 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   [JOB_TYPES.PROBLEM_REPORT_NOTIFY]: { deduplication: (data) => `problem-report:notify:${data.reportId}` },
   // Job ids, kept while BullMQ keeps the finished job (24 hours): a run, or a member's DM about one state, happens once
   [JOB_TYPES.PROBLEM_REPORT_FIX]: { jobId: (data) => `problem-report:fix:${data.reportId}:${data.runToken}` },
-  [JOB_TYPES.PROBLEM_REPORT_UPDATE]: { jobId: (data) => `problem-report:update:${data.reportId}:${data.userId}:${data.status}` },
+  [JOB_TYPES.PROBLEM_REPORT_UPDATE]: { jobId: (data) => `problem-report:update:${data.reportId}:${data.userId}:${data.status}:${data.resolvedAt}` },
   [JOB_TYPES.PROBLEM_BREAKER_ALERT]: { jobId: (data) => `problem-report:breaker:${data.trippedAt}` },
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
   [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },
