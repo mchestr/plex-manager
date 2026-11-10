@@ -1015,6 +1015,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - MCP endpoint (API tokens, connecting Claude Code, the tool catalog): See `docs/mcp.md`
 - Affiliate invites (tiers, slots, server cap, the switch): See `docs/affiliate-invites.md`
 - Inactive members (last seen from Tautulli, the inactivity sweep and its safety rules): See `docs/inactive-members.md`
+- Problem reports (members report a problem with a title from `/report`; the switch, the sheet, the rules): See `docs/problem-reports.md`
 - Email (the SMTP variables, the transport in `lib/email/`, the test email, unsubscribe links): See `docs/email.md`
 - Audit log (who can read it, categories, what Support sees): See `docs/roles.md` and `docs/privacy.md`
 - Appearance (server name, login subtitle, accent colour, uploaded logos and images): See `docs/appearance.md`

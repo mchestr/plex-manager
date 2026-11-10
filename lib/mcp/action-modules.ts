@@ -41,6 +41,7 @@ import * as discord from "@/actions/discord"
 import * as importPlexUsers from "@/actions/import-plex-users"
 import * as memberData from "@/actions/member-data"
 import * as onboarding from "@/actions/onboarding"
+import * as problemReports from "@/actions/problem-reports"
 import * as rewindExclusions from "@/actions/rewind-exclusions"
 import * as rewindGeneration from "@/actions/rewind-generation"
 import * as rewindNotify from "@/actions/rewind-notify"
@@ -87,6 +88,7 @@ export const ACTION_MODULES: Readonly<Record<string, Record<string, unknown>>> =
   "import-plex-users": importPlexUsers,
   "member-data": memberData,
   onboarding,
+  "problem-reports": problemReports,
   "rewind-exclusions": rewindExclusions,
   "rewind-generation": rewindGeneration,
   "rewind-notify": rewindNotify,

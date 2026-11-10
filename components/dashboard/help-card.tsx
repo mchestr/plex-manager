@@ -10,6 +10,8 @@ import { icons } from "@/lib/ui/icons"
 interface HelpCardProps {
   /** The Discord support channel, when the bot watches one; else the card links Help's support section. */
   supportChannelUrl: string | null
+  /** Problem reports are on: a row links to `/report`, in place of Help's support section. */
+  reportsEnabled: boolean
 }
 
 const rowClass =
@@ -25,8 +27,8 @@ function Row({ icon, end, children }: { icon: LucideIcon; end: LucideIcon; child
   )
 }
 
-/** Home's help card: the playback guide on `/help`, and where to ask for help. */
-export function HelpCard({ supportChannelUrl }: HelpCardProps) {
+/** Home's help card: the playback guide on `/help`, reporting a problem, and where to ask for help. */
+export function HelpCard({ supportChannelUrl, reportsEnabled }: HelpCardProps) {
   return (
     <Card aria-labelledby="home-help-title" role="region" data-testid="home-help-card">
       <CardHeader>
@@ -41,6 +43,13 @@ export function HelpCard({ supportChannelUrl }: HelpCardProps) {
             Open the quality guide
           </Row>
         </Link>
+        {reportsEnabled && (
+          <Link href={"/report" as Route} className={rowClass} data-testid="home-help-report">
+            <Row icon={icons.problemReport} end={icons.internalLink}>
+              Report a problem
+            </Row>
+          </Link>
+        )}
         {supportChannelUrl ? (
           <a
             href={supportChannelUrl}
@@ -54,11 +63,13 @@ export function HelpCard({ supportChannelUrl }: HelpCardProps) {
             </Row>
           </a>
         ) : (
-          <Link href={"/help#support" as Route} className={rowClass} data-testid="home-help-support">
-            <Row icon={icons.info} end={icons.internalLink}>
-              Report a problem
-            </Row>
-          </Link>
+          !reportsEnabled && (
+            <Link href={"/help#support" as Route} className={rowClass} data-testid="home-help-support">
+              <Row icon={icons.info} end={icons.internalLink}>
+                Report a problem
+              </Row>
+            </Link>
+          )
         )}
       </CardContent>
     </Card>

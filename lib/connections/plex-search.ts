@@ -25,6 +25,7 @@ const searchItemSchema = z.looseObject({
   thumb: optionalText,
   viewCount: optionalNumber,
   lastViewedAt: optionalNumber,
+  librarySectionID: z.union([z.string(), z.number()]).transform(String).optional().catch(undefined),
 })
 
 const searchResponseSchema = z.looseObject({
@@ -98,6 +99,7 @@ export async function searchPlexMedia(
       thumb: item.thumb,
       viewCount: item.viewCount,
       lastViewedAt: item.lastViewedAt,
+      librarySectionId: item.librarySectionID,
     }))
 
     const duration = Date.now() - startTime

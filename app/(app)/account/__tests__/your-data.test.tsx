@@ -23,6 +23,7 @@ const AT = '2026-12-01T09:00:00.000Z'
 const DATA: YourData = {
   marks: { page: 1, total: 1, rows: [{ id: 'mark-1', title: 'Arrival (2016)', mark: 'Finished watching', markedAt: AT }] },
   watchlist: { total: 1, rows: [{ id: 'item-1', title: 'Dune (2021)', at: AT }] },
+  reports: { total: 1, rows: [{ id: 'report-1', title: 'Heat (1995)', status: 'WITH_ADMIN', at: AT }] },
 }
 
 beforeEach(() => {
@@ -43,6 +44,16 @@ describe('YourDataSection', () => {
     expect(screen.getByText('Arrival (2016)')).toBeInTheDocument()
     expect(screen.getByText('Dune (2021)')).toBeInTheDocument()
     expect(screen.getByTestId('account-rewind-link')).toHaveAttribute('href', '/rewind')
+  })
+
+  it("lists the member's problem reports with their status, and hides the list when there are none", () => {
+    const { rerender } = render(<YourDataSection data={DATA} disclosure="" />)
+
+    expect(within(screen.getByTestId('account-reports-row-report-1')).getByText('Heat (1995)')).toBeInTheDocument()
+    expect(screen.getByTestId('account-reports-row-report-1')).toHaveTextContent('With the server admin')
+
+    rerender(<YourDataSection data={{ ...DATA, reports: { total: 0, rows: [] } }} disclosure="" />)
+    expect(screen.queryByTestId('account-reports')).not.toBeInTheDocument()
   })
 
   it("deletes a mark from its row's menu after a confirm", async () => {

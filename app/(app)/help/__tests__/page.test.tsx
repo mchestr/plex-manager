@@ -76,6 +76,25 @@ describe('HelpPage', () => {
     expect(screen.getByTestId('support-guide')).toHaveTextContent('Include the title')
   })
 
+  it('links Report a problem to /report while problem reports are on, keeping the Discord links', async () => {
+    setup({ discord: true })
+    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: 'problem-reports', enabled: true, updatedAt: new Date(), updatedBy: null })
+
+    render(await HelpPage())
+
+    expect(screen.getByTestId('support-guide-report')).toHaveAttribute('href', '/report')
+    expect(screen.getByTestId('support-guide')).not.toHaveTextContent('Include the title')
+    expect(screen.getByTestId('support-guide-channel')).toBeInTheDocument()
+  })
+
+  it('keeps the written guidance while problem reports are off', async () => {
+    setup()
+
+    render(await HelpPage())
+
+    expect(screen.queryByTestId('support-guide-report')).not.toBeInTheDocument()
+  })
+
   it('never shows admin hints', async () => {
     setup({ publicUrl: 'https://requests.example.com', discord: true })
 
