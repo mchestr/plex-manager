@@ -14,9 +14,11 @@
  * 4. Only then the state: `deleting` gives `CLEANUP_DELETING`, a state other
  *    than `leaving` or `approved` gives `CLEANUP_NOT_LEAVING`. The rows of
  *    its cascade are read with it.
- * 5. The member's active Keeps are below the limit. Else `CLEANUP_KEEP_LIMIT`.
- * 6. The transaction of `writeKeep()`, with the deleting check of E33.
- * 7. A new Keep writes `CLEANUP_KEEP_ADDED` (the member is actor and target)
+ * 5. The transaction of `writeKeep()`: the member's active Keeps are below
+ *    the limit, counted under a lock on the member so that parallel Keeps
+ *    wait for each other (else `CLEANUP_KEEP_LIMIT`), and the deleting
+ *    check of E33.
+ * 6. A new Keep writes `CLEANUP_KEEP_ADDED` (the member is actor and target)
  *    and asks for a Plex collection sync. A repeated Keep returns the
  *    existing one and writes nothing.
  *
@@ -30,7 +32,6 @@ import { accessSeesRow, readKeepAccess } from "@/lib/cleanup/actions/keeps/acces
 import { readCascade, writeKeep } from "@/lib/cleanup/actions/keeps/keep-tx"
 import { keepLimit, type KeepsResult, plexSilent, refuse } from "@/lib/cleanup/actions/keeps/result"
 import { requestCollectionSync } from "@/lib/cleanup/collections/request"
-import { countActiveKeeps } from "@/lib/cleanup/protections"
 import { isLive, readCleanupSettingsRow } from "@/lib/cleanup/settings"
 import type { KeepCleanupTitleResult } from "@/lib/cleanup/types/actions"
 import { prisma } from "@/lib/prisma"
@@ -56,9 +57,8 @@ export async function keepTitle(itemKey: string, { userId, now }: { userId: stri
   if (row.state !== "leaving" && row.state !== "approved") return refuse("CLEANUP_NOT_LEAVING")
   const rows = await readCascade(row)
 
-  if ((await countActiveKeeps(prisma, userId, now)) >= members.keepLimit) return keepLimit(members.keepLimit)
-
-  const written = await writeKeep(itemKey, rows, { memberId: userId, keepDays: members.keepDays, now })
+  const written = await writeKeep(itemKey, rows, { memberId: userId, keepDays: members.keepDays, keepLimit: members.keepLimit, now })
+  if (written.kind === "limit") return keepLimit(members.keepLimit)
   if (written.kind === "deleting") return refuse("CLEANUP_DELETING")
   if (written.kind === "notLeaving") return refuse("CLEANUP_NOT_LEAVING")
 

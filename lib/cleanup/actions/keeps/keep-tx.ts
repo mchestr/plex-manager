@@ -2,21 +2,25 @@
  * The Keep write in one transaction (TS 10.3 `keepCleanupTitle` step 5,
  * E33, owner-r2-2, architecture-r4-4, safety-r3-1). Server-only.
  *
- * 1. Create the Keep with the `RestoreItem` of the kept row, so Undo can
+ * 1. Serialize the Keeps of one member (a transaction lock on the member,
+ *    `pg_advisory_xact_lock`), then count the member's active Keeps. At the
+ *    limit: `limit`, and nothing is written. Two Keeps at the same time
+ *    can never both pass the limit (security review S-01).
+ * 2. Create the Keep with the `RestoreItem` of the kept row, so Undo can
  *    bring the row back. An older Keep of the same key that has expired ends
  *    first. An active Keep of the member is returned as it is.
- * 2. Exit the kept row and every Leaving soon row of its cascade
+ * 3. Exit the kept row and every Leaving soon row of its cascade
  *    (`cascadeWhere()`, TS 5.4) as `rescued`, reason `kept`: a kept season
  *    takes out its show row, a kept show its season rows. Rows in `deleting`
  *    and `held` rows stay. Each exit matches the row as it was read.
- * 3. Deleting check: after the exits, count the rows of the cascade in
+ * 4. Deleting check: after the exits, count the rows of the cascade in
  *    `deleting`. Above 0, the whole transaction rolls back (no Keep, no
  *    exit): `deleting`.
- * 4. An exit that matches zero rows rolls back too. The rows are read again:
+ * 5. An exit that matches zero rows rolls back too. The rows are read again:
  *    a `deleting` row gives `deleting`, a kept row that left Leaving soon
  *    gives `notLeaving`, else the transaction runs once more on the fresh
  *    rows. A second zero-row exit gives `deleting`.
- * 5. Two Keeps of one title by one member at the same time: the second
+ * 6. Two Keeps of one title by one member at the same time: the second
  *    meets the unique index of `activeKey`, rolls back, and returns the
  *    first one's Keep.
  *
@@ -27,7 +31,7 @@ import "server-only"
 
 import { isUniqueError } from "@/lib/cleanup/actions/keeps/result"
 import { cascadeWhere } from "@/lib/cleanup/identity/keys"
-import { createKeep, keepActiveKey, type ProtectionTitle, restoreOf } from "@/lib/cleanup/protections"
+import { countActiveKeeps, createKeep, keepActiveKey, type ProtectionTitle, restoreOf } from "@/lib/cleanup/protections"
 import { ExitSkippedError, exitItem } from "@/lib/cleanup/run/exit"
 import { TRANSACTION_OPTIONS } from "@/lib/cleanup/run/show-raise"
 import type { CleanupItem, CleanupProtection } from "@/lib/generated/prisma/client"
@@ -41,10 +45,13 @@ type KeepWrite =
   | { kind: "kept"; keep: CleanupProtection; created: boolean; exited: number }
   | { kind: "deleting" }
   | { kind: "notLeaving" }
+  | { kind: "limit" }
 
 interface KeepWriteInput {
   memberId: string
   keepDays: number
+  /** The most active Keeps a member may hold. */
+  keepLimit: number
   now: Date
 }
 
@@ -81,8 +88,15 @@ export function readCascade(kept: Pick<CleanupItem, "itemKey" | "level" | "title
   return prisma.cleanupItem.findMany({ where: cascadeWhere({ itemKey: kept.itemKey, level: kept.level as Level, titleKey: kept.titleKey }) })
 }
 
+/** Waits for every other Keep transaction of the member, until this transaction ends. */
+async function lockMember(tx: PrismaTransactionClient, memberId: string): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`cleanup-keep:${memberId}`}, 0))`
+}
+
 async function write(tx: PrismaTransactionClient, kept: CleanupItem, rows: readonly CleanupItem[], input: KeepWriteInput): Promise<KeepWrite> {
-  const { memberId, keepDays, now } = input
+  const { memberId, keepDays, keepLimit, now } = input
+  await lockMember(tx, memberId)
+  if ((await countActiveKeeps(tx, memberId, now)) >= keepLimit) return { kind: "limit" }
   const made = await createKeep(tx, { title: titleOfRow(kept), memberId, keepDays, restore: restoreOf(kept, now), now })
   if (!made.created) return { kind: "kept", keep: made.keep, created: false, exited: 0 }
   const exiting = rows.filter((row) => LEAVING_STATES.includes(row.state))

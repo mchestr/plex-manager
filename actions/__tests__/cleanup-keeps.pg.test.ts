@@ -16,7 +16,10 @@
  *    commit, the exit matches zero rows, and the Keep rolls back.
  * 3. The Keep commits first: the act step's optimistic `deleting` write
  *    (`{ id, updatedAt }`) matches zero rows, so the act step skips the show.
- * 4. A member keeps an approved title, an admin pauses and resumes, and the
+ * 4. Four Keeps of one member at the same time at a Keep limit of 1: one
+ *    succeeds, the others wait for its lock and get `CLEANUP_KEEP_LIMIT`
+ *    (security review S-01).
+ * 5. A member keeps an approved title, an admin pauses and resumes, and the
  *    member presses Undo: the row comes back as `leaving` with no approval,
  *    at the hold (TS 8.12; safety review S-1).
  *
@@ -156,6 +159,31 @@ describePg("member Keeps against the act step on PostgreSQL", (databaseUrl) => {
     expect(await read(SEASON)).toMatchObject({ state: "leaving" })
   })
 
+  it("lets only one of four Keeps at the same time pass a Keep limit of 1", async () => {
+    const keys = [1, 2, 3, 4].map((n) => `movie:tmdb:${RUN}${n}`)
+    await mockDb.cleanupItem.createMany({ data: keys.map((key, n) => row(key, { id: `${RUN}-movie-${n}`, sectionId: "1" })) })
+    const members = { keepsEnabled: true, keepDays: 90, keepLimit: 1, pageEnabled: true }
+    await mockDb.cleanupSettings.update({ where: { id: "cleanup" }, data: { options: { members } } })
+    // Every call passes the plex.tv check before any of them writes
+    let arrived = 0
+    let open: () => void = () => {}
+    const gate = new Promise<void>((resolve) => (open = resolve))
+    jest.mocked(memberCleanupAccess).mockImplementation(async () => {
+      arrived += 1
+      if (arrived === keys.length) open()
+      await gate
+      return "all"
+    })
+    try {
+      const results = await Promise.all(keys.map((itemKey) => keepCleanupTitle({ itemKey })))
+      expect(results.map((r) => (r.success ? "ok" : r.code)).sort()).toEqual(["CLEANUP_KEEP_LIMIT", "CLEANUP_KEEP_LIMIT", "CLEANUP_KEEP_LIMIT", "ok"])
+      expect(await mockDb.cleanupProtection.count({ where: { memberId: MEMBER, kind: "memberKeep", status: "active" } })).toBe(1)
+      expect(await mockDb.cleanupItem.count({ where: { itemKey: { in: keys } } })).toBe(3)
+    } finally {
+      await mockDb.cleanupSettings.update({ where: { id: "cleanup" }, data: { options: {} } })
+    }
+  })
+
   it("makes the act step's optimistic deleting write match zero rows when the Keep commits first", async () => {
     jest.mocked(memberCleanupAccess).mockResolvedValue("all")
     const seen = await read(SHOW)
@@ -216,7 +244,7 @@ describePg("a Keep Undo after a pause and a Resume on PostgreSQL", (databaseUrl)
     const listed = buildMovieItem({ key: MOVIE, titleKey })
     mockLevel.mockResolvedValue({ byKey: new Map([[MOVIE, listed]]), items: [listed] })
 
-    const kept = await writeKeep(MOVIE, [row], { memberId: MEMBER, keepDays: 90, now: new Date() })
+    const kept = await writeKeep(MOVIE, [row], { memberId: MEMBER, keepDays: 90, keepLimit: 20, now: new Date() })
     if (kept.kind !== "kept") throw new Error(`The Keep gave ${kept.kind}`)
     await pauseAll(ADMIN, new Date())
     expect(await resumeAll(ADMIN, new Date())).toMatchObject({ status: "resumed" })
