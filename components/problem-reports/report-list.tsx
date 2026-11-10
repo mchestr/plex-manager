@@ -1,6 +1,8 @@
 "use client"
 
-import { cancelProblemReport } from "@/actions/problem-reports"
+import { useTransition } from "react"
+
+import { askServerAdmin, cancelProblemReport } from "@/actions/problem-reports"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { StatusBadge } from "@/components/ui/status-badge"
@@ -8,10 +10,28 @@ import { useToast } from "@/components/ui/toast"
 import { useFormat } from "@/lib/format-context"
 import type { ReportRow } from "@/lib/member/problem-reports"
 
+/** "Ask the server admin", on the member's report that found no better copy. */
+function AskAdmin({ reportId }: { reportId: string }) {
+  const { showError, showSuccess } = useToast()
+  const [pending, startTransition] = useTransition()
+  const ask = () =>
+    startTransition(async () => {
+      const result = await askServerAdmin({ reportId })
+      if (result.success) showSuccess("Sent to the server admin")
+      else showError(result.error)
+    })
+  return (
+    <Button variant="secondary" size="sm" onClick={ask} loading={pending} loadingLabel="Sending" data-testid={`report-ask-${reportId}`}>
+      Ask the server admin
+    </Button>
+  )
+}
+
 /**
  * Your reports, newest first: each one's status, its latest step, the server
- * admin's note once they fixed or closed it (plain text), and Cancel while
- * nothing has run.
+ * admin's note once they fixed or closed it (plain text), Cancel while
+ * nothing has run, and Ask the server admin when Look for a better copy
+ * found none.
  */
 export function ReportList({ rows }: { rows: ReportRow[] }) {
   const format = useFormat()
@@ -49,6 +69,7 @@ export function ReportList({ rows }: { rows: ReportRow[] }) {
               sub={row.statusSub ?? undefined}
               data-testid={`report-row-status-${row.id}`}
             />
+            {row.canAsk && <AskAdmin reportId={row.id} />}
             {row.canCancel && (
               <ConfirmDialog
                 trigger={

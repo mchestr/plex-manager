@@ -20,7 +20,7 @@ const episode = (id: number, overrides: Partial<SonarrEpisode> = {}): SonarrEpis
   episodeFileId: id * 10,
   ...overrides,
 })
-const file = (id: number, relativePath: string): SonarrEpisodeFile => ({ id, relativePath, path: `/data/tv/Show/${relativePath}` })
+const file = (id: number, relativePath: string): Pick<SonarrEpisodeFile, "id" | "relativePath" | "path"> => ({ id, relativePath, path: `/data/tv/Show/${relativePath}` })
 
 const ON_PLEX = plexFileNames(["/tv/Show/Season 01/Show S01E01.mkv", "/tv/Show/Season 01/Show S01E02.MKV"])
 const FILES = [file(10, "Season 01/Show S01E01.mkv"), file(20, "Season 01/Show S01E02.mkv")]

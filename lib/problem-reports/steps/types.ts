@@ -17,8 +17,13 @@ export interface StepReport {
   plexRatingKey: string
 }
 
-/** Wait until `at` with these payload changes, the report is fixed, or it goes back to the server admin. */
+/**
+ * Wait until `at` with these payload changes, the report is fixed, it goes
+ * back to the server admin, or a better copy wasn't found (which closes a
+ * member's run, `lib/problem-reports/run.ts`).
+ */
 export type StepOutcome =
   | { next: { at: number; data: Partial<ProblemReportFixPayload> } }
   | { fixed: true }
   | { toAdmin: ToAdminReason }
+  | { noBetterCopy: true }

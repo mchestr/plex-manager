@@ -41,7 +41,7 @@ describe("gateAndRecord", () => {
     await expect(gateAndRecord(RUN, NOW)).resolves.toBeNull()
 
     expect(prismaMock.problemFixLedger.count).toHaveBeenCalledWith({
-      where: { action: { in: ["LOOK_FOR_MISSING"] }, startedAt: { gte: new Date("2026-11-08T20:00:00Z") } },
+      where: { action: { in: ["LOOK_FOR_MISSING", "BETTER_COPY"] }, startedAt: { gte: new Date("2026-11-08T20:00:00Z") } },
     })
     expect(prismaMock.problemFixLedger.create).toHaveBeenCalledWith({
       data: {

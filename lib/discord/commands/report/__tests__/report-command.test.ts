@@ -21,6 +21,8 @@ jest.mock("@/lib/problem-reports/access", () => ({
   readMemberItem: jest.fn(),
 }))
 jest.mock("@/lib/problem-reports/service", () => ({ reportProblem: jest.fn() }))
+jest.mock("@/lib/problem-reports/evidence", () => ({ memberLastPlay: jest.fn() }))
+jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
 jest.mock("@/lib/problem-reports/settings", () => ({ getProblemReportSettings: jest.fn() }))
 jest.mock("@/lib/discord/services", () => ({ verifyDiscordUser: jest.fn() }))
 jest.mock("@/lib/discord/config", () => ({ getDiscordPortalUrl: () => "https://plex.example.com/discord/link" }))
@@ -32,7 +34,9 @@ import type { MessageComponentInteraction } from "discord.js"
 
 import { searchPlexMedia, type PlexItemMetadata } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
+import { getActiveService } from "@/lib/data/active-service"
 import { verifyDiscordUser, type VerifyDiscordUserResult } from "@/lib/discord/services"
+import { memberLastPlay } from "@/lib/problem-reports/evidence"
 import { memberLibraryAccess, readMemberItem } from "@/lib/problem-reports/access"
 import { reportProblem } from "@/lib/problem-reports/service"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
@@ -46,7 +50,7 @@ const LINKED: VerifyDiscordUserResult = {
   entitled: true,
   user: { id: "member-1", name: "Member", email: null, plexUserId: "42", primaryAuthService: "plex", timezone: null, isAdmin: false },
 }
-const MOVIE: PlexItemMetadata = { ratingKey: "555", type: "movie", title: "Heat", year: 1995, ids: {}, librarySectionId: "1", parts: [], locations: [] }
+const MOVIE: PlexItemMetadata = { ratingKey: "555", type: "movie", title: "Heat", year: 1995, ids: {}, librarySectionId: "1", media: [], locations: [] }
 const SHOW: PlexItemMetadata = { ...MOVIE, ratingKey: "6999", type: "show", title: "The Office", year: 2005 }
 
 type Edited = { content: string; components: { components: { data: { customId: string; options?: { label: string; value: string }[]; label?: string } }[] }[] }
@@ -91,6 +95,8 @@ beforeEach(() => {
   jest.mocked(memberLibraryAccess).mockResolvedValue({ all: false, sections: new Set(["1"]) })
   jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: MOVIE, server: SERVER })
   jest.mocked(verifyDiscordUser).mockResolvedValue(LINKED)
+  jest.mocked(getActiveService).mockResolvedValue(null)
+  jest.mocked(memberLastPlay).mockResolvedValue(null)
 })
 
 describe("/report title:", () => {
@@ -216,6 +222,23 @@ describe("the steps", () => {
     expect(firstControl(edited(problem))).toMatchObject({ customId: "report:send:555:no_sound", label: "Send to the server admin" })
   })
 
+  it("confirms a blurry picture with Look for a better copy, or with the playback tip when the member's app converted it", async () => {
+    jest.mocked(getActiveService).mockImplementation((async (kind: string) => (kind === "radarr" ? { id: "radarr-1" } : null)) as never)
+    const blurry = component("report:problem:555:picture", { values: ["blurry"] })
+    await handleStep(blurry)
+    expect(edited(blurry).content).toBe("Heat \\(1995\\): Blurry or low quality.\nWe'll look for a better copy. If there isn't one, nothing changes.")
+    expect(firstControl(edited(blurry))).toMatchObject({ customId: "report:send:555:blurry", label: "Look for a better copy" })
+    expect(memberLastPlay).toHaveBeenCalledWith("42", expect.objectContaining({ ratingKey: "555", type: "movie" }))
+
+    jest.mocked(memberLastPlay).mockResolvedValue({ player: "Phone", transcoded: true, at: "2026-11-08T20:00:00.000Z" })
+    const converted = component("report:problem:555:picture", { values: ["blurry"] })
+    await handleStep(converted)
+    expect(edited(converted).content).toBe(
+      "Heat \\(1995\\): Blurry or low quality.\nYour Plex app converted this video while you watched, which lowers quality and can cause buffering. Get the best picture: https://plex.example.com/help#playback\nStill blurry with the quality set to Maximum? Send it to the server admin."
+    )
+    expect(firstControl(edited(converted))).toMatchObject({ customId: "report:send:555:blurry", label: "Send to the server admin" })
+  })
+
   it("hands Something else to the web, which takes the note", async () => {
     const kind = component("report:kind:555", { values: ["other"] })
 
@@ -240,13 +263,13 @@ describe("the steps", () => {
 
     await handleStep(send)
 
-    expect(reportProblem).toHaveBeenCalledWith({ userId: "member-1", ratingKey: "555", problem: "no_sound", note: null })
+    expect(reportProblem).toHaveBeenCalledWith({ userId: "member-1", ratingKey: "555", problem: "no_sound", note: null, toAdmin: false })
     expect(edited(send)).toEqual({ content: "Sent to the server admin. Follow it on the web: https://plex.example.com/report", components: [] })
   })
 
   it("says when Look for the episodes started, or answers instead of a report", async () => {
     jest.mocked(reportProblem)
-      .mockResolvedValueOnce({ ok: true, outcome: "fixing", reportId: "r1" })
+      .mockResolvedValueOnce({ ok: true, outcome: "fixing", reportId: "r1", action: "LOOK_FOR_MISSING" })
       .mockResolvedValueOnce({ ok: true, outcome: "answered", reportId: null, answer: { kind: "NOT_AIRED", season: 2, episode: 6, airsAt: "2026-11-14T20:00:00Z" } })
 
     const fixing = component("report:send:7001:missing_episodes")
@@ -256,6 +279,33 @@ describe("the steps", () => {
     const answered = component("report:send:7001:missing_episodes")
     await handleStep(answered)
     expect(edited(answered).content).toBe("Season 2, episode 6 comes out Nov 14.")
+  })
+
+  it("says when Look for a better copy started, or that the file is the best copy, with Send to the server admin", async () => {
+    jest.mocked(reportProblem)
+      .mockResolvedValueOnce({ ok: true, outcome: "fixing", reportId: "r1", action: "BETTER_COPY" })
+      .mockResolvedValueOnce({ ok: true, outcome: "answered", reportId: null, answer: { kind: "BEST_COPY" } })
+
+    const fixing = component("report:send:555:blurry")
+    await handleStep(fixing)
+    expect(edited(fixing).content).toBe(
+      "We'll look for a better copy now. The one you have keeps playing, and if there isn't a better one, nothing changes. Follow it on the web: https://plex.example.com/report"
+    )
+
+    const best = component("report:send:555:blurry")
+    await handleStep(best)
+    expect(edited(best).content).toBe("This is the best copy the server keeps.")
+    expect(firstControl(edited(best))).toMatchObject({ customId: "report:admin:555:blurry", label: "Send to the server admin" })
+  })
+
+  it("sends the report to the server admin anyway from that answer", async () => {
+    jest.mocked(reportProblem).mockResolvedValue({ ok: true, outcome: "reported", reportId: "r2" })
+    const anyway = component("report:admin:555:blurry")
+
+    await handleStep(anyway)
+
+    expect(reportProblem).toHaveBeenCalledWith({ userId: "member-1", ratingKey: "555", problem: "blurry", note: null, toAdmin: true })
+    expect(edited(anyway)).toEqual({ content: "Sent to the server admin. Follow it on the web: https://plex.example.com/report", components: [] })
   })
 
   it("says when the report joined the title's open one, or was refused", async () => {

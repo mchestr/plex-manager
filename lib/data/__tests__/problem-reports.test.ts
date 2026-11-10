@@ -149,11 +149,15 @@ describe("getProblemReport", () => {
     prismaMock.problemReport.findUnique
       .mockResolvedValueOnce({ ...DETAIL, problem: "missing_episodes", mediaType: "TV_SERIES" } as never)
       .mockResolvedValueOnce({ ...DETAIL } as never)
+      .mockResolvedValueOnce({ ...DETAIL, problem: "blurry" } as never)
       .mockResolvedValueOnce({ ...DETAIL, status: "FIXING", action: "LOOK_FOR_MISSING" } as never)
+      .mockResolvedValueOnce({ ...DETAIL, status: "FIXING", action: "BETTER_COPY" } as never)
 
     expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: "LOOK_FOR_MISSING", others: ["REFRESH"] }, running: null })
-    expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: null, others: ["REFRESH"] } })
+    expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: null, others: ["BETTER_COPY", "REFRESH"] } })
+    expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: "BETTER_COPY", others: ["REFRESH"] } })
     expect(await getProblemReport("report-1")).toMatchObject({ fixes: null, running: "Looking for the episodes" })
+    expect(await getProblemReport("report-1")).toMatchObject({ fixes: null, running: "Looking for a better copy" })
   })
 
   it("words a fix's steps on the timeline", async () => {

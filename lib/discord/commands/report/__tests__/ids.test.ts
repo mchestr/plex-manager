@@ -11,6 +11,7 @@ describe("reportIds and parseReportId", () => {
     expect(parseReportId(reportIds.kind("555"))).toEqual({ step: "kind", ratingKey: "555" })
     expect(parseReportId(reportIds.problem("555", "playback"))).toEqual({ step: "problem", ratingKey: "555", kind: "playback" })
     expect(parseReportId(reportIds.send("555", "no_sound"))).toEqual({ step: "send", ratingKey: "555", problem: "no_sound" })
+    expect(parseReportId(reportIds.admin("555", "blurry"))).toEqual({ step: "admin", ratingKey: "555", problem: "blurry" })
     expect(parseReportId(reportIds.watching("123456789012345678", "7001"))).toEqual({ step: "watching", discordUserId: "123456789012345678", ratingKey: "7001" })
   })
 
@@ -23,6 +24,7 @@ describe("reportIds and parseReportId", () => {
     "report:kind:../1",
     "report:kind:1234567890123",
     "report:send:555:not_a_problem",
+    "report:admin:555:not_a_problem",
     "report:problem:555:nonsense",
     "report:watching:abc:555",
     "report:title:extra",

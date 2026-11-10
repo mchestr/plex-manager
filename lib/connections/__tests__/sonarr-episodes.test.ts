@@ -3,7 +3,7 @@
  * don't parse, and the EpisodeSearch command for exactly the given episodes.
  */
 
-import { listSonarrEpisodeFiles, listSonarrEpisodes, searchSonarrEpisodes } from "@/lib/connections/sonarr-episodes"
+import { getSonarrSeriesState, listSonarrEpisodeFiles, listSonarrEpisodes, searchSonarrEpisodes } from "@/lib/connections/sonarr-episodes"
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
@@ -74,5 +74,38 @@ describe("searchSonarrEpisodes", () => {
     expect((await searchSonarrEpisodes(CONFIG, [])).success).toBe(false)
     expect((await searchSonarrEpisodes(CONFIG, [1.5])).success).toBe(false)
     expect(mockFetch).not.toHaveBeenCalled()
+  })
+})
+
+describe("getSonarrSeriesState", () => {
+  it("reads whether the series is monitored and its quality profile", async () => {
+    mockFetch.mockResolvedValue(respond(200, { id: 42, title: "The Office", monitored: true, qualityProfileId: 6 }))
+
+    expect(await getSonarrSeriesState(CONFIG, 42)).toEqual({ success: true, data: { id: 42, monitored: true, qualityProfileId: 6 } })
+    expect(mockFetch.mock.calls[0][0]).toBe("http://sonarr.local:8989/api/v3/series/42")
+  })
+
+  it("refuses a series id that isn't a positive whole number", async () => {
+    expect(await getSonarrSeriesState(CONFIG, 0)).toEqual({ success: false, error: "Invalid Sonarr request parameters" })
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+})
+
+describe("listSonarrEpisodeFiles quality", () => {
+  it("reads each file's size and quality against the profile, null where Sonarr sends none", async () => {
+    mockFetch.mockResolvedValue(
+      respond(200, [
+        { id: 5, relativePath: "Season 01/S01E01.mkv", size: 900, qualityCutoffNotMet: false, customFormatScore: 35 },
+        { id: 6, relativePath: "Season 01/S01E02.mkv" },
+      ])
+    )
+
+    expect(await listSonarrEpisodeFiles(CONFIG, 42)).toEqual({
+      success: true,
+      data: [
+        { id: 5, relativePath: "Season 01/S01E01.mkv", path: null, size: 900, qualityCutoffNotMet: false, customFormatScore: 35 },
+        { id: 6, relativePath: "Season 01/S01E02.mkv", path: null, size: null, qualityCutoffNotMet: null, customFormatScore: null },
+      ],
+    })
   })
 })

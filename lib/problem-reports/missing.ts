@@ -37,7 +37,7 @@ export type MissingDecision =
 export interface MissingInput {
   now: Date
   episodes: readonly SonarrEpisode[]
-  files: readonly SonarrEpisodeFile[]
+  files: readonly Pick<SonarrEpisodeFile, "id" | "relativePath" | "path">[]
   /** The names of every file Plex has for the show, from {@link plexFileNames}. */
   plexFiles: ReadonlySet<string>
   /** Only these episodes, by Sonarr id: the ones a run is waiting for. */

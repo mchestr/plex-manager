@@ -28,7 +28,7 @@ jest.mock('@/lib/problem-reports/access', () => ({
 }))
 
 const SERVER = { name: 'Home', url: 'http://plex.local:32400', token: 'owner-token', adminPlexUserId: 'owner', machineIdentifier: 'm' }
-const SHOW: PlexItemMetadata = { ratingKey: '6999', type: 'show', title: 'The Office', year: 2005, guid: 'plex://show/office', ids: {}, librarySectionId: '2', parts: [], locations: [] }
+const SHOW: PlexItemMetadata = { ratingKey: '6999', type: 'show', title: 'The Office', year: 2005, guid: 'plex://show/office', ids: {}, librarySectionId: '2', media: [], locations: [] }
 const AT = new Date('2026-11-09T15:00:00Z')
 
 beforeEach(() => {
@@ -64,9 +64,9 @@ describe('getReportPageData', () => {
     const { reports } = await getReportPageData('member-1', {})
 
     expect(reports).toEqual([
-      { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: AT.toISOString() }, canCancel: true, statusSub: null, note: null },
-      { id: 'followed', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: "You're following it", at: AT.toISOString() }, canCancel: false, statusSub: null, note: null },
-      { id: 'cancelled', title: 'Heat (1995)', problem: "Won't start", status: 'CLOSED', latest: { words: 'You cancelled it', at: AT.toISOString() }, canCancel: false, statusSub: 'Cancelled', note: null },
+      { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: AT.toISOString() }, canCancel: true, canAsk: false, statusSub: null, note: null },
+      { id: 'followed', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: "You're following it", at: AT.toISOString() }, canCancel: false, canAsk: false, statusSub: null, note: null },
+      { id: 'cancelled', title: 'Heat (1995)', problem: "Won't start", status: 'CLOSED', latest: { words: 'You cancelled it', at: AT.toISOString() }, canCancel: false, canAsk: false, statusSub: 'Cancelled', note: null },
       {
         id: 'cancelled-followed',
         title: 'Heat (1995)',
@@ -74,6 +74,7 @@ describe('getReportPageData', () => {
         status: 'CLOSED',
         latest: { words: 'The member who reported it cancelled it', at: AT.toISOString() },
         canCancel: false,
+        canAsk: false,
         statusSub: 'By the member who reported it',
         note: null,
       },
@@ -95,6 +96,28 @@ describe('getReportPageData', () => {
     ])
   })
 
+  it('says when a better copy came, or none did, and lets the member who reported it ask the server admin once', async () => {
+    const report = { problem: 'blurry', title: 'Heat', year: 1995, showTitle: null, seasonNumber: null, episodeNumber: null, createdAt: AT, memberNote: null }
+    const none = { kind: 'CLOSED', data: { reason: 'no_better_copy' }, createdAt: AT }
+    prismaMock.problemReport.findMany.mockResolvedValue([
+      { ...report, id: 'better', reporterId: 'member-1', status: 'FIXED', action: 'BETTER_COPY', events: [{ kind: 'FIXED', data: { reason: 'fix', action: 'BETTER_COPY' }, createdAt: AT }] },
+      { ...report, id: 'none', reporterId: 'member-1', status: 'CLOSED', action: 'BETTER_COPY', events: [none] },
+      { ...report, id: 'none-followed', reporterId: 'member-2', status: 'CLOSED', action: 'BETTER_COPY', events: [none] },
+      { ...report, id: 'asked', reporterId: 'member-1', status: 'WITH_ADMIN', action: 'BETTER_COPY', events: [{ kind: 'REOPENED', data: null, createdAt: AT }] },
+      { ...report, id: 'asked-followed', reporterId: 'member-2', status: 'WITH_ADMIN', action: 'BETTER_COPY', events: [{ kind: 'REOPENED', data: null, createdAt: AT }] },
+    ] as never)
+
+    const { reports } = await getReportPageData('member-1', {})
+
+    expect(reports.map(({ id, latest, statusSub, canAsk }) => ({ id, words: latest.words, statusSub, canAsk }))).toEqual([
+      { id: 'better', words: 'A better copy is on the server now', statusSub: null, canAsk: false },
+      { id: 'none', words: "We looked, but there's no better copy right now", statusSub: 'No better copy right now', canAsk: true },
+      { id: 'none-followed', words: "We looked, but there's no better copy right now", statusSub: 'No better copy right now', canAsk: false },
+      { id: 'asked', words: 'You sent it to the server admin', statusSub: null, canAsk: false },
+      { id: 'asked-followed', words: "It's with the server admin now", statusSub: null, canAsk: false },
+    ])
+  })
+
   it("shows the server admin's note to the member who reported it, and only to them", async () => {
     const report = { problem: 'wont_start', title: 'Heat', year: 1995, showTitle: null, seasonNumber: null, episodeNumber: null, createdAt: AT, memberNote: 'Swapped the copy.' }
     prismaMock.problemReport.findMany.mockResolvedValue([
@@ -111,7 +134,7 @@ describe('getReportPageData', () => {
       { id: 'followed', words: 'The server admin fixed it', statusSub: null, note: null },
     ])
     expect(prismaMock.problemReport.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ select: expect.objectContaining({ events: expect.objectContaining({ where: { OR: [{ kind: { in: ['CLOSED', 'FIXED'] } }, { kind: 'ALSO_REPORTED', actorUserId: 'member-1' }] } }) }) })
+      expect.objectContaining({ select: expect.objectContaining({ events: expect.objectContaining({ where: { OR: [{ kind: { in: ['CLOSED', 'FIXED', 'REOPENED'] } }, { kind: 'ALSO_REPORTED', actorUserId: 'member-1' }] } }) }) })
     )
   })
 
@@ -149,8 +172,8 @@ describe('getReportPageData', () => {
     })
   })
 
-  it("opens a show's sheet with its episodes and its open report, and looks for missing episodes with Sonarr set up", async () => {
-    jest.mocked(getActiveService).mockResolvedValue({ id: 'sonarr-1' } as never)
+  it("opens a show's sheet with its episodes and its open report, and says which fixers are set up", async () => {
+    jest.mocked(getActiveService).mockImplementation((async (kind: string) => (kind === 'sonarr' ? { id: 'sonarr-1' } : null)) as never)
     jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: SHOW, server: SERVER })
     jest.mocked(getPlexShowEpisodes).mockResolvedValue({ ok: true, episodes: [{ ratingKey: '7001', title: 'Pilot', seasonNumber: 1, episodeNumber: 1, files: [] }] })
     prismaMock.problemReport.findUnique.mockResolvedValue({ id: 'open', reporterId: 'member-2', problem: 'missing_episodes', status: 'WITH_ADMIN', updatedAt: AT, events: [] } as never)
@@ -164,9 +187,10 @@ describe('getReportPageData', () => {
       episodes: [{ ratingKey: '7001', label: 'S1E1: Pilot' }],
       openReport: { id: 'open', problem: 'Episodes are missing', status: 'WITH_ADMIN', since: AT.toISOString(), yours: false },
       lastPlay: null,
-      looksForMissing: true,
+      fixers: { radarr: false, sonarr: true },
     })
     expect(getActiveService).toHaveBeenCalledWith('sonarr')
+    expect(getActiveService).toHaveBeenCalledWith('radarr')
     expect(memberLastPlay).toHaveBeenCalledWith('member-plex', expect.objectContaining({ ratingKey: '6999', type: 'show' }))
     expect(prismaMock.problemReport.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { activeKey: 'plex://show/office' } }))
   })

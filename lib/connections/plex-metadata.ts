@@ -1,6 +1,6 @@
 /**
- * One Plex item's metadata: its external ids, library section, files and
- * folders.
+ * One Plex item's metadata: its external ids, library section, versions and
+ * their files, and folders.
  *
  * ## Overview
  *
@@ -37,6 +37,9 @@ const optionalKey = keySchema.optional().catch(undefined)
 
 const partSchema = z.looseObject({ file: z.string(), size: z.number().optional().catch(undefined) })
 
+/** Plex's `proxyType` for a version it made itself with Optimize. */
+const OPTIMIZED_PROXY = 42
+
 const itemSchema = z.looseObject({
   ratingKey: keySchema,
   type: z.string(),
@@ -50,7 +53,10 @@ const itemSchema = z.looseObject({
   parentIndex: z.number().int().optional().catch(undefined),
   index: z.number().int().optional().catch(undefined),
   Guid: z.array(z.looseObject({ id: z.string() })).optional().catch(undefined),
-  Media: z.array(z.looseObject({ Part: z.array(partSchema).optional().catch(undefined) })).optional().catch(undefined),
+  Media: z
+    .array(z.looseObject({ proxyType: z.number().optional().catch(undefined), Part: z.array(partSchema).optional().catch(undefined) }))
+    .optional()
+    .catch(undefined),
   Location: z.array(z.looseObject({ path: z.string() })).optional().catch(undefined),
 })
 
@@ -60,6 +66,12 @@ const responseSchema = z.looseObject({
     Metadata: z.array(itemSchema).min(1),
   }),
 })
+
+/** One version of an item: its files (several for a multi-part item), and whether Plex made it with Optimize. */
+interface PlexMedia {
+  optimized: boolean
+  parts: { file: string; size?: number }[]
+}
 
 /** What the server holds for one item. */
 export interface PlexItemMetadata {
@@ -80,8 +92,8 @@ export interface PlexItemMetadata {
   showTitle?: string
   seasonNumber?: number
   episodeNumber?: number
-  /** Every file of every version, as the server sees it. */
-  parts: { file: string; size?: number }[]
+  /** Every version, with its files as the server sees them. */
+  media: PlexMedia[]
   /** A show's folders. */
   locations: string[]
 }
@@ -131,7 +143,10 @@ export async function getPlexItemMetadata(
       showTitle: item.grandparentTitle,
       seasonNumber: item.parentIndex,
       episodeNumber: item.index,
-      parts: (item.Media ?? []).flatMap((media) => media.Part ?? []).map(({ file, size }) => ({ file, size })),
+      media: (item.Media ?? []).map((media) => ({
+        optimized: media.proxyType === OPTIMIZED_PROXY,
+        parts: (media.Part ?? []).map(({ file, size }) => ({ file, size })),
+      })),
       locations: (item.Location ?? []).map((location) => location.path),
     },
   }

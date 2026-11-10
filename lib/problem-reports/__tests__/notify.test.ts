@@ -52,12 +52,22 @@ describe("adminAlertText", () => {
 })
 
 describe("memberUpdateText", () => {
-  const update = { own: true, status: "FIXED" as const, by: "fix" as const, title: "The Office (2005)", hasNote: false }
+  const update = { own: true, status: "FIXED" as const, by: "fix" as const, action: "LOOK_FOR_MISSING" as const, title: "The Office (2005)", hasNote: false }
   const link = "\nYour reports: <https://plex.example.com/report>"
 
   it("says a fix found the missing episodes, for the member and their followers alike", () => {
     expect(memberUpdateText(update, BASE)).toBe(`The Office \\(2005\\) has the missing episodes now.${link}`)
     expect(memberUpdateText({ ...update, own: false }, BASE)).toBe(`The Office \\(2005\\) has the missing episodes now.${link}`)
+  })
+
+  it("says a better copy came, or that none did, and where the member who reported it can ask the server admin", () => {
+    const heat = { ...update, action: "BETTER_COPY" as const, title: "Heat (1995)" }
+    expect(memberUpdateText(heat, BASE)).toBe(`A better copy of Heat \\(1995\\) is on the server now.${link}`)
+    expect(memberUpdateText({ ...heat, status: "CLOSED" }, BASE)).toBe(
+      `We looked for a better copy of Heat \\(1995\\), but there isn't one right now. If it still looks poor, you can ask the server admin from your reports.${link}`
+    )
+    expect(memberUpdateText({ ...heat, status: "CLOSED", own: false }, BASE)).toBe(`We looked for a better copy of Heat \\(1995\\), but there isn't one right now.${link}`)
+    expect(memberUpdateText({ ...heat, action: undefined }, BASE)).toBe(`Heat \\(1995\\) is fixed.${link}`)
   })
 
   it("says the server admin fixed or closed it, and mentions a note only to the member who reported it", () => {
