@@ -123,5 +123,7 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `E2E_DATABASE_URL` |  |  | Test only: the Playwright database; its name must end in _test, and the suite wipes it. |
 | `E2E_PORT` |  | `3100` | Test only: the Playwright web server port. |
 | `E2E_SMTP_PORT` |  | `2526` | Test only: the port of the Playwright SMTP sink, which the web server's SMTP_URL names. |
+| `E2E_PLEX_TV_PORT` |  | `2527` | Test only: the port of the Playwright plex.tv mock, which the web server's E2E_PLEX_TV_URL names. |
+| `E2E_PLEX_TV_URL` |  |  | Test only: a local plex.tv mock that the library share list is read from instead of plex.tv. Used only with E2E_TEST_MODE="true" and a loopback http:// address; playwright.config.ts sets it. Never set it in .env. |
 | `SKIP_CONNECTION_TESTS` |  |  | Test only: "true" skips live Plex checks. |
 | `ENABLE_DEV_UI` |  |  | Development only: "1" serves the /dev/ui primitives sheet (Playwright sets it). |
