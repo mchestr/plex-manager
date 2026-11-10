@@ -287,6 +287,10 @@ test.describe('Admin media cleanup: turn on a rule', () => {
     await other.getByTestId('admin-cleanup-editor-rename-input').fill(`${DRY.name} again`);
     await other.getByTestId('admin-cleanup-editor-rename-save').click();
     await expect(other.getByRole('heading', { level: 1 })).toContainText(`${DRY.name} again`);
+    // A rename changes the draft only: Save writes it, and the rule revision moves on
+    const saved = await ruleRow(DRY.id);
+    await other.getByTestId('admin-cleanup-editor-save').click();
+    await expect.poll(async () => (await ruleRow(DRY.id)).revision, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT }).toBe(saved.revision + 1);
     await other.close();
 
     await confirm(page).click();
