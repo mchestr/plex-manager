@@ -142,4 +142,14 @@ describe("decideMatchForMember", () => {
     await expect(decideMatchForMember(SERVER, MOVIE)).resolves.toBeNull()
     expect(checkMatch).not.toHaveBeenCalled()
   })
+
+  it("fixes the match for a member whose swaps need approval, past the swap limits and while the breaker is tripped, since a match changes no file", async () => {
+    jest.mocked(checkMatch).mockResolvedValue(DIFFERS)
+    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ ...settings("ON"), breakerTrippedAt: NOW } as never)
+    prismaMock.user.findUnique.mockResolvedValue({ swapsNeedApproval: true, plexUserId: "42" } as never)
+    jest.mocked(readSwapLedger).mockResolvedValue({ ...LEDGER, memberSwaps: [NOW, NOW, NOW], serverToday: 10 })
+
+    await expect(decideMatchForMember(SERVER, MOVIE)).resolves.toEqual({ startsFix: true })
+    await expect(memberFixesFor(TITLE, day, NOW)).resolves.toMatchObject({ matchFixes: true })
+  })
 })

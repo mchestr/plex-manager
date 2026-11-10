@@ -1,8 +1,8 @@
 /**
  * What the gates of a fix that replaces a file (a swap's two, a removal's
- * one) check again, in the same serializable transaction that records the
- * run or marks it replacing (docs/problem-reports.md, "Checked again before
- * a grab or a delete"):
+ * one), and of a member's fix of the Plex match, check again, in the same
+ * serializable transaction that records the run or marks it replacing
+ * (docs/problem-reports.md, "Checked again before a fix acts"):
  *
  * - **A member's swap** (`automatic`): automatic swaps are still in the mode
  *   it was claimed under and haven't changed since, so changing the mode
@@ -10,6 +10,10 @@
  *   the ledger and the member's "Swaps need approval". Before the grab the
  *   run's own row is left out of the title's count. Evidence isn't read
  *   again: it was the reason to start.
+ * - **A member's fix of the Plex match** (`automatic`): members' swaps are
+ *   still On and haven't changed since it was claimed. A match changes no
+ *   file, so no swap limit applies; the gate's hourly cap on Plex changes
+ *   does.
  * - **An admin's tap** (`web` or `mcp`, a swap or a removal): the admin is
  *   still an admin at each gate, and the run reached its first gate within
  *   15 minutes of the tap, as in `lib/queue/jobs/member-activity.ts`. A step
@@ -78,6 +82,12 @@ async function memberSwap(tx: PrismaTransactionClient, run: RecheckedRun, now: D
   return decided.ok ? null : AT_RUN_TIME[decided.reason]
 }
 
+async function memberMatch(tx: PrismaTransactionClient, run: RecheckedRun): Promise<RecheckRefusal | null> {
+  const settings = await getSwapSettings(tx)
+  const changed = settings.automaticSince !== null && (run.claimedAt ?? 0) < settings.automaticSince.getTime()
+  return settings.automatic !== "ON" || changed ? "AUTO_CHANGED" : null
+}
+
 async function adminTap(tx: PrismaTransactionClient, run: RecheckedRun, now: Date, step: GateStep): Promise<RecheckRefusal | null> {
   const actor = run.actorUserId ? await tx.user.findUnique({ where: { id: run.actorUserId }, select: { isAdmin: true } }) : null
   if (!actor?.isAdmin) return "NOT_ADMIN"
@@ -88,6 +98,7 @@ async function adminTap(tx: PrismaTransactionClient, run: RecheckedRun, now: Dat
 /** The refusal a gate hands back, or `null` when the run may act; see the module comment. */
 export async function recheckRun(tx: PrismaTransactionClient, run: RecheckedRun, now: Date, step: GateStep): Promise<RecheckRefusal | null> {
   if (run.action === "SWAP" && run.trigger === "automatic") return memberSwap(tx, run, now, step)
+  if (run.action === "FIX_MATCH" && run.trigger === "automatic") return memberMatch(tx, run)
   if ((run.action === "SWAP" || run.action === "REMOVE_AND_SEARCH") && run.trigger !== "automatic") return adminTap(tx, run, now, step)
   return null
 }

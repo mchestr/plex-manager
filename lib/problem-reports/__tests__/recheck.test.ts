@@ -1,6 +1,7 @@
 /**
- * What a swap's or a removal's gates check again in their transaction: a
- * member's swap against the mode it was claimed under and the limits, and an
+ * What a swap's, a removal's and a member's match fix's gates check again in
+ * their transaction: a member's swap against the mode it was claimed under
+ * and the limits, a member's match fix against the mode alone, and an
  * admin's tap against its 15 minutes and the admin still being one.
  */
 
@@ -102,8 +103,33 @@ describe("an admin's tap", () => {
   })
 })
 
-it("checks nothing for a fix that never replaces a file", async () => {
+describe("a member's fix of the Plex match", () => {
+  const MATCH_RUN = { ...MEMBER_RUN, action: "FIX_MATCH" as const }
+
+  it("runs while members' swaps are still On as it was claimed, with no swap limits or approval", async () => {
+    jest.mocked(readSwapLedger).mockResolvedValue({ ...LEDGER, memberSwaps: [NOW, NOW, NOW], serverToday: 10 })
+    prismaMock.user.findUnique.mockResolvedValue({ swapsNeedApproval: true } as never)
+
+    await expect(recheckRun(TX, MATCH_RUN, NOW, "record")).resolves.toBeNull()
+    expect(readSwapLedger).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["members' swaps were turned off", { automatic: "OFF" }, {}],
+    ["they're in Dry run now", { automatic: "DRY_RUN" }, {}],
+    ["the mode changed after the member asked", { automaticSince: new Date(NOW.getTime() - 1000) }, {}],
+    ["it was claimed before claims were timed", {}, { claimedAt: undefined }],
+  ])("stops when %s, so changing the mode never runs a backlog", async (_label, settings, run) => {
+    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ ...SETTINGS, ...settings } as never)
+
+    await expect(recheckRun(TX, { ...MATCH_RUN, ...run }, NOW, "record")).resolves.toBe("AUTO_CHANGED")
+  })
+})
+
+it("checks nothing for an admin's match or refresh, or a member's other fixes", async () => {
   await expect(recheckRun(TX, { ...MEMBER_RUN, action: "BETTER_COPY" }, NOW, "record")).resolves.toBeNull()
   await expect(recheckRun(TX, { ...ADMIN_RUN, action: "FIX_MATCH", claimedAt: undefined }, NOW, "record")).resolves.toBeNull()
+  await expect(recheckRun(TX, { ...MEMBER_RUN, action: "REFRESH", claimedAt: undefined }, NOW, "record")).resolves.toBeNull()
   expect(prismaMock.user.findUnique).not.toHaveBeenCalled()
+  expect(prismaMock.problemReportSettings.findUnique).not.toHaveBeenCalled()
 })

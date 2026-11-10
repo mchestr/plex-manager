@@ -15,7 +15,9 @@
  * - **A different title playing** (`decideMatchForMember`): with members'
  *   swaps on, Plex's match is checked (`checkMatch`). On, a match that
  *   differs is fixed on its own; in Dry run, and when the match agrees or
- *   can't be told, the server admin hears what the check found.
+ *   can't be told, the server admin hears what the check found. No swap
+ *   limit or "Swaps need approval" applies: a match changes no file, and
+ *   the hourly cap on Plex changes counts it.
  *
  * A member played the title recently when Tautulli has their play of it in
  * the last 30 days, or they're streaming it now.
