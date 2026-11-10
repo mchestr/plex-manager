@@ -20,6 +20,7 @@ import { matchTotals } from "@/lib/cleanup/engine/near-miss"
 import type { CompiledRule, EvalContext, HistogramBucket } from "@/lib/cleanup/engine/types"
 import { anyFieldMeta, withPreset } from "@/lib/cleanup/fields/catalog"
 import { NOUNS } from "@/lib/cleanup/fields/words"
+import { thresholdText } from "@/lib/cleanup/preview/condition-words"
 import type { SnapshotItem } from "@/lib/cleanup/schema/snapshot"
 import type { PreviewFocus } from "@/lib/cleanup/types/preview"
 import { DEFAULT_LOCALE, formatBytes, formatDate } from "@/lib/utils/format"
@@ -34,6 +35,11 @@ const DATE_WORDS = {
   "request.age": "Requested",
   "show.lastEpisodeAdded": "Newest episode",
 } as const
+
+/** The passing range of a histogram condition as words: its field label in lower case and its threshold. */
+function passingRange(c: Condition, label: string): string {
+  return `${label.charAt(0).toLowerCase()}${label.slice(1)} ${thresholdText(c)}`
+}
 
 /** The threshold of a condition in `measure()` units, with its side, or null for a field with no histogram. */
 function threshold(c: Condition): { low: boolean; value: number } | null {
@@ -122,9 +128,11 @@ export function previewFocus({ compiled, items, ctx, conditionId }: FocusInput):
     matches: matchTotals(replaceCondition(compiled, withPreset(c, preset.value)), items, ctx).matches,
   }))
   const unknownText = unknown === 0 ? "" : ` ${unknown} ${unknown === 1 ? "is" : "are"} unknown.`
+  // The text form of the passing bars names their range (UX 4.4, 8.4): "...: last played more than 1 year ago, or never."
+  const range = list.length > 0 ? `: ${passingRange(c, meta.label(level))}` : ""
   const focus: PreviewFocus = {
     buckets: list.map((bucket, i) => ({ label: bucket.label, count: counts[i], passes: bucketPasses(c, bucket) })),
-    summary: `${passing} of ${plural(items.length, level)} pass this condition.${unknownText}`,
+    summary: `${passing} of ${plural(items.length, level)} pass this condition${range}.${unknownText}`,
     presets,
   }
   const date = computedDate(c, ctx)

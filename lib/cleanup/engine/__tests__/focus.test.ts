@@ -27,7 +27,7 @@ describe("previewFocus buckets", () => {
   it("puts a re-added title in the bucket of the date that decides it, so a failing item never sits in a passing bucket (correctness review C-06)", () => {
     const readded = buildMovieItem({ key: "movie:tmdb:9", added: { plex: daysAgo(10), arr: daysAgo(700) } })
     const focus = focusOf(buildCondition("library.added", { op: "lessThan", value: { duration: { amount: 30, unit: "days" } } }), [readded])
-    expect(focus?.summary).toBe("0 of 1 movie pass this condition.")
+    expect(focus?.summary).toBe("0 of 1 movie pass this condition: added less than 30 days ago.")
     expect(focus?.buckets.filter((b) => b.count > 0)).toEqual([expect.objectContaining({ count: 1, passes: false })])
   })
 
@@ -70,9 +70,10 @@ describe("previewFocus buckets", () => {
     const unknown = buildMovieItem({ key: "movie:tmdb:99", plays: null })
     const focus = focusOf(buildCondition("watch.lastPlayed"), [...ITEMS, unknown])
     expect(focus?.buckets.reduce((n, b) => n + b.count, 0)).toBe(7)
-    expect(focus?.summary).toBe("3 of 8 movies pass this condition. 1 is unknown.")
+    // The text form of the passing bars names their range (UX 4.4, 8.4; UX review UX-07)
+    expect(focus?.summary).toBe("3 of 8 movies pass this condition: last played more than 365 days ago, or never. 1 is unknown.")
     const two = focusOf(buildCondition("watch.lastPlayed"), [...ITEMS, unknown, { ...unknown, key: "movie:tmdb:98" }])
-    expect(two?.summary).toBe("3 of 9 movies pass this condition. 2 are unknown.")
+    expect(two?.summary).toBe("3 of 9 movies pass this condition: last played more than 365 days ago, or never. 2 are unknown.")
   })
 
   it("gives fields with no histogram no buckets, and the summary still counts", () => {

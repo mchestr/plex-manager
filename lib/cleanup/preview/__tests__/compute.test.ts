@@ -103,7 +103,7 @@ describe("computePreview", () => {
   it("adds the focus of an open condition", () => {
     const preview = computePreview(buildRequest(DRAFT, { focus: { conditionId: "c1" } }), previewData(MOVIES))
     expect(preview.focus?.presets).toHaveLength(4)
-    expect(preview.focus?.summary).toMatch(/^\d+ of 120 movies pass this condition\./)
+    expect(preview.focus?.summary).toMatch(/^\d+ of 120 movies pass this condition: last played more than 365 days ago, or never\./)
     expect(computePreview(buildRequest(DRAFT, { focus: { conditionId: "c9" } }), previewData(MOVIES)).focus).toBeUndefined()
   })
 
