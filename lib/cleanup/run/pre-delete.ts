@@ -28,6 +28,7 @@
 import "server-only"
 
 import { isCountedPlay } from "@/lib/cleanup/engine/plays"
+import { idText } from "@/lib/cleanup/identity/match"
 import { isInside, rootOf } from "@/lib/cleanup/identity/path-fence"
 import type { OutcomeDetail, OutcomeReason } from "@/lib/cleanup/outcomes"
 import type { ArrRef } from "@/lib/cleanup/schema/runtime"
@@ -105,11 +106,17 @@ export async function prepareChecks(services: ActServices, input: { oldestSince:
 
 const refusedOf = (arr: Arr, failure: { status?: number }) => (failure.status === 401 ? { refused: arr } : {})
 
-/** Row 2: the ids of `match.by` and every shared kind, the path, a root that strictly holds it, and no new Sonarr files. */
+/**
+ * Row 2: the ids of `match.by` and every shared kind, the path, a root that
+ * strictly holds it, and no new Sonarr files. The ids compare as the
+ * snapshot match compares them (`idText()`): 0 and "" are no id, and IMDb
+ * ids compare in lower case, so a title that the match took always passes.
+ */
 function recordCheck({ arr, item }: PreDeleteInput, record: ArrRecord, roots: string[]): PreDeleteResult | null {
-  const ids = { tmdb: record.tmdbId ?? undefined, tvdb: "tvdbId" in record ? record.tvdbId : undefined, imdb: record.imdbId ?? undefined }
+  const ids = { tmdb: idText(record.tmdbId), tvdb: idText("tvdbId" in record ? record.tvdbId : undefined), imdb: idText(record.imdbId) }
+  const known = { tmdb: idText(item.ids.tmdb), tvdb: idText(item.ids.tvdb), imdb: idText(item.ids.imdb) }
   const by = item.match.by
-  const same = by !== undefined && ids[by] === item.ids[by] && ID_KINDS.every((k) => item.ids[k] === undefined || ids[k] === undefined || ids[k] === item.ids[k])
+  const same = by !== undefined && ids[by] !== null && ids[by] === known[by] && ID_KINDS.every((k) => known[k] === null || ids[k] === null || ids[k] === known[k])
   if (!same || record.path !== arr.path || rootOf(record.path, roots) === null) return { kind: "rescue", reason: "recordChanged" }
   const stored = item.arr?.fileCount
   if (!("seasons" in record) || stored === undefined) return null

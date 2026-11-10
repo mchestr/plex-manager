@@ -176,6 +176,17 @@ describe("row 2: same ids and path, no new files", () => {
     await expect(preDelete(input(buildMovieItem({ match: { state: "matched" } })), env())).resolves.toEqual({ kind: "rescue", reason: "recordChanged" })
   })
 
+  it("reads an arr id of 0 or an empty IMDb id as no id, and IMDb ids in any case, as the snapshot match does (safety review S-3)", async () => {
+    mockArr.getSonarrSeries.mockResolvedValue({ ok: true, data: sonarrSeries([{ seasonNumber: 2, statistics: stats(1) }], { tmdbId: 0 }) })
+    await expect(preDelete(input(buildShowItem({ ids: { tvdb: 2002, tmdb: 3003 } })), env())).resolves.toMatchObject({ kind: "go" })
+    mockArr.getRadarrMovie.mockResolvedValue({ ok: true, data: radarrMovie({ imdbId: "TT0000001" }) })
+    await expect(preDelete(input(buildMovieItem({ ids: { tmdb: 1001, imdb: "tt0000001" } })), env())).resolves.toMatchObject({ kind: "go" })
+    mockArr.getRadarrMovie.mockResolvedValue({ ok: true, data: radarrMovie({ imdbId: "" }) })
+    await expect(preDelete(input(MOVIE), env())).resolves.toMatchObject({ kind: "go" })
+    mockArr.getRadarrMovie.mockResolvedValue({ ok: true, data: radarrMovie({ tmdbId: 0 }) })
+    await expect(preDelete(input(MOVIE), env())).resolves.toEqual({ kind: "rescue", reason: "recordChanged" })
+  })
+
   it("rescues newContent for more Sonarr files than the snapshot item's arr.fileCount (safety-r2-3, architecture-r3-5)", async () => {
     const show = buildShowItem({ arr: { ...SHOW.arr!, fileCount: 3 } })
     await expect(preDelete(input(show), env())).resolves.toEqual({ kind: "rescue", reason: "newContent" })
