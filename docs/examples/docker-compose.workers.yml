@@ -68,7 +68,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     environment:
       - REDISCLI_AUTH=${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
