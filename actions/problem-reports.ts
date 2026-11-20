@@ -19,6 +19,7 @@ const REFUSALS = {
   NOT_ENTITLED: ["NOT_ENTITLED", "This needs an active membership."],
   RATE_LIMITED: ["RATE_LIMITED", "You've sent a lot of reports."],
   NOT_FOUND: ["NOT_FOUND", "We couldn't find that title in your libraries."],
+  CLOSED: ["NOT_FOUND", "This report is closed."],
   UNAVAILABLE: ["UPSTREAM_UNAVAILABLE", "We can't reach the server right now. Try again in a few minutes."],
   NOTE_REQUIRED: ["VALIDATION", "Add a note that says what's wrong."],
   WRONG_KIND: ["VALIDATION", "That problem is for shows."],
@@ -59,7 +60,7 @@ export const followProblemReport = memberAction({
   fallbackError: "Could not follow the report",
   handler: async ({ reportId }, { userId }): Promise<ActionResult<null>> => {
     const result = await followReport({ userId, reportId })
-    if (!result.ok) return refused(result.refusal, result.retryAfterSec, "This report is closed.")
+    if (!result.ok) return refused(result.refusal, result.retryAfterSec)
     refresh()
     return ok(null)
   },
