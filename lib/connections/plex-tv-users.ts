@@ -3,6 +3,7 @@ import "server-only"
 import { XMLParser } from "fast-xml-parser"
 import { z } from "zod"
 
+import { plexTvBaseUrl } from "@/lib/security/test-mode"
 import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
 
 import { getClientIdentifier, logger } from "./plex-core"
@@ -30,12 +31,13 @@ import { getClientIdentifier, logger } from "./plex-core"
  * `Retry-After`), any other status, a timeout, a network error or a body that
  * does not parse is `unavailable`: an error state, never a verdict.
  *
- * The endpoint has no paging, so one call reads every user.
+ * The endpoint has no paging, so one call reads every user. The host comes
+ * from `plexTvBaseUrl()`, the E2E seam (TS E27): `https://clients.plex.tv`
+ * outside the E2E suite.
  *
  * @module lib/connections/plex-tv-users
  */
 
-const PLEX_TV_USERS_URL = "https://clients.plex.tv/api/users"
 const TIMEOUT_MS = 15_000
 
 export interface PlexTvShare {
@@ -177,7 +179,7 @@ export async function fetchPlexTvUsers(token: string): Promise<PlexTvUsersResult
 
   let response: Response
   try {
-    response = await fetchWithTimeout(PLEX_TV_USERS_URL, {
+    response = await fetchWithTimeout(`${plexTvBaseUrl().clients}/api/users`, {
       method: "GET",
       headers: {
         Accept: "application/xml",

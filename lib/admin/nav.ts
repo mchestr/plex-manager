@@ -1,3 +1,4 @@
+/* eslint max-lines: ["error", { "max": 230, "skipBlankLines": true, "skipComments": true }] -- cohesive: one table feeds the sidebar, the tab bar, the command menu and the page titles, beside the rules that read it */
 /**
  * The admin navigation config (ui-design-system 5.5 and 6.2): one list that
  * feeds the sidebar, the mobile tab bar and its More sheet, page titles
@@ -19,7 +20,7 @@
  * Rewind          Season, Playground, Shares, Settings
  * Discord         Activity, Settings
  * AI              Activity, Cost, Settings
- * Automations     Watchlist sync, Inactive members, Request limits, Queues
+ * Automations     Problem reports, Watchlist sync, Inactive members, Request limits, Queues, Media cleanup
  * Audit log
  * Settings
  * ```
@@ -49,11 +50,13 @@ export interface NavCounts {
   failedJobs: number | null
   /** Problem reports with the server admin. */
   reportsToReview: number
+  /** Media cleanup items in a deletion or entry batch (TS 12.3 item 3); `null` for a role, which never reviews them. */
+  cleanupReview: number | null
 }
 
 interface AdminNavBadge {
   text: string
-  tone?: "destructive"
+  tone?: "destructive" | "warning"
 }
 
 export interface AdminNavChild {
@@ -80,6 +83,19 @@ export interface AdminNavItem {
   also?: readonly Route[]
   /** The item's section tabs, in order. The item's `href` is its first child's `href`. */
   children?: readonly AdminNavChild[]
+}
+
+/**
+ * Failed jobs win, because they are the destructive state. Else the count of
+ * what waits for an admin under Automations: the problem reports with them and
+ * the media cleanup items in a batch, a warning while any cleanup item waits
+ * (UX 3.2).
+ */
+function automationsBadge({ failedJobs, reportsToReview, cleanupReview }: NavCounts): AdminNavBadge | null {
+  if (failedJobs) return { text: `${failedJobs} failed`, tone: "destructive" }
+  const toReview = reportsToReview + (cleanupReview ?? 0)
+  if (toReview === 0) return null
+  return cleanupReview ? { text: `${toReview} to review`, tone: "warning" } : { text: `${toReview} to review` }
 }
 
 export const ADMIN_NAV: readonly AdminNavItem[] = [
@@ -179,18 +195,17 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     icon: icons.automations,
     // Its other tabs sit beside /admin/problem-reports, not below it, so `also` lights it on their paths
     match: "prefix",
-    also: ["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues"],
+    also: ["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues", "/admin/cleanup"],
     // The tab bar follows nav order, so Automations sits after Rewind
     mobile: "tab",
-    // Failed jobs keep priority over the reports to review
-    badge: ({ failedJobs, reportsToReview }) =>
-      failedJobs ? { text: `${failedJobs} failed`, tone: "destructive" } : reportsToReview > 0 ? { text: `${reportsToReview} to review` } : null,
+    badge: automationsBadge,
     children: [
       { id: "problem-reports", label: "Problem reports", href: "/admin/problem-reports" },
       { id: "watchlist", label: "Watchlist sync", href: "/admin/watchlist" },
       { id: "inactivity", label: "Inactive members", href: "/admin/inactivity" },
       { id: "request-limits", label: "Request limits", href: "/admin/request-limits" },
       { id: "queues", label: "Queues", href: "/admin/queues" },
+      { id: "cleanup", label: "Media cleanup", href: "/admin/cleanup" },
     ],
   },
   {

@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe, toHaveNoViolations } from "jest-axe"
+import { useRef } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
@@ -79,5 +80,29 @@ describe("Popover", () => {
     expect(popup).toHaveAttribute("data-field", "paper")
     expect(popup).toHaveClass("paper", "bg-popover")
     container.remove()
+  })
+
+  it("opens at an anchor that is not its trigger", async () => {
+    function Anchored() {
+      const anchor = useRef<HTMLButtonElement>(null)
+      return (
+        <>
+          <Button ref={anchor} variant="outline">
+            365 days
+          </Button>
+          <Popover open>
+            <PopoverContent anchor={anchor} data-testid="anchored" className="w-[25rem]">
+              <PopoverTitle>Last played</PopoverTitle>
+            </PopoverContent>
+          </Popover>
+        </>
+      )
+    }
+    render(<Anchored />)
+
+    const popup = await screen.findByRole("dialog", { name: "Last played" })
+    expect(popup).toBe(screen.getByTestId("anchored"))
+    expect(popup).toHaveClass("w-[25rem]")
+    expect(popup).not.toHaveClass("w-72")
   })
 })

@@ -16,6 +16,7 @@ export const REFUSALS = {
   NOT_ENTITLED: ["NOT_ENTITLED", NOT_ENTITLED_MESSAGE],
   RATE_LIMITED: ["RATE_LIMITED", "You've sent a lot of reports."],
   NOT_FOUND: ["NOT_FOUND", "We couldn't find that title in your libraries."],
+  CLOSED: ["NOT_FOUND", "This report is closed."],
   UNAVAILABLE: ["UPSTREAM_UNAVAILABLE", "We can't reach the server right now. Try again in a few minutes."],
   NOTE_REQUIRED: ["VALIDATION", "Add a note that says what's wrong."],
   WRONG_KIND: ["VALIDATION", "That problem is for shows."],
