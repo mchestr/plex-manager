@@ -46,7 +46,7 @@ import { fixTraits } from "@/lib/problem-reports/fixes"
 import { gateAndRecord, hasRunRecord } from "@/lib/problem-reports/ledger"
 import { checkMatch, idsFit, type ExpectedTitle, type MatchTarget } from "@/lib/problem-reports/match"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
-import type { ProblemReportFixPayload } from "@/lib/queue/types"
+import type { ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 
 const CHECK_MS = 5000
 const WAIT_MS = 60_000

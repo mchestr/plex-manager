@@ -43,7 +43,7 @@ import type { ResolvedFile } from "@/lib/problem-reports/resolve"
 import { checkAgain, checkCopy, fileTarget, WAIT_MS, watchFor } from "@/lib/problem-reports/steps/copy-wait"
 import { finishReplace, readyToReplace } from "@/lib/problem-reports/steps/replace"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
-import type { ProblemReportFixPayload } from "@/lib/queue/types"
+import type { ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("PROBLEM_REPORT_SWAP")

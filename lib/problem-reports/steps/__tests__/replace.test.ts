@@ -13,7 +13,7 @@ import { findPlexItemByGuid, isPlexItemPlaying } from "@/lib/connections/plex-fi
 import { scanPlexFolder } from "@/lib/connections/plex-library-actions"
 import { resolveFile, type ResolvedFile } from "@/lib/problem-reports/resolve"
 import { finishReplace, readyToReplace } from "@/lib/problem-reports/steps/replace"
-import type { CopyWatch, ProblemReportFixPayload, ReplaceWatch } from "@/lib/queue/types"
+import type { CopyWatch, ProblemReportFixPayload, ReplaceWatch } from "@/lib/problem-reports/fix-payload"
 
 jest.mock("@/lib/connections/arr-upgrade", () => ({ ...jest.requireActual("@/lib/connections/arr-upgrade"), listTitleQueue: jest.fn() }))
 jest.mock("@/lib/connections/arr-swap", () => ({ listTitleBlocklist: jest.fn() }))
