@@ -8,7 +8,7 @@ import { expect, test } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { clearReportLimits } from './helpers/rate-limits';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
-import { MOCK_MOVIE, startMockRadarr, type MockRadarr } from './mocks/radarr-server';
+import { MOCK_MOVIE, startProblemReportsRadarr, type ProblemReportsRadarr } from './mocks/problem-reports-radarr';
 
 /**
  * Members' swaps (docs/problem-reports.md, "Members' swaps"): the admin
@@ -19,7 +19,7 @@ import { MOCK_MOVIE, startMockRadarr, type MockRadarr } from './mocks/radarr-ser
  * server admin; in Dry run the swap stops at its pick and goes to the server
  * admin while the member sees it with them throughout; and a member out of
  * swaps is told when one comes back. Radarr is the mock in
- * `e2e/mocks/radarr-server.ts`, and the movie and the member's stream come
+ * `e2e/mocks/problem-reports-radarr.ts`, and the movie and the member's stream come
  * from a stub Plex server in library section 1, which the plex.tv mock
  * shares with the regular member. A fix's next step waits in the job queue,
  * so the spec promotes the delayed job instead of waiting for it.
@@ -138,11 +138,11 @@ async function chooseFilmedOffScreen(page: Page) {
 
 test.describe("Problem reports: members' swaps", () => {
   let plex: StubPlex;
-  let radarr: MockRadarr;
+  let radarr: ProblemReportsRadarr;
   let originalUrl: string | null = null;
 
   test.beforeAll(async () => {
-    [plex, radarr] = await Promise.all([startStubPlex(), startMockRadarr(MOVIE.folder)]);
+    [plex, radarr] = await Promise.all([startStubPlex(), startProblemReportsRadarr(MOVIE.folder)]);
     await clearReports();
     await clearReportLimits();
     await withDb(async (prisma) => {

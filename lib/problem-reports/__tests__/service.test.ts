@@ -277,11 +277,18 @@ describe('followProblemReport', () => {
     expect(prismaMock.problemReportEvent.create).not.toHaveBeenCalled()
   })
 
-  it('refuses a report that is closed or unknown', async () => {
+  it('refuses a report that is closed or unknown as closed', async () => {
     prismaMock.problemReport.findFirst.mockReset()
     prismaMock.problemReport.findFirst.mockResolvedValue(null)
 
-    expect(await followProblemReport({ userId: 'member-1', reportId: 'report-gone' })).toEqual({ ok: false, refusal: 'NOT_FOUND' })
+    expect(await followProblemReport({ userId: 'member-1', reportId: 'report-gone' })).toEqual({ ok: false, refusal: 'CLOSED' })
+  })
+
+  it('refuses a report that closed before the follow joined it as closed', async () => {
+    prismaMock.problemReport.findFirst.mockResolvedValueOnce(null)
+
+    expect(await followProblemReport({ userId: 'member-1', reportId: 'report-open' })).toEqual({ ok: false, refusal: 'CLOSED' })
+    expect(prismaMock.problemReportEvent.create).not.toHaveBeenCalled()
   })
 
   it('refuses while the switch is off', async () => {

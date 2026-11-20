@@ -9,7 +9,8 @@ import { expect, settlePage, test } from './visual/visual-test';
  * The root layout's contract on every page of the axe route table (P3.2):
  * one `main#main`, a skip link that reaches it, no zoom lock, and IBM Plex
  * Sans on the body. Pages are taken at rest, as the axe spec takes them
- * (`settlePage`).
+ * (`settlePage`). The skip link is the first Tab stop, except on a page that
+ * starts focus on its title (`focusesTitle`).
  */
 
 /** One test per page: the interactive states share their page's layout. */
@@ -45,7 +46,13 @@ test.describe('Landmarks and the root layout', () => {
         );
         expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toContain('plexSans');
 
-        await page.keyboard.press('Tab');
+        if (route.focusesTitle) {
+          // Focus starts on the page title, inside main: the skip link still shows on focus and reaches main
+          await expect(page.locator('main#main h1')).toBeFocused();
+          await page.getByTestId('skip-to-content').focus();
+        } else {
+          await page.keyboard.press('Tab');
+        }
         await expect(page.getByTestId('skip-to-content')).toBeFocused();
         await expect(page.getByTestId('skip-to-content')).toBeVisible();
         await page.keyboard.press('Enter');

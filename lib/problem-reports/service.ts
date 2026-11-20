@@ -199,11 +199,11 @@ export async function followProblemReport({ userId, reportId }: { userId: string
   if (refused) return refused
 
   const report = await prisma.problemReport.findFirst({ where: { id: reportId, activeKey: { not: null } }, select: { plexRatingKey: true } })
-  if (!report) return refuse("NOT_FOUND")
+  if (!report) return refuse("CLOSED")
   const member = await readMemberItem(userId, report.plexRatingKey)
   if (!member.ok) return refuse(member.reason)
 
-  return (await joinOpenReport({ id: reportId }, userId, {})) ? { ok: true } : refuse("NOT_FOUND")
+  return (await joinOpenReport({ id: reportId }, userId, {})) ? { ok: true } : refuse("CLOSED")
 }
 
 /** Cancels the member's own report while nothing has run on it. */
