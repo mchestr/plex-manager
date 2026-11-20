@@ -11,7 +11,9 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder }
 
 import { plainDiscordText } from "@/lib/discord/plain-text"
 import { getBaseUrl } from "@/lib/env"
+import { missingAnswerWords } from "@/lib/problem-reports/answers"
 import type { FoundTitle } from "@/lib/problem-reports/search"
+import type { ReportOutcome } from "@/lib/problem-reports/service"
 import { kindsFor, problemLabel, problemsOf, type ProblemCode, type ProblemKind, type ReportableType } from "@/lib/problem-reports/taxonomy"
 
 import { reportIds } from "./ids"
@@ -87,13 +89,22 @@ export const chooseEpisodeOnWeb = (ratingKey: string) => words(`Choose the episo
 /** "Something else" needs a note, which the member writes on the web. */
 export const writeNoteOnWeb = (ratingKey: string) => words(`Tell the server admin what's wrong on the web: ${reportUrl(ratingKey)}`)
 
-/** The report went to the server admin, or joined the title's open report. */
-export const sent = (joined: boolean) =>
-  words(
-    joined
-      ? `This title already had an open report, so yours was added to it. Follow it on the web: ${reportUrl()}`
-      : `Sent to the server admin. Follow it on the web: ${reportUrl()}`
-  )
+/**
+ * What the report led to: the server admin, the title's open report, Look
+ * for the episodes, or an answer instead of a report. `day` writes a date.
+ */
+export function sent(result: ReportOutcome, day: (iso: string) => string): StepMessage {
+  switch (result.outcome) {
+    case "answered":
+      return words(missingAnswerWords(result.answer, day))
+    case "fixing":
+      return words(`We'll look for the missing episodes now. Nothing is removed. Follow it on the web: ${reportUrl()}`)
+    case "joined":
+      return words(`This title already had an open report, so yours was added to it. Follow it on the web: ${reportUrl()}`)
+    case "reported":
+      return words(`Sent to the server admin. Follow it on the web: ${reportUrl()}`)
+  }
+}
 
 export const nothingFound = (query: string) => words(`Nothing in your libraries matches "${plainDiscordText(query, 80)}". Try another title.`)
 

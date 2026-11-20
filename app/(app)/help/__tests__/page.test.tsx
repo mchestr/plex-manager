@@ -78,7 +78,7 @@ describe('HelpPage', () => {
 
   it('links Report a problem to /report while problem reports are on, keeping the Discord links', async () => {
     setup({ discord: true })
-    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: 'problem-reports', enabled: true, updatedAt: new Date(), updatedBy: null })
+    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: 'problem-reports', breakerTrippedAt: null, enabled: true, updatedAt: new Date(), updatedBy: null })
 
     render(await HelpPage())
 

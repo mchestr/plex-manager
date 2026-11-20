@@ -8,6 +8,7 @@ import { mockReset } from 'jest-mock-extended'
 
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { getPlexShowEpisodes, searchPlexMedia, type PlexItemMetadata } from '@/lib/connections/plex'
+import { getActiveService } from '@/lib/data/active-service'
 import { getActivePlexServerConfig } from '@/lib/connections/plex-config'
 import { recentlyWatched, watchingNow } from '@/lib/member/problem-report-titles'
 import { getReportPageData } from '@/lib/member/problem-reports'
@@ -19,6 +20,7 @@ jest.mock('@/lib/connections/plex', () => ({ getPlexShowEpisodes: jest.fn(), sea
 jest.mock('@/lib/connections/plex-config', () => ({ getActivePlexServerConfig: jest.fn() }))
 jest.mock('@/lib/member/problem-report-titles', () => ({ watchingNow: jest.fn(), recentlyWatched: jest.fn() }))
 jest.mock('@/lib/problem-reports/evidence', () => ({ memberLastPlay: jest.fn() }))
+jest.mock('@/lib/data/active-service', () => ({ getActiveService: jest.fn() }))
 jest.mock('@/lib/problem-reports/access', () => ({
   ...jest.requireActual('@/lib/problem-reports/access'),
   memberLibraryAccess: jest.fn(),
@@ -39,6 +41,7 @@ beforeEach(() => {
   jest.mocked(watchingNow).mockResolvedValue([])
   jest.mocked(recentlyWatched).mockResolvedValue([])
   jest.mocked(memberLastPlay).mockResolvedValue(null)
+  jest.mocked(getActiveService).mockResolvedValue(null)
 })
 
 describe('getReportPageData', () => {
@@ -74,6 +77,21 @@ describe('getReportPageData', () => {
         statusSub: 'By the member who reported it',
         note: null,
       },
+    ])
+  })
+
+  it("says what a running fix is doing, and when a fix found the missing episodes", async () => {
+    const report = { problem: 'missing_episodes', title: 'The Office', year: 2005, showTitle: null, seasonNumber: null, episodeNumber: null, createdAt: AT, memberNote: null }
+    prismaMock.problemReport.findMany.mockResolvedValue([
+      { ...report, id: 'fixing', reporterId: 'member-1', status: 'FIXING', action: 'LOOK_FOR_MISSING', events: [] },
+      { ...report, id: 'found', reporterId: 'member-1', status: 'FIXED', action: 'LOOK_FOR_MISSING', events: [{ kind: 'FIXED', data: { reason: 'fix', action: 'LOOK_FOR_MISSING' }, createdAt: AT }] },
+    ] as never)
+
+    const { reports } = await getReportPageData('member-1', {})
+
+    expect(reports.map(({ id, latest, statusSub }) => ({ id, words: latest.words, statusSub }))).toEqual([
+      { id: 'fixing', words: 'You sent it', statusSub: 'Looking for the episodes' },
+      { id: 'found', words: 'The missing episodes are on the server now', statusSub: null },
     ])
   })
 
@@ -131,9 +149,10 @@ describe('getReportPageData', () => {
     })
   })
 
-  it("opens a show's sheet with its episodes and its open report", async () => {
+  it("opens a show's sheet with its episodes and its open report, and looks for missing episodes with Sonarr set up", async () => {
+    jest.mocked(getActiveService).mockResolvedValue({ id: 'sonarr-1' } as never)
     jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: SHOW, server: SERVER })
-    jest.mocked(getPlexShowEpisodes).mockResolvedValue({ ok: true, episodes: [{ ratingKey: '7001', title: 'Pilot', seasonNumber: 1, episodeNumber: 1 }] })
+    jest.mocked(getPlexShowEpisodes).mockResolvedValue({ ok: true, episodes: [{ ratingKey: '7001', title: 'Pilot', seasonNumber: 1, episodeNumber: 1, files: [] }] })
     prismaMock.problemReport.findUnique.mockResolvedValue({ id: 'open', reporterId: 'member-2', problem: 'missing_episodes', status: 'WITH_ADMIN', updatedAt: AT, events: [] } as never)
 
     const { selected } = await getReportPageData('member-1', { item: '6999' })
@@ -145,7 +164,9 @@ describe('getReportPageData', () => {
       episodes: [{ ratingKey: '7001', label: 'S1E1: Pilot' }],
       openReport: { id: 'open', problem: 'Episodes are missing', status: 'WITH_ADMIN', since: AT.toISOString(), yours: false },
       lastPlay: null,
+      looksForMissing: true,
     })
+    expect(getActiveService).toHaveBeenCalledWith('sonarr')
     expect(memberLastPlay).toHaveBeenCalledWith('member-plex', expect.objectContaining({ ratingKey: '6999', type: 'show' }))
     expect(prismaMock.problemReport.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { activeKey: 'plex://show/office' } }))
   })

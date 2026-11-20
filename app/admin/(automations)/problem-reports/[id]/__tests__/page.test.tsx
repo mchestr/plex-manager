@@ -37,6 +37,8 @@ const REPORT: ProblemReportDetail = {
   memberNote: null,
   adminNote: null,
   plexHref: "https://app.plex.tv/desktop/#!/server/abc/details?key=%2Flibrary%2Fmetadata%2F555",
+  fixes: { suggested: null, others: ["REFRESH"] },
+  running: null,
   steps: [
     {
       id: "e1",

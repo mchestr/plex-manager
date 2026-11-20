@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { FixActions } from "@/components/admin/problem-reports/fix-actions"
 import { ReportTimeline } from "@/components/admin/problem-reports/report-timeline"
 import { ResolveActions } from "@/components/admin/problem-reports/resolve-actions"
 import { DetailItem } from "@/components/admin/users/detail/detail-item"
@@ -29,8 +30,10 @@ function Note({ label, text, testId }: { label: string; text: string; testId: st
 /**
  * One problem report (docs/problem-reports.md): the title, the problem and
  * who reported it, then the timeline with each member's words and the
- * evidence. While it is open, the header offers Close with a note and Mark
- * fixed. Members' words show as plain text, never as Markdown.
+ * evidence. While it is open, the header offers the fixes (the problem's
+ * own first, the rest under Other fixes), Close with a note and Mark fixed;
+ * while a fix runs, the report says what it is doing. Members' words show as
+ * plain text, never as Markdown.
  */
 export default async function ProblemReportPage({ params }: { params: Promise<{ id: string }> }) {
   await assertAdmin()
@@ -45,7 +48,14 @@ export default async function ProblemReportPage({ params }: { params: Promise<{ 
         description={report.problem}
         breadcrumbs={[{ label: "Problem reports", href: problemReports() }, { label: report.title }]}
         meta={<StatusBadge domain="problemReport" value={report.status} data-testid="admin-problem-report-status" />}
-        actions={report.open && <ResolveActions reportId={report.id} />}
+        actions={
+          report.open && (
+            <>
+              {report.fixes && <FixActions reportId={report.id} suggested={report.fixes.suggested} others={report.fixes.others} />}
+              <ResolveActions reportId={report.id} />
+            </>
+          )
+        }
         data-testid="admin-problem-report-header"
       />
       <dl className="grid grid-cols-1 gap-4 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="admin-problem-report">
@@ -58,6 +68,11 @@ export default async function ProblemReportPage({ params }: { params: Promise<{ 
           {f.dateTime(report.createdAt, { zoneLabel: true })}
         </DetailItem>
         <DetailItem label="Type">{TYPE_LABELS[report.mediaType]}</DetailItem>
+        {report.running && (
+          <DetailItem label="Fix" testId="admin-problem-report-running">
+            {report.running}
+          </DetailItem>
+        )}
         {report.resolvedAt && (
           <DetailItem label={report.status === "FIXED" ? "Fixed" : "Closed"} testId="admin-problem-report-resolved-timestamp">
             {f.dateTime(report.resolvedAt, { zoneLabel: true })}

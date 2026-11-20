@@ -181,3 +181,47 @@ export async function arrGetList(
   if (!result.ok) return toConnectionResult(service, result)
   return { success: true, data: { records: result.data.slice(0, arrLimit(limit)), totalRecords: result.data.length } }
 }
+
+/**
+ * Every record of an unpaged *arr list that parses with `schema`; a record
+ * that fails it is skipped, as in {@link arrFind}.
+ *
+ * @param query - From {@link arrQuery}; `""` for none.
+ */
+export async function arrList<T>(
+  service: ArrService,
+  config: ArrConfig,
+  path: string,
+  query: string | null,
+  schema: z.ZodType<T>
+): Promise<ConnectionResult<T[]>> {
+  if (query === null) return invalidArrParams(service)
+  const result = await serviceFetch({
+    service,
+    url: `${config.url}${path}${query ? `?${query}` : ""}`,
+    headers: { "X-Api-Key": config.apiKey },
+    schema: z.array(z.unknown()),
+  })
+  if (!result.ok) return toConnectionResult(service, result)
+  const records = result.data.flatMap((record) => {
+    const parsed = schema.safeParse(record)
+    return parsed.success ? [parsed.data] : []
+  })
+  return { success: true, data: records }
+}
+
+/**
+ * POST a JSON body to an *arr v3 endpoint, such as `/api/v3/command`, and
+ * parse the answer with `schema`.
+ */
+export async function arrPost<T>(service: ArrService, config: ArrConfig, path: string, body: unknown, schema: z.ZodType<T>): Promise<ConnectionResult<T>> {
+  const result = await serviceFetch({
+    service,
+    url: `${config.url}${path}`,
+    method: "POST",
+    headers: { "X-Api-Key": config.apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    schema,
+  })
+  return toConnectionResult(service, result)
+}

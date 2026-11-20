@@ -42,7 +42,7 @@ These are decided. Do not write code against them; if a task asks for one, say s
 - **Styling**: Tailwind CSS v4 with utility-first approach; primitives in `components/ui/` are built on Base UI (`@base-ui/react`)
 - **Animation**: Motion (`motion/react`)
 - **Charts**: Recharts, through `ChartCard`
-- **Jobs**: BullMQ on Redis (Rewind generation, Stripe access, watchlist sync, retention, last seen and the inactivity sweep, problem report alerts, and media cleanup: `cleanup:read`, `cleanup:run`, `cleanup:act`, `cleanup:collections`)
+- **Jobs**: BullMQ on Redis (Rewind generation, Stripe access, watchlist sync, retention, last seen and the inactivity sweep, problem report alerts, fixes and member updates, and media cleanup: `cleanup:read`, `cleanup:run`, `cleanup:act`, `cleanup:collections`)
 - **LLM**: Vercel AI SDK (OpenAI, Anthropic, Google and OpenAI-compatible servers)
 - **Validation**: Zod schemas for all inputs/responses
 - **Testing**: Jest + Testing Library + Playwright (E2E)
@@ -294,7 +294,7 @@ if (!result.success) {
 - If a file exceeds these limits, it's a signal to refactor
 - ESLint's `max-lines` (blank lines and comments skipped, tests excluded) fails a file in `components/` or `actions/` above 300 lines and warns for `lib/` and `hooks/` above 150. Split along responsibilities; a `'use server'` file can export only async functions, so shared helpers move to `lib/`
 - Deliberate exceptions carry a file-level `/* eslint max-lines: ["error", N] -- cohesive: <reason> */` and a line here:
-  - `lib/queue/types.ts` (360): the one registry of every job type, label, payload and id policy
+  - `lib/queue/types.ts` (380): the one registry of every job type, label, payload and id policy
   - `lib/utils/format.ts` (220): every zone and locale formatter, covered by `npm run test:tz`
   - `lib/ui/status.ts` (300): one table holds every status word, with its resolver and the Discord status rows
   - `lib/security/audit-log.ts` (220): the one enum of every audit event type, beside the writers that take it
@@ -1024,7 +1024,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - Affiliate invites (tiers, slots, server cap, the switch): See `docs/affiliate-invites.md`
 - Inactive members (last seen from Tautulli, the inactivity sweep and its safety rules): See `docs/inactive-members.md`
 - Media cleanup (rules, Leaving soon and member Keeps, deletion through Radarr and Sonarr, the safety stops, the Kometa change, the MCP tools): See `docs/media-cleanup.md`
-- Problem reports (members report a problem with a title from `/report`; Automations > Problem reports, the switch, the sheet, the rules, the admins' Discord alerts): See `docs/problem-reports.md`
+- Problem reports (members report a problem with a title from `/report`; Automations > Problem reports, the switch, the sheet, the rules, the fixes and their ledger, the admins' and members' Discord DMs): See `docs/problem-reports.md`
 - Email (the SMTP variables, the transport in `lib/email/`, the test email, unsubscribe links): See `docs/email.md`
 - Audit log (who can read it, categories, what Support sees): See `docs/roles.md` and `docs/privacy.md`
 - Appearance (server name, login subtitle, accent colour, uploaded logos and images): See `docs/appearance.md`

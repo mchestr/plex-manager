@@ -7,13 +7,13 @@ import { useState } from "react"
 import { ReportAlready } from "@/components/problem-reports/report-already"
 import { ReportKindStep } from "@/components/problem-reports/report-kind-step"
 import { ReportProblemStep } from "@/components/problem-reports/report-problem-step"
+import { ReportSent, type SentOutcome } from "@/components/problem-reports/report-sent"
 import { StepHeading } from "@/components/problem-reports/step-heading"
-import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader } from "@/components/ui/sheet"
 import type { SelectedTitle } from "@/lib/member/problem-reports"
 import type { ProblemKind } from "@/lib/problem-reports/taxonomy"
 
-type Step = { at: "already" } | { at: "kind" } | { at: "problem"; kind: ProblemKind } | { at: "sent"; joined: boolean }
+type Step = { at: "already" } | { at: "kind" } | { at: "problem"; kind: ProblemKind } | { at: "sent"; sent: SentOutcome }
 
 interface ReportSheetProps {
   selected: SelectedTitle | { error: string }
@@ -58,22 +58,10 @@ export function ReportSheet({ selected, closeHref }: ReportSheetProps) {
                 selected={selected}
                 kind={step.kind}
                 onBack={() => setStep({ at: "kind" })}
-                onSent={(joined) => setStep({ at: "sent", joined })}
+                onSent={(sent) => setStep({ at: "sent", sent })}
               />
             )}
-            {step.at === "sent" && (
-              <div className="flex flex-col gap-4" data-testid="report-sent">
-                <StepHeading>Sent</StepHeading>
-                <p className="text-ui text-muted-foreground">
-                  {step.joined
-                    ? "This title already had an open report, so we added yours to it. We'll message you when it's fixed."
-                    : "The server admin will take a look. We'll message you when it's done."}
-                </p>
-                <Button className="self-start" onClick={close} data-testid="report-done">
-                  Done
-                </Button>
-              </div>
-            )}
+            {step.at === "sent" && <ReportSent sent={step.sent} onDone={close} />}
           </>
         )}
       </SheetContent>

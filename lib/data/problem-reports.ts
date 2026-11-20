@@ -17,8 +17,9 @@ import type { ProblemReportFilter } from "@/lib/admin/routes"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import type { MediaType, ProblemReportStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
-import { problemLabel } from "@/lib/problem-reports/taxonomy"
-import { getProblemReportSettings } from "@/lib/problem-reports/settings"
+import { FIX_ACTIONS, FIX_WORDS, fixesFor, suggestedFix, type FixAction } from "@/lib/problem-reports/fixes"
+import { problemLabel, reportableTypeOf } from "@/lib/problem-reports/taxonomy"
+import { getProblemReportSettings, PROBLEM_REPORT_SETTINGS_ID } from "@/lib/problem-reports/settings"
 import { reportTitle } from "@/lib/problem-reports/title"
 import { AuditEventType, auditMemberListed, auditMemberRead } from "@/lib/security/audit-log"
 import type { LastSaved } from "@/lib/settings/audit-meta"
@@ -99,7 +100,25 @@ export interface ProblemReportDetail {
   adminNote: string | null
   /** The title in the server's Plex web app, when the server is known. */
   plexHref: string | null
+  /** The fixes an admin can run now: the one the problem points to, and the rest. Null while closed or fixing. */
+  fixes: { suggested: FixAction | null; others: FixAction[] } | null
+  /** What the running fix is doing, while the report is Fixing. */
+  running: string | null
   steps: TimelineStep[]
+}
+
+/** The fixes for a report: the problem's own first, when it applies to this type of title. */
+function fixChoices(problem: string, mediaType: string): { suggested: FixAction | null; others: FixAction[] } {
+  const type = reportableTypeOf(mediaType)
+  const available = type ? fixesFor(type) : []
+  const suggested = suggestedFix(problem)
+  const primary = suggested && available.includes(suggested) ? suggested : null
+  return { suggested: primary, others: available.filter((action) => action !== primary) }
+}
+
+const runningWords = (action: string | null): string | null => {
+  const fix = FIX_ACTIONS.find((known) => known === action)
+  return fix ? FIX_WORDS[fix].running : null
 }
 
 /** One report with its timeline, or null when there is none with this id. */
@@ -110,7 +129,7 @@ export async function getProblemReport(id: string): Promise<ProblemReportDetail 
       where: { id },
       select: {
         id: true, problem: true, note: true, status: true, activeKey: true, mediaType: true, plexRatingKey: true, title: true, year: true,
-        showTitle: true, seasonNumber: true, episodeNumber: true, memberNote: true, adminNote: true, createdAt: true, resolvedAt: true,
+        showTitle: true, seasonNumber: true, episodeNumber: true, memberNote: true, adminNote: true, createdAt: true, resolvedAt: true, action: true,
         reporterId: true, reporter: { select: personSelect },
         events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true, kind: true, data: true, createdAt: true, actor: { select: personSelect } } },
       },
@@ -137,8 +156,17 @@ export async function getProblemReport(id: string): Promise<ProblemReportDetail 
     memberNote: report.memberNote,
     adminNote: report.adminNote,
     plexHref: plexItemHref(server?.machineIdentifier ?? null, report.plexRatingKey),
+    fixes: report.activeKey !== null && report.status !== "FIXING" ? fixChoices(report.problem, report.mediaType) : null,
+    running: report.status === "FIXING" ? runningWords(report.action) : null,
     steps: report.events.map((event) => timelineStep({ ...event, actor: event.actor && person(event.actor) })),
   }
+}
+
+/** When the breaker tripped, while fixes that replace files are paused; null otherwise. */
+export async function getProblemBreaker(): Promise<Date | null> {
+  await assertAdmin()
+  const row = await prisma.problemReportSettings.findUnique({ where: { id: PROBLEM_REPORT_SETTINGS_ID }, select: { breakerTrippedAt: true } })
+  return row?.breakerTrippedAt ?? null
 }
 
 /** The settings card: the switch, and its newest audited save. */

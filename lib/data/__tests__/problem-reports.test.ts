@@ -14,7 +14,7 @@ import { mockReset } from "jest-mock-extended"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { assertAdmin } from "@/lib/admin"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
-import { getProblemReport, getProblemReportSettingsView, listProblemReports } from "@/lib/data/problem-reports"
+import { getProblemBreaker, getProblemReport, getProblemReportSettingsView, listProblemReports } from "@/lib/data/problem-reports"
 import { auditMemberListed, auditMemberRead } from "@/lib/security/audit-log"
 
 jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
@@ -142,13 +142,55 @@ describe("getProblemReport", () => {
     jest.mocked(getActivePlexServerConfig).mockResolvedValue(null)
 
     expect(await getProblemReport("missing")).toBeNull()
-    expect(await getProblemReport("report-1")).toMatchObject({ open: false, plexHref: null })
+    expect(await getProblemReport("report-1")).toMatchObject({ open: false, plexHref: null, fixes: null, running: null })
+  })
+
+  it("offers the fixes for the title, the problem's own first, and says what a running fix is doing", async () => {
+    prismaMock.problemReport.findUnique
+      .mockResolvedValueOnce({ ...DETAIL, problem: "missing_episodes", mediaType: "TV_SERIES" } as never)
+      .mockResolvedValueOnce({ ...DETAIL } as never)
+      .mockResolvedValueOnce({ ...DETAIL, status: "FIXING", action: "LOOK_FOR_MISSING" } as never)
+
+    expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: "LOOK_FOR_MISSING", others: ["REFRESH"] }, running: null })
+    expect(await getProblemReport("report-1")).toMatchObject({ fixes: { suggested: null, others: ["REFRESH"] } })
+    expect(await getProblemReport("report-1")).toMatchObject({ fixes: null, running: "Looking for the episodes" })
+  })
+
+  it("words a fix's steps on the timeline", async () => {
+    prismaMock.problemReport.findUnique.mockResolvedValue({
+      ...DETAIL,
+      events: [
+        { id: "e1", kind: "FIX_STARTED", data: { action: "LOOK_FOR_MISSING", trigger: "automatic" }, createdAt: AT, actor: JANE },
+        { id: "e2", kind: "TO_ADMIN", data: { reason: "NOT_FOUND", action: "LOOK_FOR_MISSING" }, createdAt: AT, actor: null },
+        { id: "e3", kind: "FIX_STARTED", data: { action: "REFRESH", trigger: "mcp" }, createdAt: AT, actor: null },
+        { id: "e4", kind: "FIXED", data: { reason: "fix", action: "LOOK_FOR_MISSING" }, createdAt: AT, actor: null },
+        { id: "e5", kind: "TO_ADMIN", data: { reason: "made up" }, createdAt: AT, actor: null },
+      ],
+    } as never)
+
+    expect((await getProblemReport("report-1"))?.steps.map((step) => step.words)).toEqual([
+      "Started looking for the episodes for the member",
+      "Sonarr didn't find the episodes within a day",
+      "Asked Plex to refresh the details over MCP",
+      "Fixed: the missing episodes are on the server",
+      "Sent to the server admin",
+    ])
+  })
+})
+
+describe("getProblemBreaker", () => {
+  it("is when the breaker tripped, or null", async () => {
+    prismaMock.problemReportSettings.findUnique.mockResolvedValueOnce({ breakerTrippedAt: AT } as never).mockResolvedValueOnce(null)
+
+    expect(await getProblemBreaker()).toEqual(AT)
+    expect(await getProblemBreaker()).toBeNull()
+    expect(assertAdmin).toHaveBeenCalled()
   })
 })
 
 describe("getProblemReportSettingsView", () => {
   it("reads the switch and the newest audited save", async () => {
-    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: "problem-reports", enabled: true, updatedAt: AT, updatedBy: "admin-1" })
+    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: "problem-reports", breakerTrippedAt: null, enabled: true, updatedAt: AT, updatedBy: "admin-1" })
     prismaMock.auditLog.findFirst.mockResolvedValue({ id: "audit-1", actorUserId: "admin-1", createdAt: AT } as never)
     prismaMock.user.findUnique.mockResolvedValue({ name: "Dana", email: null } as never)
 

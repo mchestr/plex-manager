@@ -20,6 +20,7 @@
  * | `PROBLEM_REPORT_CLOSED`        | `outcome`, `memberNote`                        | "Marked fixed, with a note for the member", "Closed"                             |
  * | `PROBLEM_REPORT_SETTINGS_CHANGED` | `changedFields`, `after`                    | "Turned on"                                                                      |
  * | `PROBLEM_SWAP_APPROVAL_CHANGED` | `needsApproval`                               | "Swaps need approval"                                                            |
+ * | `PROBLEM_FIX_RUN`              | `action`, `trigger`                            | "Look for the episodes, started by the app"                                     |
  *
  * The inactivity sweep events (`MEMBER_UNSHARED`, `INACTIVITY_*` and
  * `ACTIVITY_SYNC_TRIGGERED`) have their summaries in
@@ -168,6 +169,16 @@ const reportSettings: Summarize = ({ changedFields, after }) =>
 const swapApproval: Summarize = ({ needsApproval }) =>
   typeof needsApproval === "boolean" ? (needsApproval ? "Swaps need approval" : "Swaps no longer need approval") : null
 
+const FIX_NAMES: Record<string, string> = { LOOK_FOR_MISSING: "Look for the episodes", SCAN: "Scan the show's folder in Plex", REFRESH: "Refresh the details" }
+const FIX_TRIGGERS: Record<string, string> = { automatic: "started by the app", web: "started by an admin", mcp: "started over MCP" }
+
+const fixRun: Summarize = ({ action, trigger }) => {
+  const name = typeof action === "string" ? FIX_NAMES[action] : undefined
+  if (!name) return null
+  const by = typeof trigger === "string" ? FIX_TRIGGERS[trigger] : undefined
+  return by ? `${name}, ${by}` : name
+}
+
 const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   ...INACTIVITY_SUMMARIES,
   CONFIG_CHANGED: configChanged,
@@ -185,6 +196,7 @@ const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   PROBLEM_REPORT_CLOSED: reportClosed,
   PROBLEM_REPORT_SETTINGS_CHANGED: reportSettings,
   PROBLEM_SWAP_APPROVAL_CHANGED: swapApproval,
+  PROBLEM_FIX_RUN: fixRun,
 }
 
 /** The event's one-line summary, or null when its type has none or its details do not fit. */

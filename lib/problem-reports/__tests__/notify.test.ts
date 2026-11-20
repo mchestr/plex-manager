@@ -4,7 +4,7 @@
  * link, the member's name and the titles as plain text, and no link embeds.
  */
 
-import { adminAlertText } from "@/lib/problem-reports/notify"
+import { adminAlertText, memberUpdateText } from "@/lib/problem-reports/notify"
 
 const BASE = "https://plex.example.com"
 const report = (id: string, title: string, problem = "wont_start") => ({ id, title, problem })
@@ -50,3 +50,28 @@ describe("adminAlertText", () => {
     expect(text.length).toBeLessThan(2000)
   })
 })
+
+describe("memberUpdateText", () => {
+  const update = { own: true, status: "FIXED" as const, by: "fix" as const, title: "The Office (2005)", hasNote: false }
+  const link = "\nYour reports: <https://plex.example.com/report>"
+
+  it("says a fix found the missing episodes, for the member and their followers alike", () => {
+    expect(memberUpdateText(update, BASE)).toBe(`The Office \\(2005\\) has the missing episodes now.${link}`)
+    expect(memberUpdateText({ ...update, own: false }, BASE)).toBe(`The Office \\(2005\\) has the missing episodes now.${link}`)
+  })
+
+  it("says the server admin fixed or closed it, and mentions a note only to the member who reported it", () => {
+    expect(memberUpdateText({ ...update, by: "admin", hasNote: true }, BASE)).toBe(`The server admin fixed The Office \\(2005\\). The server admin left you a note.${link}`)
+    expect(memberUpdateText({ ...update, status: "CLOSED", by: "admin" }, BASE)).toBe(`The server admin closed your report about The Office \\(2005\\).${link}`)
+    expect(memberUpdateText({ ...update, own: false, status: "CLOSED", by: "admin", hasNote: true }, BASE)).toBe(
+      `The server admin closed the report you follow about The Office \\(2005\\).${link}`
+    )
+  })
+
+  it("tells a follower the member who made it cancelled it", () => {
+    expect(memberUpdateText({ ...update, own: false, status: "CLOSED", by: "reporter" }, BASE)).toBe(
+      `The report you follow about The Office \\(2005\\) was cancelled by the member who made it.${link}`
+    )
+  })
+})
+

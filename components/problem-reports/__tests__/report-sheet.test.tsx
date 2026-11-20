@@ -17,7 +17,7 @@ jest.mock('@/actions/problem-reports', () => ({ reportProblem: jest.fn(), follow
 const mockShowError = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showError: mockShowError, showSuccess: jest.fn() }) }))
 
-const MOVIE: SelectedTitle = { ratingKey: '555', type: 'movie', title: 'Heat (1995)', episodes: null, openReport: null, lastPlay: null }
+const MOVIE: SelectedTitle = { ratingKey: '555', type: 'movie', title: 'Heat (1995)', episodes: null, openReport: null, lastPlay: null, looksForMissing: false }
 const SHOW: SelectedTitle = {
   ratingKey: '6999',
   type: 'show',
@@ -25,6 +25,7 @@ const SHOW: SelectedTitle = {
   episodes: [{ ratingKey: '7001', label: 'S1E1: Pilot' }],
   openReport: null,
   lastPlay: null,
+  looksForMissing: false,
 }
 
 beforeEach(() => {
@@ -35,7 +36,7 @@ beforeEach(() => {
 describe('ReportSheet', () => {
   it('sends a problem to the server admin from the two steps', async () => {
     const user = userEvent.setup()
-    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-1', joined: false } })
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-1', outcome: 'reported', answer: null } })
     render(<ReportSheet selected={MOVIE} closeHref="/report?q=heat" />)
 
     expect(screen.getByTestId('report-sheet-title')).toHaveTextContent('Heat (1995)')
@@ -70,7 +71,7 @@ describe('ReportSheet', () => {
 
   it("reports a show's episode, and Back returns to step 1", async () => {
     const user = userEvent.setup()
-    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-2', joined: true } })
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-2', outcome: 'joined', answer: null } })
     render(<ReportSheet selected={SHOW} closeHref="/report" />)
 
     expect(screen.getByTestId('report-kind-episodes')).toBeInTheDocument()
@@ -90,7 +91,7 @@ describe('ReportSheet', () => {
 
   it("asks whether anything else plays on the member's player, and sends the answer", async () => {
     const user = userEvent.setup()
-    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-3', joined: false } })
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-3', outcome: 'reported', answer: null } })
     render(<ReportSheet selected={{ ...MOVIE, lastPlay: { player: 'Living Room', transcoded: false, at: '2026-11-08T20:00:00.000Z' } }} closeHref="/report" />)
 
     await user.click(screen.getByTestId('report-kind-playback'))
@@ -106,7 +107,7 @@ describe('ReportSheet', () => {
 
   it("asks about a show's player for the whole show only, since another episode's last play may differ", async () => {
     const user = userEvent.setup()
-    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-4', joined: false } })
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-4', outcome: 'reported', answer: null } })
     render(<ReportSheet selected={{ ...SHOW, lastPlay: { player: 'Living Room', transcoded: false, at: '2026-11-08T20:00:00.000Z' } }} closeHref="/report" />)
 
     await user.click(screen.getByTestId('report-kind-playback'))
@@ -119,6 +120,53 @@ describe('ReportSheet', () => {
     expect(screen.queryByTestId('report-device')).not.toBeInTheDocument()
     await user.click(screen.getByTestId('report-send'))
     expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '7001', problem: 'wont_start', note: '' })
+  })
+
+  it("looks for missing episodes, and says a fix started", async () => {
+    const user = userEvent.setup()
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-5', outcome: 'fixing', answer: null } })
+    render(<ReportSheet selected={{ ...SHOW, looksForMissing: true }} closeHref="/report" />)
+
+    await user.click(screen.getByTestId('report-kind-episodes'))
+    await user.click(within(screen.getByTestId('report-problem-missing_episodes')).getByText('Episodes are missing'))
+    expect(screen.getByTestId('report-consequence')).toHaveTextContent("We'll check which episodes are missing and look for them. Nothing is removed.")
+    expect(screen.getByTestId('report-send')).toHaveTextContent('Look for them')
+    await user.click(screen.getByTestId('report-send'))
+
+    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '6999', problem: 'missing_episodes', note: '' })
+    expect(await screen.findByTestId('report-sent-line')).toHaveTextContent("We'll look for the missing episodes now. Nothing is removed.")
+  })
+
+  it("answers instead of a report, with Overseerr's page to request what isn't on the server", async () => {
+    const user = userEvent.setup()
+    jest.mocked(reportProblem).mockResolvedValueOnce({
+      success: true,
+      data: { reportId: null, outcome: 'answered', answer: { kind: 'NOT_ON_SERVER', seasons: [3], requestHref: 'https://requests.example.com/tv/2316' } },
+    })
+    render(<ReportSheet selected={{ ...SHOW, looksForMissing: true }} closeHref="/report" />)
+
+    await user.click(screen.getByTestId('report-kind-episodes'))
+    await user.click(within(screen.getByTestId('report-problem-missing_episodes')).getByText('Episodes are missing'))
+    await user.click(screen.getByTestId('report-send'))
+
+    expect(await screen.findByTestId('report-sent-line')).toHaveTextContent("Season 3 isn't on the server.")
+    expect(screen.getByTestId('report-request')).toHaveAttribute('href', 'https://requests.example.com/tv/2316')
+  })
+
+  it("says when the next episode comes out", async () => {
+    const user = userEvent.setup()
+    jest.mocked(reportProblem).mockResolvedValueOnce({
+      success: true,
+      data: { reportId: null, outcome: 'answered', answer: { kind: 'NOT_AIRED', season: 2, episode: 6, airsAt: '2026-11-14T20:00:00Z' } },
+    })
+    render(<ReportSheet selected={{ ...SHOW, looksForMissing: true }} closeHref="/report" />)
+
+    await user.click(screen.getByTestId('report-kind-episodes'))
+    await user.click(within(screen.getByTestId('report-problem-missing_episodes')).getByText('Episodes are missing'))
+    await user.click(screen.getByTestId('report-send'))
+
+    expect(await screen.findByTestId('report-sent-line')).toHaveTextContent(/^Season 2, episode 6 comes out Nov 14\.$/)
+    expect(screen.queryByTestId('report-request')).not.toBeInTheDocument()
   })
 
   it('explains a converted play for a blurry picture, and asks nothing about the device', async () => {

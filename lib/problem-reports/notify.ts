@@ -1,9 +1,11 @@
 /**
- * The server admin's Discord alert about new problem reports: one message
- * per reporting member, naming the member, each title and its problem, with
- * a link to each report. Links sit in `<...>`, so Discord shows no previews.
- * The member's name and the titles are someone else's words, so they go
- * through {@link plainDiscordText}; the problem's words are the app's own.
+ * The Discord messages about problem reports: the server admin's alert about
+ * new reports (one message per reporting member, naming the member, each
+ * title and its problem, with a link to each report), and a member's update
+ * when a report they made or follow is fixed or closed. Links sit in
+ * `<...>`, so Discord shows no previews. Names and titles are someone else's
+ * words, so they go through {@link plainDiscordText}; the rest is the app's
+ * own.
  *
  * @module lib/problem-reports/notify
  */
@@ -38,4 +40,33 @@ export function adminAlertText(reporter: string | null, reports: readonly AlertR
   const listed = reports.slice(0, LISTED).map((report) => `- ${line(report)} ${link(report.id)}`)
   const more = reports.length > LISTED ? [`And ${reports.length - LISTED} more: <${baseUrl}/admin/problem-reports>`] : []
   return [`${who} reported ${reports.length} problems:`, ...listed, ...more].join("\n")
+}
+
+/** How a report ended, as a member's update tells it. */
+export interface MemberUpdate {
+  /** Whether the member made the report, rather than following it. */
+  own: boolean
+  status: "FIXED" | "CLOSED"
+  /** Who ended it: a fix, the server admin, or the member who made it. */
+  by: "fix" | "admin" | "reporter"
+  title: string
+  /** Whether the server admin left the member who made it a note. */
+  hasNote: boolean
+}
+
+/** A member's update, with a link to their reports. */
+export function memberUpdateText(update: MemberUpdate, baseUrl: string): string {
+  const title = plainDiscordText(update.title, TITLE_MAX)
+  const words =
+    update.status === "FIXED"
+      ? update.by === "fix"
+        ? `${title} has the missing episodes now.`
+        : `The server admin fixed ${title}.`
+      : update.by === "reporter"
+        ? `The report you follow about ${title} was cancelled by the member who made it.`
+        : update.own
+          ? `The server admin closed your report about ${title}.`
+          : `The server admin closed the report you follow about ${title}.`
+  const note = update.own && update.hasNote ? " The server admin left you a note." : ""
+  return `${words}${note}\nYour reports: <${baseUrl}/report>`
 }

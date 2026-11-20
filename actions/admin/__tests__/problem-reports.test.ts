@@ -12,13 +12,19 @@ import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 
 import { asTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { resolveProblemReport, setSwapsNeedApproval, updateProblemReportSettings } from "@/actions/admin/problem-reports"
+import { resolveProblemReport, resumeProblemFixes, runProblemFix, setSwapsNeedApproval, updateProblemReportSettings } from "@/actions/admin/problem-reports"
+import { principalSession } from "@/lib/mcp/principal"
+import { startFix } from "@/lib/problem-reports/run"
+import { queueMemberUpdates } from "@/lib/problem-reports/updates"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
+jest.mock("@/lib/problem-reports/run", () => ({ startFix: jest.fn() }))
+jest.mock("@/lib/problem-reports/updates", () => ({ queueMemberUpdates: jest.fn() }))
+jest.mock("@/lib/mcp/principal", () => ({ principalSession: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({
   ...jest.requireActual("@/lib/security/audit-log"),
   logAuditEvent: jest.fn(),
@@ -52,6 +58,7 @@ describe("resolveProblemReport", () => {
       outcome: "fixed",
       memberNote: true,
     })
+    expect(queueMemberUpdates).toHaveBeenCalledWith(REPORT, "FIXED", { from: "request" })
     expect(revalidatePath).toHaveBeenCalledWith("/admin/problem-reports")
     expect(revalidatePath).toHaveBeenCalledWith(`/admin/problem-reports/${REPORT}`)
     expect(revalidatePath).toHaveBeenCalledWith("/report")
@@ -111,7 +118,7 @@ describe("updateProblemReportSettings", () => {
   })
 
   it("writes no audit row when nothing changed", async () => {
-    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: "problem-reports", enabled: true, updatedAt: new Date(), updatedBy: null })
+    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: "problem-reports", breakerTrippedAt: null, enabled: true, updatedAt: new Date(), updatedBy: null })
 
     await updateProblemReportSettings({ enabled: true })
 
@@ -143,6 +150,63 @@ describe("setSwapsNeedApproval", () => {
     prismaMock.user.findUnique.mockResolvedValue(null)
 
     await expect(setSwapsNeedApproval({ userId: "member-1", needsApproval: false })).resolves.toMatchObject({ success: false, code: "NOT_FOUND" })
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+})
+
+describe("runProblemFix", () => {
+  beforeEach(() => {
+    prismaMock.problemReport.findUnique.mockResolvedValue({ mediaType: "TV_SERIES" } as never)
+    jest.mocked(startFix).mockResolvedValue({ ok: true, runToken: 2 })
+    jest.mocked(principalSession).mockReturnValue(undefined)
+  })
+
+  it("starts the fix as the admin, from the web", async () => {
+    await expect(runProblemFix({ reportId: REPORT, action: "LOOK_FOR_MISSING" })).resolves.toEqual({ success: true, data: null })
+
+    expect(startFix).toHaveBeenCalledWith({ reportId: REPORT, action: "LOOK_FOR_MISSING", trigger: "web", actorUserId: "admin-1" })
+    expect(revalidatePath).toHaveBeenCalledWith(`/admin/problem-reports/${REPORT}`)
+  })
+
+  it("says the run came over MCP when an MCP client asked", async () => {
+    jest.mocked(principalSession).mockReturnValue({ user: { id: "admin-1", isAdmin: true } } as never)
+
+    await runProblemFix({ reportId: REPORT, action: "REFRESH" })
+    expect(startFix).toHaveBeenCalledWith(expect.objectContaining({ trigger: "mcp" }))
+  })
+
+  it("refuses a report that isn't there, and a fix that doesn't apply to the title", async () => {
+    prismaMock.problemReport.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ mediaType: "MOVIE" } as never)
+
+    await expect(runProblemFix({ reportId: REPORT, action: "REFRESH" })).resolves.toMatchObject({ success: false, code: "NOT_FOUND" })
+    await expect(runProblemFix({ reportId: REPORT, action: "LOOK_FOR_MISSING" })).resolves.toMatchObject({ success: false, code: "VALIDATION" })
+    expect(startFix).not.toHaveBeenCalled()
+  })
+
+  it("says when a fix is already running or the queue is down", async () => {
+    jest.mocked(startFix).mockResolvedValueOnce({ ok: false, reason: "NOT_OPEN" }).mockResolvedValueOnce({ ok: false, reason: "QUEUE_DOWN" })
+
+    await expect(runProblemFix({ reportId: REPORT, action: "REFRESH" })).resolves.toMatchObject({ success: false, code: "CONFLICT" })
+    await expect(runProblemFix({ reportId: REPORT, action: "REFRESH" })).resolves.toMatchObject({ success: false, code: "UPSTREAM_UNAVAILABLE" })
+  })
+})
+
+describe("resumeProblemFixes", () => {
+  it("resumes the fixes and audits it while the breaker is tripped", async () => {
+    prismaMock.problemReportSettings.updateMany.mockResolvedValue({ count: 1 })
+
+    await expect(resumeProblemFixes({})).resolves.toEqual({ success: true, data: null })
+    expect(prismaMock.problemReportSettings.updateMany).toHaveBeenCalledWith({
+      where: { id: "problem-reports", breakerTrippedAt: { not: null } },
+      data: { breakerTrippedAt: null, updatedBy: "admin-1" },
+    })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.PROBLEM_BREAKER_RESUMED, "admin-1", {})
+  })
+
+  it("audits nothing when the breaker wasn't tripped", async () => {
+    prismaMock.problemReportSettings.updateMany.mockResolvedValue({ count: 0 })
+
+    await resumeProblemFixes({})
     expect(logAuditEvent).not.toHaveBeenCalled()
   })
 })

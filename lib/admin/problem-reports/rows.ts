@@ -9,8 +9,17 @@
 
 import type { ProblemReportFilter } from "@/lib/admin/routes"
 import type { ProblemReportStatus } from "@/lib/generated/prisma/client"
+import { TO_ADMIN_WORDS, TRIGGER_WORDS } from "@/lib/admin/problem-reports/fix-words"
+import { FIX_WORDS } from "@/lib/problem-reports/fixes"
 import { problemLabel } from "@/lib/problem-reports/taxonomy"
-import { closedEventDataSchema, reportEventDataSchema, type DeviceAnswer } from "@/lib/validations/problem-reports"
+import {
+  closedEventDataSchema,
+  fixedEventDataSchema,
+  fixStartedDataSchema,
+  reportEventDataSchema,
+  toAdminDataSchema,
+  type DeviceAnswer,
+} from "@/lib/validations/problem-reports"
 
 /** The statuses each filter lists: Needs you is the server admin's; a report sent to run on its own counts as fixing. */
 export const FILTER_STATUSES: Record<ProblemReportFilter, readonly ProblemReportStatus[]> = {
@@ -86,7 +95,15 @@ export function timelineStep(event: { id: string; kind: string; data: unknown; c
     case "ALSO_REPORTED":
       return { ...base, ...memberStep(event.kind, event.data) }
     case "FIXED":
-      return { ...base, words: "Marked fixed" }
+      return { ...base, words: fixedEventDataSchema.safeParse(event.data).data?.reason === "fix" ? "Fixed: the missing episodes are on the server" : "Marked fixed" }
+    case "FIX_STARTED": {
+      const started = fixStartedDataSchema.safeParse(event.data)
+      return { ...base, words: started.success ? `${FIX_WORDS[started.data.action].started}${TRIGGER_WORDS[started.data.trigger]}` : "Started a fix" }
+    }
+    case "TO_ADMIN": {
+      const handed = toAdminDataSchema.safeParse(event.data)
+      return { ...base, words: handed.success ? TO_ADMIN_WORDS[handed.data.reason] : "Sent to the server admin" }
+    }
     case "CLOSED": {
       const closed = closedEventDataSchema.safeParse(event.data)
       return { ...base, words: closed.success && closed.data.reason === "cancelled" ? "Cancelled" : "Closed" }
