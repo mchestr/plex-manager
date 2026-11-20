@@ -359,6 +359,24 @@ agree.
 - **Redis.** Without `REDIS_URL`, the seed opens no Redis connection. Cases
   that need the job queue skip themselves.
 
+## Library access for a member
+
+The SEC-21 library check (the poster route, and anything else that checks a
+rating key against a member's shared libraries) reads the server's share list
+from plex.tv, which the E2E web server reads from the plex.tv mock
+(`e2e/mocks/plex-tv-server.ts`, see Media cleanup). Besides the cleanup
+world's server, the mock answers the share list of any other server with
+`MOCK_SHARED_SECTIONS`, whatever the token: the regular user has section 1
+shared and section 2 not. A spec still needs a stub Plex server that answers
+`/identity` and the item's `/library/metadata/{ratingKey}`;
+`e2e/poster-library-access.spec.ts` shows both.
+
+The web server keeps what it reads for the whole run: a member's share list
+for 10 minutes per server, and an item's section for 24 hours
+(`lib/connections/plex-shared-sections.ts`). A spec that needs different
+shares gives the member its own Plex account in `MOCK_SHARED_SECTIONS`, and
+uses rating keys no other spec uses.
+
 ## Writing New Tests
 
 ### Example: Testing Admin Functionality
