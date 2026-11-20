@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useState, useTransition } from "react"
 
 import { reportProblem } from "@/actions/problem-reports"
-import type { SentOutcome } from "@/components/problem-reports/report-sent"
+import type { SentOutcome, SentRequest } from "@/components/problem-reports/report-sent"
 import { StepHeading } from "@/components/problem-reports/step-heading"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/toast"
 import type { SelectedTitle } from "@/lib/member/problem-reports"
+import { consequence } from "@/lib/problem-reports/consequence"
 import { asksDevice, needsNote, PROBLEM_KINDS, problemsOf, showsTranscodeTip, type ProblemCode, type ProblemKind } from "@/lib/problem-reports/taxonomy"
 import { icons } from "@/lib/ui/icons"
 import { PROBLEM_NOTE_MAX, type DeviceAnswer } from "@/lib/validations/problem-reports"
@@ -38,7 +39,7 @@ interface ReportProblemStepProps {
   selected: SelectedTitle
   kind: ProblemKind
   onBack: () => void
-  onSent: (sent: SentOutcome) => void
+  onSent: (sent: SentOutcome, request: SentRequest) => void
 }
 
 /**
@@ -46,8 +47,8 @@ interface ReportProblemStepProps {
  * {player}?" for playback problems when the member's last player of the
  * opened title is known and the report is for that title (not one episode of
  * the show), a note (required for "Something else"), what happens next, and the button
- * named for it. A converted last play first explains itself for picture
- * problems. Choosing a radio never moves on by itself.
+ * named for it (`consequence`). A converted last play first explains itself
+ * for picture problems. Choosing a radio never moves on by itself.
  */
 export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProblemStepProps) {
   const { showError } = useToast()
@@ -57,13 +58,14 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
   const [note, setNote] = useState("")
   const [device, setDevice] = useState<DeviceAnswer | null>(null)
   const [pending, startTransition] = useTransition()
-  const player = selected.lastPlay?.player ?? null
-  // The player is from the last play of the title the sheet opened; one episode of a show may have played elsewhere
-  const askDevice = problem !== null && asksDevice(problem) && player !== null && episode === WHOLE_SHOW
-  const transcodeTip = problem !== null && showsTranscodeTip(problem) && selected.lastPlay?.transcoded === true
+  // The last play is of the title the sheet opened; one episode of a show may have played elsewhere, or another way
+  const wholeTitle = episode === WHOLE_SHOW
+  const player = wholeTitle ? (selected.lastPlay?.player ?? null) : null
+  const transcoded = wholeTitle && selected.lastPlay?.transcoded === true
+  const askDevice = problem !== null && asksDevice(problem) && player !== null
+  const transcodeTip = problem !== null && showsTranscodeTip(problem) && transcoded
+  const next = consequence(problem, { type: wholeTitle ? selected.type : "episode", transcoded, ...selected.fixers })
 
-  // Sonarr is read first for missing episodes, so the button says what happens when it can look
-  const looksForMissing = problem === "missing_episodes" && selected.looksForMissing
   const noteRequired = problem !== null && needsNote(problem)
   const canSend = problem !== null && (!noteRequired || note.trim() !== "")
   const episodes = kind !== "episodes" && selected.episodes?.length ? selected.episodes : null
@@ -72,13 +74,13 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
   const send = () => {
     if (!problem) return
     startTransition(async () => {
-      const ratingKey = episode === WHOLE_SHOW ? selected.ratingKey : episode
-      const result = await reportProblem({ ratingKey, problem, note, device: askDevice && device ? device : undefined })
+      const request: SentRequest = { ratingKey: wholeTitle ? selected.ratingKey : episode, problem, note, device: askDevice && device ? device : undefined }
+      const result = await reportProblem(request)
       if (!result.success) {
         showError(result.error)
         return
       }
-      onSent(result.data)
+      onSent(result.data, request)
     })
   }
 
@@ -146,9 +148,7 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
         <Textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={PROBLEM_NOTE_MAX} rows={3} data-testid="report-note" />
       </Field>
       <p className="text-ui text-muted-foreground" data-testid="report-consequence">
-        {looksForMissing
-          ? "We'll check which episodes are missing and look for them. Nothing is removed."
-          : "The server admin will take a look. We'll message you when it's done."}
+        {next.line}
       </p>
       <div className="flex flex-wrap gap-2">
         <Button variant="ghost" onClick={onBack} data-testid="report-back">
@@ -156,7 +156,7 @@ export function ReportProblemStep({ selected, kind, onBack, onSent }: ReportProb
           Back
         </Button>
         <Button onClick={send} disabled={!canSend} loading={pending} loadingLabel="Sending" data-testid="report-send">
-          {looksForMissing ? "Look for them" : "Send to the server admin"}
+          {next.button}
         </Button>
       </div>
     </div>

@@ -61,6 +61,15 @@ describe("timelineStep", () => {
     expect(timelineStep(event("FIXED", { reason: "admin" }, ADMIN)).words).toBe("Marked fixed")
   })
 
+  it("says what a fix did, and when a member asked the server admin after one", () => {
+    expect(timelineStep(event("FIXED", { reason: "fix", action: "BETTER_COPY" })).words).toBe("Fixed: a better copy is on the server")
+    expect(timelineStep(event("FIXED", { reason: "fix", action: "LOOK_FOR_MISSING" })).words).toBe("Fixed: the missing episodes are on the server")
+    expect(timelineStep(event("FIXED", { reason: "fix" })).words).toBe("Fixed")
+    expect(timelineStep(event("CLOSED", { reason: "no_better_copy" }, null)).words).toBe("Closed: no better copy right now")
+    expect(timelineStep(event("REOPENED", null))).toMatchObject({ words: "Asked the server admin to take a look", actor: MEMBER })
+    expect(timelineStep(event("TO_ADMIN", { reason: "NO_UPGRADE", action: "BETTER_COPY" }, null)).words).toBe("The quality profile doesn't want a better copy of this file")
+  })
+
   it("reads data of the wrong shape as nothing, and keeps an unknown step's kind", () => {
     expect(timelineStep(event("REPORTED", { problem: 7, device: "maybe", evidence: { lastPlay: "yesterday" } }))).toMatchObject({
       words: "Reported",

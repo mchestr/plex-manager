@@ -55,7 +55,7 @@ describePg('reportProblem on PostgreSQL', (databaseUrl) => {
     jest.mocked(readMemberItem).mockResolvedValue({
       ok: true,
       server: SERVER,
-      item: { ratingKey: '555', type: 'movie', title: 'Heat', year: 1995, guid: GUID, ids: {}, librarySectionId: '1', parts: [], locations: [] },
+      item: { ratingKey: '555', type: 'movie', title: 'Heat', year: 1995, guid: GUID, ids: {}, librarySectionId: '1', media: [], locations: [] },
     })
   })
 
@@ -95,7 +95,7 @@ describePg('reportProblem on PostgreSQL', (databaseUrl) => {
     jest.mocked(readMemberItem).mockResolvedValue({
       ok: true,
       server: SERVER,
-      item: { ratingKey: '556', type: 'movie', title: 'Ronin', year: 1998, guid, ids: {}, librarySectionId: '1', parts: [], locations: [] },
+      item: { ratingKey: '556', type: 'movie', title: 'Ronin', year: 1998, guid, ids: {}, librarySectionId: '1', media: [], locations: [] },
     })
 
     const results = await Promise.all([0, 1].map(() => reportProblem({ userId: MEMBERS[1], ratingKey: '556', problem: 'wont_start', note: null })))

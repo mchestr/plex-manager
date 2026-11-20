@@ -10,7 +10,7 @@
 import type { ProblemReportFilter } from "@/lib/admin/routes"
 import type { ProblemReportStatus } from "@/lib/generated/prisma/client"
 import { TO_ADMIN_WORDS, TRIGGER_WORDS } from "@/lib/admin/problem-reports/fix-words"
-import { FIX_WORDS } from "@/lib/problem-reports/fixes"
+import { FIX_WORDS, type FixAction } from "@/lib/problem-reports/fixes"
 import { problemLabel } from "@/lib/problem-reports/taxonomy"
 import {
   closedEventDataSchema,
@@ -71,6 +71,22 @@ const DEVICE_WORDS: Record<DeviceAnswer, string> = {
   not_tried: "They haven't tried another title",
 }
 
+/** What a fix that worked did, after "Fixed: ". */
+const FIXED_WORDS: Record<FixAction, string> = {
+  BETTER_COPY: "a better copy is on the server",
+  LOOK_FOR_MISSING: "the missing episodes are on the server",
+  REFRESH: "Plex read the details again",
+}
+
+/** The server admin's mark, or the words for what a fix did. */
+function fixedWords(data: unknown): string {
+  const fixed = fixedEventDataSchema.safeParse(data).data
+  if (fixed?.reason !== "fix") return "Marked fixed"
+  return fixed.action ? `Fixed: ${FIXED_WORDS[fixed.action]}` : "Fixed"
+}
+
+const CLOSED_WORDS = { cancelled: "Cancelled", admin: "Closed", no_better_copy: "Closed: no better copy right now" } as const
+
 /** A member's step: what they reported, in their words, with their answer and the evidence. */
 function memberStep(kind: "REPORTED" | "ALSO_REPORTED", data: unknown) {
   const parsed = reportEventDataSchema.safeParse(data)
@@ -95,7 +111,9 @@ export function timelineStep(event: { id: string; kind: string; data: unknown; c
     case "ALSO_REPORTED":
       return { ...base, ...memberStep(event.kind, event.data) }
     case "FIXED":
-      return { ...base, words: fixedEventDataSchema.safeParse(event.data).data?.reason === "fix" ? "Fixed: the missing episodes are on the server" : "Marked fixed" }
+      return { ...base, words: fixedWords(event.data) }
+    case "REOPENED":
+      return { ...base, words: "Asked the server admin to take a look" }
     case "FIX_STARTED": {
       const started = fixStartedDataSchema.safeParse(event.data)
       return { ...base, words: started.success ? `${FIX_WORDS[started.data.action].started}${TRIGGER_WORDS[started.data.trigger]}` : "Started a fix" }
@@ -106,7 +124,7 @@ export function timelineStep(event: { id: string; kind: string; data: unknown; c
     }
     case "CLOSED": {
       const closed = closedEventDataSchema.safeParse(event.data)
-      return { ...base, words: closed.success && closed.data.reason === "cancelled" ? "Cancelled" : "Closed" }
+      return { ...base, words: closed.success ? CLOSED_WORDS[closed.data.reason] : "Closed" }
     }
     default:
       return { ...base, words: event.kind }

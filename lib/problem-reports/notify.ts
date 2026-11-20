@@ -11,6 +11,7 @@
  */
 
 import { plainDiscordText } from "@/lib/discord/plain-text"
+import type { FixAction } from "@/lib/problem-reports/fixes"
 import { problemLabel } from "@/lib/problem-reports/taxonomy"
 
 const NAME_MAX = 60
@@ -49,20 +50,35 @@ export interface MemberUpdate {
   status: "FIXED" | "CLOSED"
   /** Who ended it: a fix, the server admin, or the member who made it. */
   by: "fix" | "admin" | "reporter"
+  /** The fix that ended it, when `by` is a fix. A fix closes a report only when Look for a better copy found none. */
+  action?: FixAction
   title: string
   /** Whether the server admin left the member who made it a note. */
   hasNote: boolean
+}
+
+/** What a fix that worked did, about a title. */
+const FIXED_BY: Partial<Record<FixAction, (title: string) => string>> = {
+  BETTER_COPY: (title) => `A better copy of ${title} is on the server now.`,
+  LOOK_FOR_MISSING: (title) => `${title} has the missing episodes now.`,
+}
+
+/** A fix's end, in the member's words. */
+function byFix(update: MemberUpdate, title: string): string {
+  if (update.status === "FIXED") return FIXED_BY[update.action ?? "REFRESH"]?.(title) ?? `${title} is fixed.`
+  const none = `We looked for a better copy of ${title}, but there isn't one right now.`
+  return update.own ? `${none} If it still looks poor, you can ask the server admin from your reports.` : none
 }
 
 /** A member's update, with a link to their reports. */
 export function memberUpdateText(update: MemberUpdate, baseUrl: string): string {
   const title = plainDiscordText(update.title, TITLE_MAX)
   const words =
-    update.status === "FIXED"
-      ? update.by === "fix"
-        ? `${title} has the missing episodes now.`
-        : `The server admin fixed ${title}.`
-      : update.by === "reporter"
+    update.by === "fix"
+      ? byFix(update, title)
+      : update.status === "FIXED"
+        ? `The server admin fixed ${title}.`
+        : update.by === "reporter"
         ? `The report you follow about ${title} was cancelled by the member who made it.`
         : update.own
           ? `The server admin closed your report about ${title}.`

@@ -16,7 +16,7 @@ jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
 
 const NOW = new Date("2026-11-09T20:00:00Z")
 const SERVER = { url: "http://plex.local:32400", token: "owner-token" }
-const SHOW = { ratingKey: "6999", type: "show", title: "The Office", ids: { tvdb: 73244 }, librarySectionId: "2", parts: [], locations: ["/tv/The Office"] }
+const SHOW = { ratingKey: "6999", type: "show", title: "The Office", ids: { tvdb: 73244 }, librarySectionId: "2", media: [], locations: ["/tv/The Office"] }
 const EPISODE = { ...SHOW, ratingKey: "7001", type: "episode", title: "Pilot", grandparentRatingKey: "6999", ids: {} }
 const SONARR_ROW = { name: "Sonarr", url: "http://sonarr.local:8989", apiKey: "arr-key" }
 const EPISODES = [{ id: 11, seasonNumber: 1, episodeNumber: 1, airDateUtc: "2026-01-01T00:00:00Z", monitored: true, hasFile: false, episodeFileId: null }]

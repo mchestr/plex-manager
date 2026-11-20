@@ -45,7 +45,7 @@ describe('getPlexItemMetadata', () => {
         guid: 'plex://movie/5d776b59ad5437001f79c6f8',
         ids: { imdb: 'tt0137523', tmdb: 550, tvdb: 194 },
         librarySectionId: '1',
-        parts: [{ file: '/data/movies/Fight Club (1999)/Fight Club (1999) Bluray-1080p.mkv', size: 10947358412 }],
+        media: [{ optimized: false, parts: [{ file: '/data/movies/Fight Club (1999)/Fight Club (1999) Bluray-1080p.mkv', size: 10947358412 }] }],
         locations: [],
       },
     })
@@ -90,7 +90,39 @@ describe('getPlexItemMetadata', () => {
 
     expect(lookup).toMatchObject({
       status: 'found',
-      item: { type: 'show', ids: { tvdb: 73244 }, locations: ['/data/tv/The Office (US)'], parts: [] },
+      item: { type: 'show', ids: { tvdb: 73244 }, locations: ['/data/tv/The Office (US)'], media: [] },
+    })
+  })
+
+  it("keeps each version's files apart and marks the versions Plex optimized", async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      jsonResponse({
+        MediaContainer: {
+          Metadata: [
+            {
+              ratingKey: '555',
+              type: 'movie',
+              title: 'Up',
+              Media: [
+                { Part: [{ file: '/movies/Up (2009)/Up CD1.mkv', size: 1 }, { file: '/movies/Up (2009)/Up CD2.mkv', size: 2 }] },
+                { proxyType: 42, Part: [{ file: '/optimized/Up.mp4' }] },
+                { proxyType: 'odd' },
+              ],
+            },
+          ],
+        },
+      })
+    )
+
+    expect(await getPlexItemMetadata(SERVER, '555')).toMatchObject({
+      status: 'found',
+      item: {
+        media: [
+          { optimized: false, parts: [{ file: '/movies/Up (2009)/Up CD1.mkv', size: 1 }, { file: '/movies/Up (2009)/Up CD2.mkv', size: 2 }] },
+          { optimized: true, parts: [{ file: '/optimized/Up.mp4' }] },
+          { optimized: false, parts: [] },
+        ],
+      },
     })
   })
 

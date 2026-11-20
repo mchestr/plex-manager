@@ -52,7 +52,7 @@ describe('ReportPage', () => {
   it('keeps Your reports, and nothing to report from, while problem reports are off', async () => {
     jest.mocked(getProblemReportSettings).mockResolvedValue({ enabled: false })
     jest.mocked(listMemberReports).mockResolvedValue([
-      { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: '2026-11-09T15:00:00.000Z' }, canCancel: true, statusSub: null, note: null },
+      { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: '2026-11-09T15:00:00.000Z' }, canCancel: true, canAsk: false, statusSub: null, note: null },
     ])
 
     render(await ReportPage({ searchParams: params({ q: 'heat', item: '555' }) }))

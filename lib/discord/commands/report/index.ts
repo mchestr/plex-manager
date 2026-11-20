@@ -14,7 +14,8 @@
  *        a show ─► a link to /report?item=<ratingKey> to choose the episode
  *        else ─► what kind (select) ─► which problem (select)
  *                  "Something else" ─► a link to the web, which takes the note
- *                  ─► the confirm ─► Send to the server admin ─► reportProblem (the web's service)
+ *                  ─► the confirm, with the web's words and button ─► reportProblem (the web's service)
+ *                        an answer that the file is the best copy ─► Send to the server admin ─► reportProblem, toAdmin
  * ```
  *
  * Each step's `custom_id` carries what the next needs (`./ids.ts`); nothing
@@ -33,12 +34,15 @@
 import { MessageFlags, type MessageComponentInteraction } from "discord.js"
 
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
+import { getActiveService } from "@/lib/data/active-service"
 import { memberLibraryAccess, readMemberItem } from "@/lib/problem-reports/access"
+import { consequence } from "@/lib/problem-reports/consequence"
+import { memberLastPlay } from "@/lib/problem-reports/evidence"
 import { refusalCopy, REFUSALS } from "@/lib/problem-reports/refusals"
 import { searchMemberTitles } from "@/lib/problem-reports/search"
 import { reportProblem } from "@/lib/problem-reports/service"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
-import { kindsFor, needsNote, PROBLEM_KINDS, PROBLEMS, type ProblemCode, type ProblemKind, type ReportableType } from "@/lib/problem-reports/taxonomy"
+import { kindsFor, needsNote, PROBLEM_KINDS, PROBLEMS, showsTranscodeTip, type ProblemCode, type ProblemKind, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { reportTitle } from "@/lib/problem-reports/title"
 import { serverZone } from "@/lib/utils/server-zone"
 import { ratingKeySchema } from "@/lib/validations/params"
@@ -56,11 +60,14 @@ const EXPIRED = words("That choice is no longer valid. Run /report again.")
 
 type Edit = (message: StepMessage) => Promise<unknown>
 
+/** A linked member: their id, and their Plex account's for their last play. */
+type Member = { id: string; plexUserId: string | null }
+
 /** The member behind a component interaction, or null when they are no longer linked and entitled. */
-async function memberOf(interaction: MessageComponentInteraction): Promise<string | null> {
+async function memberOf(interaction: MessageComponentInteraction): Promise<Member | null> {
   const { verifyDiscordUser } = await import("@/lib/discord/services")
   const verified = await verifyDiscordUser(interaction.user.id)
-  return verified.linked && verified.entitled && verified.user ? verified.user.id : null
+  return verified.linked && verified.entitled && verified.user ? { id: verified.user.id, plexUserId: verified.user.plexUserId ?? null } : null
 }
 
 /** The title as the member may see it, or the step's refusal. */
@@ -70,7 +77,7 @@ async function readTitle(edit: Edit, userId: string, ratingKey: string) {
     await edit(words(refusalCopy(member.reason)))
     return null
   }
-  return { title: reportTitle(member.item), type: member.item.type as ReportableType }
+  return { title: reportTitle(member.item), type: member.item.type as ReportableType, item: member.item }
 }
 
 /** After a title is chosen: a show goes to the web for its episode, anything else to the kind step. */
@@ -105,12 +112,12 @@ const chosen = (interaction: MessageComponentInteraction): string | null =>
 const isKind = (value: string | null): value is ProblemKind => PROBLEM_KINDS.some((kind) => kind.id === value)
 
 /** A step on the flow's own message: acknowledge, check the member, then edit the message. */
-async function onStep(interaction: MessageComponentInteraction, run: (edit: Edit, userId: string) => Promise<unknown>): Promise<void> {
+async function onStep(interaction: MessageComponentInteraction, run: (edit: Edit, member: Member) => Promise<unknown>): Promise<void> {
   await interaction.deferUpdate()
   const edit: Edit = (message) => interaction.editReply(message)
-  const userId = await memberOf(interaction)
-  if (!userId) return void (await edit(words(buildNotLinkedMessage("report a problem"))))
-  await run(edit, userId)
+  const member = await memberOf(interaction)
+  if (!member) return void (await edit(words(buildNotLinkedMessage("report a problem"))))
+  await run(edit, member)
 }
 
 /** Report a problem on `/watching`: only the member whose stream it is, in a new ephemeral message. */
@@ -121,10 +128,10 @@ async function onWatching(interaction: MessageComponentInteraction, ownerId: str
   }
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
   const edit: Edit = (message) => interaction.editReply(message)
-  const userId = await memberOf(interaction)
-  if (!userId) return void (await edit(words(buildNotLinkedMessage("report a problem"))))
+  const member = await memberOf(interaction)
+  if (!member) return void (await edit(words(buildNotLinkedMessage("report a problem"))))
   if (!(await getProblemReportSettings()).enabled) return void (await edit(words(REFUSALS.OFF[1])))
-  await offerKinds(edit, userId, ratingKey)
+  await offerKinds(edit, member.id, ratingKey)
 }
 
 async function onKind(edit: Edit, userId: string, ratingKey: string, kind: string | null): Promise<void> {
@@ -136,19 +143,26 @@ async function onKind(edit: Edit, userId: string, ratingKey: string, kind: strin
   await edit(kindsFor(read.type).some((offered) => offered.id === kind) ? chooseProblem(read.title, kind, ratingKey) : EXPIRED)
 }
 
-async function onProblem(edit: Edit, userId: string, ratingKey: string, kind: ProblemKind, problem: string | null): Promise<void> {
+async function onProblem(edit: Edit, member: Member, ratingKey: string, kind: ProblemKind, problem: string | null): Promise<void> {
   if (!problem || !Object.hasOwn(PROBLEMS, problem) || PROBLEMS[problem as ProblemCode].kind !== kind) return void (await edit(EXPIRED))
-  if (needsNote(problem as ProblemCode)) return void (await edit(writeNoteOnWeb(ratingKey)))
-  const read = await readTitle(edit, userId, ratingKey)
-  if (read) await edit(confirmProblem(read.title, problem as ProblemCode, ratingKey))
+  const code = problem as ProblemCode
+  if (needsNote(code)) return void (await edit(writeNoteOnWeb(ratingKey)))
+  const read = await readTitle(edit, member.id, ratingKey)
+  if (!read) return
+  // What the web's sheet reads for its words: the member's last play of this title, and the services set up
+  const [lastPlay, radarr, sonarr] = await Promise.all([memberLastPlay(member.plexUserId, read.item), getActiveService("radarr"), getActiveService("sonarr")])
+  const transcoded = lastPlay?.transcoded === true
+  const next = consequence(code, { type: read.type, transcoded, radarr: Boolean(radarr), sonarr: Boolean(sonarr) })
+  await edit(confirmProblem(read.title, code, ratingKey, { ...next, tip: transcoded && showsTranscodeTip(code) }))
 }
 
-async function onSend(edit: Edit, userId: string, ratingKey: string, problem: ProblemCode): Promise<void> {
-  const result = await reportProblem({ userId, ratingKey, problem, note: null })
+/** Sends the report; `toAdmin` after an answer the member didn't accept. */
+async function onSend(edit: Edit, userId: string, ratingKey: string, problem: ProblemCode, toAdmin: boolean): Promise<void> {
+  const result = await reportProblem({ userId, ratingKey, problem, note: null, toAdmin })
   if (!result.ok) return void (await edit(words(refusalCopy(result.refusal, result.retryAfterSec))))
   // Discord has no zone of the member's, so a date is the server's
   const day = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: await serverZone() })
-  await edit(sent(result, (iso) => day.format(new Date(iso))))
+  await edit(sent(result, (iso) => day.format(new Date(iso)), { ratingKey, problem }))
 }
 
 /** Routes a `/report` component to its step. */
@@ -163,14 +177,15 @@ async function handleStep(interaction: MessageComponentInteraction): Promise<voi
       return onWatching(interaction, step.discordUserId, step.ratingKey)
     case "title": {
       const ratingKey = chosen(interaction)
-      return onStep(interaction, (edit, userId) => (ratingKeySchema.safeParse(ratingKey).success && ratingKey ? offerKinds(edit, userId, ratingKey) : edit(EXPIRED)))
+      return onStep(interaction, (edit, member) => (ratingKeySchema.safeParse(ratingKey).success && ratingKey ? offerKinds(edit, member.id, ratingKey) : edit(EXPIRED)))
     }
     case "kind":
-      return onStep(interaction, (edit, userId) => onKind(edit, userId, step.ratingKey, chosen(interaction)))
+      return onStep(interaction, (edit, member) => onKind(edit, member.id, step.ratingKey, chosen(interaction)))
     case "problem":
-      return onStep(interaction, (edit, userId) => onProblem(edit, userId, step.ratingKey, step.kind, chosen(interaction)))
+      return onStep(interaction, (edit, member) => onProblem(edit, member, step.ratingKey, step.kind, chosen(interaction)))
     case "send":
-      return onStep(interaction, (edit, userId) => onSend(edit, userId, step.ratingKey, step.problem))
+    case "admin":
+      return onStep(interaction, (edit, member) => onSend(edit, member.id, step.ratingKey, step.problem, step.step === "admin"))
   }
 }
 

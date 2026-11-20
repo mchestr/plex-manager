@@ -2,7 +2,8 @@
  * What `/report` shows in Discord at each step: the words, the select menus
  * and the buttons. Titles come from Plex and go through `plainDiscordText`
  * in message text; select options and button labels are plain text already.
- * The words match the web sheet's (`lib/problem-reports/taxonomy.ts`).
+ * The words match the web sheet's (`lib/problem-reports/taxonomy.ts`,
+ * `lib/problem-reports/consequence.ts`).
  *
  * @module lib/discord/commands/report/messages
  */
@@ -11,7 +12,8 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder }
 
 import { plainDiscordText } from "@/lib/discord/plain-text"
 import { getBaseUrl } from "@/lib/env"
-import { missingAnswerWords } from "@/lib/problem-reports/answers"
+import { answerWords } from "@/lib/problem-reports/answers"
+import type { FixAction } from "@/lib/problem-reports/fixes"
 import type { FoundTitle } from "@/lib/problem-reports/search"
 import type { ReportOutcome } from "@/lib/problem-reports/service"
 import { kindsFor, problemLabel, problemsOf, type ProblemCode, type ProblemKind, type ReportableType } from "@/lib/problem-reports/taxonomy"
@@ -74,13 +76,27 @@ export function chooseProblem(title: string, kind: ProblemKind, ratingKey: strin
   }
 }
 
-/** The confirm: the problem, what happens next, and the web's button. */
-export function confirmProblem(title: string, problem: ProblemCode, ratingKey: string): StepMessage {
-  const send = new ButtonBuilder().setCustomId(reportIds.send(ratingKey, problem)).setLabel("Send to the server admin").setStyle(ButtonStyle.Primary)
+const button = (customId: string, label: string) =>
+  new ActionRowBuilder<ButtonBuilder>().addComponents(new ButtonBuilder().setCustomId(customId).setLabel(label).setStyle(ButtonStyle.Primary))
+
+/**
+ * The confirm: the problem, the web's playback tip when the member's Plex app
+ * converted their last play, what happens next and the web's button
+ * (`consequence`).
+ */
+export function confirmProblem(title: string, problem: ProblemCode, ratingKey: string, next: { line: string; button: string; tip: boolean }): StepMessage {
+  const tip = next.tip ? `\nYour Plex app converted this video while you watched, which lowers quality and can cause buffering. Get the best picture: ${getBaseUrl()}/help#playback` : ""
   return {
-    content: `${plainDiscordText(title, TITLE_MAX)}: ${problemLabel(problem)}.\nThe server admin will take a look. We'll message you when it's done.`,
-    components: [new ActionRowBuilder<ButtonBuilder>().addComponents(send)],
+    content: `${plainDiscordText(title, TITLE_MAX)}: ${problemLabel(problem)}.${tip}\n${next.line}`,
+    components: [button(reportIds.send(ratingKey, problem), next.button)],
   }
+}
+
+/** What a fix that started is doing, as the web's sheet says it. */
+const FIXING: Record<FixAction, string> = {
+  BETTER_COPY: "We'll look for a better copy now. The one you have keeps playing, and if there isn't a better one, nothing changes.",
+  LOOK_FOR_MISSING: "We'll look for the missing episodes now. Nothing is removed.",
+  REFRESH: "We'll ask Plex to read the details again.",
 }
 
 /** A show's problem is with an episode, which the member picks on the web. */
@@ -90,15 +106,19 @@ export const chooseEpisodeOnWeb = (ratingKey: string) => words(`Choose the episo
 export const writeNoteOnWeb = (ratingKey: string) => words(`Tell the server admin what's wrong on the web: ${reportUrl(ratingKey)}`)
 
 /**
- * What the report led to: the server admin, the title's open report, Look
- * for the episodes, or an answer instead of a report. `day` writes a date.
+ * What the report led to: the server admin, the title's open report, a fix
+ * that started, or an answer instead of a report, with Send to the server
+ * admin when the answer is that the file is the best copy. `day` writes a
+ * date; `sentAs` is what was sent, for that button.
  */
-export function sent(result: ReportOutcome, day: (iso: string) => string): StepMessage {
+export function sent(result: ReportOutcome, day: (iso: string) => string, sentAs: { ratingKey: string; problem: ProblemCode }): StepMessage {
   switch (result.outcome) {
     case "answered":
-      return words(missingAnswerWords(result.answer, day))
+      return result.answer.kind === "BEST_COPY"
+        ? { content: answerWords(result.answer, day), components: [button(reportIds.admin(sentAs.ratingKey, sentAs.problem), "Send to the server admin")] }
+        : words(answerWords(result.answer, day))
     case "fixing":
-      return words(`We'll look for the missing episodes now. Nothing is removed. Follow it on the web: ${reportUrl()}`)
+      return words(`${FIXING[result.action]} Follow it on the web: ${reportUrl()}`)
     case "joined":
       return words(`This title already had an open report, so yours was added to it. Follow it on the web: ${reportUrl()}`)
     case "reported":

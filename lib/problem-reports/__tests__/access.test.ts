@@ -18,7 +18,7 @@ jest.mock('@/lib/connections/plex-config', () => ({ getActivePlexServerConfig: j
 jest.mock('@/lib/connections/plex-shared-sections', () => ({ getSharedSectionKeys: jest.fn(), rememberItemSectionKey: jest.fn() }))
 
 const SERVER = { name: 'Home', url: 'http://plex.local:32400', token: 'owner-token', adminPlexUserId: 'owner-plex', machineIdentifier: 'machine' }
-const ITEM: PlexItemMetadata = { ratingKey: '555', type: 'movie', title: 'Heat', year: 1995, guid: 'plex://movie/heat', ids: {}, librarySectionId: '1', parts: [], locations: [] }
+const ITEM: PlexItemMetadata = { ratingKey: '555', type: 'movie', title: 'Heat', year: 1995, guid: 'plex://movie/heat', ids: {}, librarySectionId: '1', media: [], locations: [] }
 
 beforeEach(() => {
   jest.clearAllMocks()

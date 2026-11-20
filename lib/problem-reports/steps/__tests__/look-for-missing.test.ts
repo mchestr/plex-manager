@@ -22,7 +22,7 @@ const MINUTE = 60_000
 const SERVER = { name: "Home", url: "http://plex.local:32400", token: "owner-token", adminPlexUserId: "owner", machineIdentifier: "m" }
 const REPORT = { id: "report-1", runToken: 3, action: "LOOK_FOR_MISSING" as const, reporterId: "member-1", plexRatingKey: "6999" }
 const START = { reportId: "report-1", runToken: 3, step: "start" as const, trigger: "automatic" as const, actorUserId: "member-1" }
-const SHOW = { ratingKey: "6999", type: "show", title: "The Office", ids: { tvdb: 73244 }, librarySectionId: "2", parts: [], locations: ["/tv/The Office"] }
+const SHOW = { ratingKey: "6999", type: "show", title: "The Office", ids: { tvdb: 73244 }, librarySectionId: "2", media: [], locations: ["/tv/The Office"] }
 const SONARR = { name: "Sonarr", url: "http://sonarr.local:8989", apiKey: "arr-key" }
 const state = (decision: Extract<MissingState, { ok: true }>["decision"]): MissingState => ({ ok: true, sonarr: SONARR, show: SHOW, seriesId: 42, decision })
 

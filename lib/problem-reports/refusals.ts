@@ -8,7 +8,7 @@
 
 import { NOT_ENTITLED_MESSAGE } from "@/lib/actions/entitlement"
 import type { ActionErrorCode } from "@/lib/actions/result"
-import type { ReportRefusal } from "@/lib/problem-reports/service"
+import type { ReportRefusal } from "@/lib/problem-reports/admit"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
 
 export const REFUSALS = {

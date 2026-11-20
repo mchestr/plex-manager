@@ -20,10 +20,10 @@ import { PROBLEM_REPORT_SETTINGS_ID } from "@/lib/problem-reports/settings"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
 
 /** What a run did, as the ledger records it: a scan of Plex is not a search. */
-type LedgerAction = "LOOK_FOR_MISSING" | "SCAN" | "REFRESH"
+type LedgerAction = "LOOK_FOR_MISSING" | "BETTER_COPY" | "SCAN" | "REFRESH"
 
 /** Ledger actions that send an indexer search, and ones that replace a file (none yet). */
-const SEARCHES: LedgerAction[] = ["LOOK_FOR_MISSING"]
+const SEARCHES: LedgerAction[] = ["LOOK_FOR_MISSING", "BETTER_COPY"]
 const REPLACES_FILE: LedgerAction[] = []
 
 const HOUR_MS = 60 * 60 * 1000
@@ -38,7 +38,7 @@ export interface RunRecord {
   reporterId: string
   actorUserId: string | null
   trigger: FixTrigger
-  /** What it acts on: `sonarr:series:<id>`, `plex:<rating key>`. */
+  /** What it acts on: `sonarr:series:<id>`, `radarr:movie:<id>`, `sonarr:episode:<ids>`, `plex:<rating key>`. */
   target: string
   action: LedgerAction
   traits: FixTraits
