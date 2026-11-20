@@ -17,7 +17,7 @@ import type * as IconsModule from "@/lib/ui/icons"
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/brand", () => ({ serverName: jest.fn().mockResolvedValue("Northfield Plex") }))
 jest.mock("@/lib/admin/nav-counts", () => ({
-  getAdminNavCounts: jest.fn().mockResolvedValue({ users: 7, pendingAffiliates: 2, failedJobs: 0 }),
+  getAdminNavCounts: jest.fn().mockResolvedValue({ users: 7, pendingAffiliates: 2, failedJobs: 0, cleanupReview: 6 }),
 }))
 jest.mock("@/lib/admin/nav", () => {
   const actual = jest.requireActual<typeof NavModule>("@/lib/admin/nav")

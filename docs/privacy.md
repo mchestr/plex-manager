@@ -160,6 +160,9 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `ProblemReport` | a problem the member reported with a title: the problem code, the member's note, the title's Plex rating key, guid and display fields, the status, the server admin's note to the member and internal note, dates | M `/report` and Your data; A problem report pages | Cascade | No |
 | `ProblemReportEvent` | one step of a report: its kind, the member or admin who took it (`actorUserId`), and its data. A second reporter's `ALSO_REPORTED` event holds their problem and note | M status words only, never who else reported; A problem report pages | The member's own `ALSO_REPORTED` events on others' reports are deleted; the events of their reports cascade; on other events `actorUserId` is set to null | No |
 | `InactivityNotice` | one warning email that the inactivity sweep planned for the member before removal: the stage (`leadDays`), the cycle and removal dates (`cycleAt`, `removeAfter`), the member zone, the status, a result code, the send attempts and the run that planned it. No address and no email text | A **Admin > Automations > Inactive members** | Cascade | No |
+| `CleanupProtection` | titles a member kept from Leaving soon and the Keep end date. When a Keep ends: the date, and who ended it. Admin exclusions with an admin note (no member). | M Leaving soon page and Account. A **Admin > Automations > Media cleanup**, Kept and excluded. | Cascade for the member's Keeps. Ended Keeps go 30 days after they end. | No |
+| `CleanupSnapshot` | per plex.tv account id, the newest play and whether the account has access now (no names) | A Media cleanup previews | Not erased on removal. Each library read replaces it, and only the 2 newest stay. A removed member's id leaves within 2 days. | No |
+| `CleanupSnapshotPart` | per title, the plex.tv account ids of the members who played or requested it, with dates and play counts (no names) | A Media cleanup previews and Why. M only their own facts, on the Leaving soon page. | Not erased on removal. Each library read replaces it, and only the 2 newest stay. A removed member's id leaves within 2 days. | No |
 
 ### Server data with no member's personal data
 
@@ -182,6 +185,11 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `DiscordIntegration` | Discord app credentials and bot settings; `updatedBy` admin id | `clientSecret`, `botToken` |
 | `ProblemReportSettings` | whether members can report problems on `/report`; `updatedBy` admin id | No |
 | `InactivitySettings` | whether the inactivity sweep is on, its days without a play, the claim of the run in progress, whether warning emails are on and the days before removal that they go out (`warningsEnabled`, `warningDays`); `updatedBy` admin id | No |
+| `CleanupSettings` | whether media cleanup is on or paused, its options, the claims of the runs, the Plex collection ids. `updatedBy` and `pausedBy` admin ids. | No |
+| `CleanupRule` | cleanup rules (name, conditions, mode) and their dry-run counts. `createdBy` and `updatedBy` admin ids. A "Requested by" condition can name member user ids: a `request.by` condition with `{ kind: "member", userId }` holds a member id. The rule is admin settings, and member removal does not edit rules. The evaluator reads a missing user as "no such member" (the condition fails for `anyOf` and `only`, and passes for `noneOf`). | No |
+| `CleanupItem` | titles in Leaving soon: size, dates, rule ids, the facts of the last check without member ids. `approvedBy` and `postponedBy` admin ids. | No |
+| `CleanupOutcome` | titles that left Leaving soon, with the facts the run saw and no member ids. Deleted and failed rows stay 1 year. Rescued and released rows stay 90 days. | No |
+| `CleanupRun` | per run, counts per rule and the safety stops. No member data. | No |
 | `LeaseLock` | which instance holds each lease (Discord bot, watchlist sync, retention) and until when | No |
 | `RewindServerAggregate` | server-wide yearly totals, no per-member rows | No |
 | `MediaMetadataCache` | Plex metadata per title | No |

@@ -1,11 +1,16 @@
 import { TEST_USERS } from '../fixtures/auth';
+import { CLEANUP_A11Y_PREFIX, cleanupSeedIds } from '../helpers/cleanup-fixtures';
 import { createE2EPrismaClient } from '../helpers/prisma';
+import { clearCleanup, restorePlex, seedCleanupA11y, wipeCleanup } from '../helpers/seed-cleanup';
 import { clearVisualFixtures, seedVisualFixtures, VISUAL_REWIND_ID } from '../helpers/seed-fixtures';
 
 /**
  * The axe spec's seed: P1.6's visual seed plus the rows only the axe routes
  * read (a share link on the seeded Rewind, one chat conversation with its
- * usage row and the assistant page's stored turns, and a few watchlist titles).
+ * usage row and the assistant page's stored turns, a few watchlist titles,
+ * and the media cleanup rows of `seedCleanupA11y()`: the fixed rules
+ * `a11y-cleanup-rule-dry` and `a11y-cleanup-rule-live` and the three cleanup
+ * members, TS 16.5).
  */
 
 /** 43 base64url characters, the shape `generateShareToken` makes. */
@@ -39,6 +44,8 @@ const A11Y_WATCHLIST = (['REQUESTED', 'ALREADY_AVAILABLE', 'NOT_PERMITTED', 'FAI
 
 export async function seedA11yFixtures(): Promise<void> {
   await seedVisualFixtures();
+  // After the visual seed, which deletes every user outside its list: the cleanup routes sign in as the cleanup members (delivery-r3-5)
+  await seedCleanupA11y();
   const prisma = createE2EPrismaClient();
   try {
     await prisma.$transaction([
@@ -101,7 +108,35 @@ export async function clearA11yShareVisits(): Promise<void> {
   }
 }
 
+/**
+ * Deletes the Radarr, Sonarr, Overseerr and Tautulli rows that the axe row
+ * "recipe sheet" points at the mocks (`useCleanupServices(CLEANUP_A11Y_PREFIX)`):
+ * the axe seed has none, and the member rows after it read the seed's data.
+ */
+export async function clearA11yCleanupServices(): Promise<void> {
+  const ids = cleanupSeedIds(CLEANUP_A11Y_PREFIX).services;
+  const prisma = createE2EPrismaClient();
+  try {
+    await prisma.$transaction([
+      prisma.radarr.deleteMany({ where: { id: ids.radarr } }),
+      prisma.sonarr.deleteMany({ where: { id: ids.sonarr } }),
+      prisma.overseerr.deleteMany({ where: { id: ids.overseerr } }),
+      prisma.tautulli.deleteMany({ where: { id: ids.tautulli } }),
+    ]);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+/**
+ * Removes what the axe seed added. The media cleanup rows go first, and the
+ * Plex row that the member cleanup routes pointed at the Plex mock comes back
+ * (TS 16.4 rule 3), so the specs after this one see the server as before.
+ */
 export async function clearA11yFixtures(): Promise<void> {
+  await restorePlex();
+  await wipeCleanup();
+  await clearCleanup(CLEANUP_A11Y_PREFIX);
   const prisma = createE2EPrismaClient();
   try {
     await prisma.chatConversation.deleteMany({ where: { id: A11Y_CONVERSATION_ID } });

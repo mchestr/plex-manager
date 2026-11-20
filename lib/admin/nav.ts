@@ -1,3 +1,4 @@
+/* eslint max-lines: ["error", { "max": 230, "skipBlankLines": true, "skipComments": true }] -- cohesive: one table feeds the sidebar, the tab bar, the command menu and the page titles, beside the rules that read it */
 /**
  * The admin navigation config (ui-design-system 5.5 and 6.2): one list that
  * feeds the sidebar, the mobile tab bar and its More sheet, page titles
@@ -19,7 +20,7 @@
  * Rewind          Season, Playground, Shares, Settings
  * Discord         Activity, Settings
  * AI              Activity, Cost, Settings
- * Automations     Watchlist sync, Inactive members, Request limits, Queues
+ * Automations     Watchlist sync, Inactive members, Request limits, Queues, Media cleanup
  * Audit log
  * Settings
  * ```
@@ -47,11 +48,13 @@ export interface NavCounts {
   /** Affiliate applications waiting for a decision. */
   pendingAffiliates: number
   failedJobs: number | null
+  /** Media cleanup items in a deletion or entry batch (TS 12.3 item 3); `null` for a role, which never reviews them. */
+  cleanupReview: number | null
 }
 
 interface AdminNavBadge {
   text: string
-  tone?: "destructive"
+  tone?: "destructive" | "warning"
 }
 
 export interface AdminNavChild {
@@ -177,15 +180,22 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     icon: icons.automations,
     // Its other tabs sit beside /admin/watchlist, not below it, so `also` lights it on their paths
     match: "prefix",
-    also: ["/admin/inactivity", "/admin/request-limits", "/admin/queues"],
+    also: ["/admin/inactivity", "/admin/request-limits", "/admin/queues", "/admin/cleanup"],
     // The tab bar follows nav order, so Automations sits after Rewind
     mobile: "tab",
-    badge: ({ failedJobs }) => (failedJobs ? { text: `${failedJobs} failed`, tone: "destructive" } : null),
+    // Failed jobs win, because they are the destructive state; else the media cleanup batches that wait (UX 3.2)
+    badge: ({ failedJobs, cleanupReview }) =>
+      failedJobs
+        ? { text: `${failedJobs} failed`, tone: "destructive" }
+        : cleanupReview
+          ? { text: `${cleanupReview} to review`, tone: "warning" }
+          : null,
     children: [
       { id: "watchlist", label: "Watchlist sync", href: "/admin/watchlist" },
       { id: "inactivity", label: "Inactive members", href: "/admin/inactivity" },
       { id: "request-limits", label: "Request limits", href: "/admin/request-limits" },
       { id: "queues", label: "Queues", href: "/admin/queues" },
+      { id: "cleanup", label: "Media cleanup", href: "/admin/cleanup" },
     ],
   },
   {

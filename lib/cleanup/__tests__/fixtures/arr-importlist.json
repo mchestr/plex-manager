@@ -1,0 +1,34 @@
+[
+  {
+    "enableAuto": true,
+    "monitor": "movieOnly",
+    "rootFolderPath": "/data/movies",
+    "qualityProfileId": 4,
+    "searchOnAdd": false,
+    "minimumAvailability": "released",
+    "listType": "trakt",
+    "listOrder": 1,
+    "minRefreshInterval": "12:00:00",
+    "name": "Invented list",
+    "fields": [
+      {
+        "order": 0,
+        "name": "accessToken",
+        "label": "Access Token",
+        "value": "redacted-token",
+        "type": "textbox",
+        "privacy": "apiKey"
+      }
+    ],
+    "implementationName": "Trakt List",
+    "implementation": "TraktListImport",
+    "configContract": "TraktListSettings",
+    "infoLink": "https://wiki.servarr.com/radarr/supported#traktlistimport",
+    "tags": [
+      2
+    ],
+    "presets": [],
+    "enabled": true,
+    "id": 1
+  }
+]

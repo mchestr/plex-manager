@@ -1,0 +1,40 @@
+[
+  {
+    "seriesId": 21,
+    "tvdbId": 6603101,
+    "episodeFileId": 2101,
+    "seasonNumber": 1,
+    "episodeNumber": 1,
+    "title": "Episode 1",
+    "airDate": "2016-09-01",
+    "airDateUtc": "2016-09-02T01:00:00Z",
+    "lastSearchTime": "2024-01-01T00:00:00Z",
+    "runtime": 25,
+    "overview": "An invented episode.",
+    "hasFile": true,
+    "monitored": true,
+    "absoluteEpisodeNumber": 1,
+    "unverifiedSceneNumbering": false,
+    "grabbed": false,
+    "id": 3101
+  },
+  {
+    "seriesId": 21,
+    "tvdbId": 6603102,
+    "episodeFileId": 2102,
+    "seasonNumber": 1,
+    "episodeNumber": 2,
+    "title": "Episode 2",
+    "airDate": "2016-09-01",
+    "airDateUtc": "2016-09-02T01:00:00Z",
+    "lastSearchTime": "2024-01-01T00:00:00Z",
+    "runtime": 25,
+    "overview": "An invented episode.",
+    "hasFile": true,
+    "monitored": false,
+    "absoluteEpisodeNumber": 2,
+    "unverifiedSceneNumbering": false,
+    "grabbed": false,
+    "id": 3102
+  }
+]

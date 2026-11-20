@@ -87,7 +87,7 @@ describe("rate-limit", () => {
   })
 
   describe("LIMITS", () => {
-    it("keeps the existing limits and adds the sign-in, invite, PIN, LLM, Discord, watchlist, Rewind card, generation and LLM limits", async () => {
+    it("keeps the existing limits and adds the sign-in, invite, PIN, LLM, Discord, watchlist, Rewind card, generation, LLM and media cleanup limits", async () => {
       const { LIMITS } = await import("@/lib/security/rate-limit-config")
 
       expect(LIMITS).toEqual({
@@ -105,6 +105,9 @@ describe("rate-limit", () => {
         'problem-report:create': { points: 10, duration: 3600 },
         'problem-report:create:day': { points: 20, duration: 86400 },
         'admin:remove-member': { points: 10, duration: 3600 },
+        'admin:cleanup-preview': { points: 120, duration: 60 },
+        'admin:cleanup': { points: 60, duration: 600 },
+        'cleanup:keep': { points: 30, duration: 3600 },
         'account:data': { points: 60, duration: 3600 },
         checkout: { points: 10, duration: 60 },
         portal: { points: 10, duration: 60 },

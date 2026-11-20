@@ -1,0 +1,87 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "allowSync": true,
+    "identifier": "com.plexapp.plugins.library",
+    "librarySectionID": 1,
+    "librarySectionTitle": "Movies",
+    "librarySectionUUID": "0b7c4f2e-0000-4000-8000-000000000001",
+    "mediaTagPrefix": "/system/bundle/media/flags/",
+    "Metadata": [
+      {
+        "ratingKey": "101",
+        "key": "/library/metadata/101",
+        "guid": "plex://movie/5d7768aa96b655001fdc0101",
+        "slug": "the-lantern-keeper",
+        "studio": "Invented Pictures",
+        "type": "movie",
+        "title": "The Lantern Keeper",
+        "librarySectionTitle": "Movies",
+        "librarySectionID": 1,
+        "librarySectionKey": "/library/sections/1",
+        "contentRating": "PG-13",
+        "summary": "An invented film for the cleanup fixtures.",
+        "audienceRating": 7.1,
+        "viewCount": 2,
+        "lastViewedAt": 1730000000,
+        "year": 2014,
+        "tagline": "Invented.",
+        "thumb": "/library/metadata/101/thumb/1735689600",
+        "art": "/library/metadata/101/art/1735689600",
+        "duration": 6300000,
+        "originallyAvailableAt": "2014-05-01",
+        "addedAt": 1700000000,
+        "updatedAt": 1735689600,
+        "Media": [
+          {
+            "id": 1010,
+            "duration": 6300000,
+            "bitrate": 8000,
+            "width": 1920,
+            "height": 1080,
+            "videoResolution": "1080",
+            "container": "mkv",
+            "Part": [
+              {
+                "id": 10100,
+                "key": "/library/parts/10100/1735689600/file.mkv",
+                "duration": 6300000,
+                "file": "/data/movies/The Lantern Keeper (2014)/The Lantern Keeper (2014).mkv",
+                "size": 8589934592,
+                "container": "mkv"
+              }
+            ]
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Drama"
+          }
+        ],
+        "Director": [
+          {
+            "tag": "Invented Director"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Invented Actor"
+          }
+        ],
+        "Guid": [
+          {
+            "id": "imdb://tt9900101"
+          },
+          {
+            "id": "tmdb://990101"
+          }
+        ],
+        "Label": [
+          {
+            "tag": "Untranscodable"
+          }
+        ]
+      }
+    ]
+  }
+}
