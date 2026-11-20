@@ -4,14 +4,14 @@ import type { AddressInfo } from 'node:net';
 import { expect, test } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
-import { MOCK_MOVIE, startMockRadarr, type MockRadarr } from './mocks/radarr-server';
+import { MOCK_MOVIE, startProblemReportsRadarr, type ProblemReportsRadarr } from './mocks/problem-reports-radarr';
 
 /**
  * Plex's match (docs/problem-reports.md, "Fix the Plex match"): the admin
  * fixes a movie Plex matched to another title, and the report ends fixed
  * once the movie has Radarr's ids; and a member's report of wrong details
  * checks the match against Radarr, then asks Plex to read the details again.
- * Radarr is the mock in `e2e/mocks/radarr-server.ts`; the stub Plex server
+ * Radarr is the mock in `e2e/mocks/problem-reports-radarr.ts`; the stub Plex server
  * below answers the match calls and changes the movie's ids when it is
  * matched.
  */
@@ -112,11 +112,11 @@ const statusOf = (id: string) => withDb((prisma) => prisma.problemReport.findUni
 
 test.describe('Problem reports: the Plex match', () => {
   let plex: StubPlex;
-  let radarr: MockRadarr;
+  let radarr: ProblemReportsRadarr;
   let originalUrl: string | null = null;
 
   test.beforeAll(async () => {
-    [plex, radarr] = await Promise.all([startStubPlex(), startMockRadarr(MOVIE.folder)]);
+    [plex, radarr] = await Promise.all([startStubPlex(), startProblemReportsRadarr(MOVIE.folder)]);
     await clearReports();
     await withDb(async (prisma) => {
       originalUrl = (await prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true } }))?.url ?? null;

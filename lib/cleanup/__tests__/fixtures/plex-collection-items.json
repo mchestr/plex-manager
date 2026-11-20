@@ -1,0 +1,25 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "totalSize": 1,
+    "offset": 0,
+    "allowSync": true,
+    "librarySectionID": 1,
+    "title1": "Movies",
+    "title2": "Leaving soon",
+    "Metadata": [
+      {
+        "ratingKey": "101",
+        "key": "/library/metadata/101",
+        "guid": "plex://movie/5d7768aa96b655001fdc0101",
+        "type": "movie",
+        "title": "The Lantern Keeper",
+        "librarySectionTitle": "Movies",
+        "librarySectionID": 1,
+        "year": 2014,
+        "addedAt": 1700000000,
+        "updatedAt": 1735689600
+      }
+    ]
+  }
+}

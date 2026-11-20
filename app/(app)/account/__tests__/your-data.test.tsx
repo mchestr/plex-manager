@@ -3,7 +3,7 @@
  * conversation lists, each delete behind a confirm.
  */
 
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { resetUrl } from '@/__tests__/helpers/url-router'
@@ -15,6 +15,10 @@ jest.mock('server-only', () => ({}))
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))
 jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').navigationModule)
 jest.mock('@/actions/member-data', () => ({ deleteMyMark: jest.fn(), forgetWatchlistItem: jest.fn() }))
+// The Keeps block of the section loads the session and the member's Keeps; with no session it renders nothing
+jest.mock('@/actions/cleanup-keeps', () => ({ keepCleanupTitle: jest.fn(), removeMyCleanupKeep: jest.fn() }))
+jest.mock('@/lib/data/session', () => ({ getSession: jest.fn().mockResolvedValue(null) }))
+jest.mock('@/lib/data/leaving-soon', () => ({ getMyKeeps: jest.fn() }))
 const mockShowSuccess = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: mockShowSuccess, showError: jest.fn() }) }))
 
@@ -46,13 +50,15 @@ describe('YourDataSection', () => {
     expect(screen.getByTestId('account-rewind-link')).toHaveAttribute('href', '/rewind')
   })
 
-  it("lists the member's problem reports with their status, and hides the list when there are none", () => {
-    const { rerender } = render(<YourDataSection data={DATA} disclosure="" />)
+  it("lists the member's problem reports with their status, and hides the list when there are none", async () => {
+    // The Keeps block suspends on its session read, so each render settles inside act
+    const view = await act(async () => render(<YourDataSection data={DATA} disclosure="" />))
 
     expect(within(screen.getByTestId('account-reports-row-report-1')).getByText('Heat (1995)')).toBeInTheDocument()
     expect(screen.getByTestId('account-reports-row-report-1')).toHaveTextContent('With the server admin')
 
-    rerender(<YourDataSection data={{ ...DATA, reports: { total: 0, rows: [] } }} disclosure="" />)
+    await act(async () => view.rerender(<YourDataSection data={{ ...DATA, reports: { total: 0, rows: [] } }} disclosure="" />))
+    expect(screen.getByTestId('account-your-data')).toBeInTheDocument()
     expect(screen.queryByTestId('account-reports')).not.toBeInTheDocument()
   })
 

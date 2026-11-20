@@ -6,7 +6,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
-import { MOCK_MOVIE, startMockRadarr, type MockRadarr } from './mocks/radarr-server';
+import { MOCK_MOVIE, startProblemReportsRadarr, type ProblemReportsRadarr } from './mocks/problem-reports-radarr';
 
 /**
  * "Blurry or low quality" (docs/problem-reports.md, "Look for a better
@@ -14,7 +14,7 @@ import { MOCK_MOVIE, startMockRadarr, type MockRadarr } from './mocks/radarr-ser
  * Look for a better copy, and Radarr is asked to search with the file in
  * place; one at the cutoff hears it is the best copy the server keeps and
  * can still send it to the server admin; the admin can start the fix from a
- * report. Radarr is the mock in `e2e/mocks/radarr-server.ts`, and the movie
+ * report. Radarr is the mock in `e2e/mocks/problem-reports-radarr.ts`, and the movie
  * comes from a stub Plex server in library section 1, which the plex.tv mock
  * shares with the regular member.
  */
@@ -82,11 +82,11 @@ const fileAt = (qualityCutoffNotMet: boolean) => ({ id: 70, relativePath: FILE_N
 
 test.describe('Problem reports: a better copy', () => {
   let plex: Server;
-  let radarr: MockRadarr;
+  let radarr: ProblemReportsRadarr;
   let originalUrl: string | null = null;
 
   test.beforeAll(async () => {
-    [plex, radarr] = await Promise.all([startStubPlex(), startMockRadarr(MOVIE.folder)]);
+    [plex, radarr] = await Promise.all([startStubPlex(), startProblemReportsRadarr(MOVIE.folder)]);
     await clearReports();
     await withDb(async (prisma) => {
       originalUrl = (await prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true } }))?.url ?? null;

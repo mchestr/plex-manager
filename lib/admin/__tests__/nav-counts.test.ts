@@ -2,6 +2,9 @@
  * The admin sidebar's counts: members and PENDING affiliate applications from
  * the database (invites have no badge, so none are counted). The failed-job
  * count asks Redis, and is null when Redis is unset, not ready, slow or failing.
+ * The problem reports to review are those with the server admin. The media
+ * cleanup items to review count held items and due Review first items while
+ * the feature is on and not paused (TS 12.3 item 3).
  */
 
 import { mockReset } from 'jest-mock-extended'
@@ -27,10 +30,13 @@ beforeEach(() => {
   prismaMock.user.count.mockResolvedValue(7)
   prismaMock.affiliateApplication.count.mockResolvedValue(2)
   prismaMock.problemReport.count.mockResolvedValue(3)
+  prismaMock.cleanupSettings.findUnique.mockResolvedValue(null)
+  prismaMock.config.findUnique.mockResolvedValue({ timezone: 'America/Chicago' } as never)
+  prismaMock.cleanupItem.count.mockResolvedValue(6)
 })
 
 it('counts the members, the pending applications and the reports with the server admin, and no longer the invites', async () => {
-  await expect(getAdminNavCounts()).resolves.toStrictEqual({ users: 7, pendingAffiliates: 2, failedJobs: null, reportsToReview: 3 })
+  await expect(getAdminNavCounts()).resolves.toStrictEqual({ users: 7, pendingAffiliates: 2, failedJobs: null, reportsToReview: 3, cleanupReview: 0 })
   expect(prismaMock.problemReport.count).toHaveBeenCalledWith({ where: { status: 'WITH_ADMIN' } })
   expect(prismaMock.affiliateApplication.count).toHaveBeenCalledWith({ where: { status: 'PENDING' } })
   expect(prismaMock.invite.count).not.toHaveBeenCalled()
@@ -64,5 +70,36 @@ describe('failed jobs', () => {
     } finally {
       jest.useRealTimers()
     }
+  })
+})
+
+describe('media cleanup items to review', () => {
+  afterEach(() => jest.useRealTimers())
+
+  it('counts the held items and the due Review first items, with today in the server zone, while cleanup is on', async () => {
+    // 03:00 UTC is still the day before in Chicago
+    jest.useFakeTimers({ now: new Date('2026-11-09T03:00:00Z'), doNotFake: ['setTimeout', 'clearTimeout'] })
+    prismaMock.cleanupSettings.findUnique.mockResolvedValue({ enabled: true, pausedAt: null } as never)
+
+    await expect(getAdminNavCounts()).resolves.toMatchObject({ cleanupReview: 6 })
+    expect(prismaMock.cleanupSettings.findUnique).toHaveBeenCalledWith({ where: { id: 'cleanup' }, select: { enabled: true, pausedAt: true } })
+    expect(prismaMock.cleanupItem.count).toHaveBeenCalledWith({
+      where: { OR: [{ state: 'held' }, { state: 'leaving', needsApproval: true, leaveOn: { lte: '2026-11-08' } }] },
+    })
+  })
+
+  it.each([
+    ['off', { enabled: false, pausedAt: null }],
+    ['paused', { enabled: true, pausedAt: new Date('2026-11-08T09:12:00Z') }],
+  ])('is 0 while cleanup is %s, without counting', async (_state, settings) => {
+    prismaMock.cleanupSettings.findUnique.mockResolvedValue(settings as never)
+
+    await expect(getAdminNavCounts()).resolves.toMatchObject({ cleanupReview: 0 })
+    expect(prismaMock.cleanupItem.count).not.toHaveBeenCalled()
+  })
+
+  it('is 0 before the settings row exists', async () => {
+    await expect(getAdminNavCounts()).resolves.toMatchObject({ cleanupReview: 0 })
+    expect(prismaMock.cleanupItem.count).not.toHaveBeenCalled()
   })
 })

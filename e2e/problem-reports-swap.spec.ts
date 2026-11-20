@@ -6,7 +6,7 @@ import { Queue } from 'bullmq';
 import { expect, test } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
-import { MOCK_MOVIE, startMockRadarr, type MockRadarr } from './mocks/radarr-server';
+import { MOCK_MOVIE, startProblemReportsRadarr, type ProblemReportsRadarr } from './mocks/problem-reports-radarr';
 
 /**
  * The fixes that replace a file (docs/problem-reports.md, "Swap the copy"
@@ -15,7 +15,7 @@ import { MOCK_MOVIE, startMockRadarr, type MockRadarr } from './mocks/radarr-ser
  * ends Fixed with the old release on the blocklist; and the admin removes
  * the file behind a confirm that says what will happen, after which Radarr
  * monitors the movie again and searches. Radarr is the mock in
- * `e2e/mocks/radarr-server.ts`, and the movie comes from a stub Plex server
+ * `e2e/mocks/problem-reports-radarr.ts`, and the movie comes from a stub Plex server
  * in library section 1. A fix's next step waits in the job queue, so the
  * spec promotes the delayed job rather than waiting for it.
  */
@@ -125,11 +125,11 @@ async function runNextStep(reportId: string) {
 
 test.describe('Problem reports: swap the copy and remove the file', () => {
   let plex: Server;
-  let radarr: MockRadarr;
+  let radarr: ProblemReportsRadarr;
   let originalUrl: string | null = null;
 
   test.beforeAll(async () => {
-    [plex, radarr] = await Promise.all([startStubPlex(), startMockRadarr(MOVIE.folder)]);
+    [plex, radarr] = await Promise.all([startStubPlex(), startProblemReportsRadarr(MOVIE.folder)]);
     await clearReports();
     await withDb(async (prisma) => {
       originalUrl = (await prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true } }))?.url ?? null;

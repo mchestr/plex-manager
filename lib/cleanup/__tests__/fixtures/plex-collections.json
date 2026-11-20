@@ -1,0 +1,46 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "totalSize": 2,
+    "offset": 0,
+    "allowSync": false,
+    "librarySectionID": 1,
+    "Metadata": [
+      {
+        "ratingKey": "501",
+        "key": "/library/collections/501/children",
+        "guid": "collection://0b7c4f2e-0000-4000-8000-000000000501",
+        "type": "collection",
+        "title": "Leaving soon",
+        "subtype": "movie",
+        "summary": "These titles leave soon, the soonest first.",
+        "index": 501,
+        "ratingCount": 1,
+        "thumb": "/library/collections/501/composite/1735689600",
+        "addedAt": 1735000000,
+        "updatedAt": 1735689600,
+        "childCount": "1",
+        "smart": false,
+        "collectionSort": "2",
+        "maxYear": "2014",
+        "minYear": "2014"
+      },
+      {
+        "ratingKey": "502",
+        "key": "/library/collections/502/children",
+        "guid": "collection://0b7c4f2e-0000-4000-8000-000000000502",
+        "type": "collection",
+        "title": "Recently added",
+        "subtype": "movie",
+        "summary": "",
+        "index": 502,
+        "thumb": "/library/collections/502/composite/1735689600",
+        "addedAt": 1735000100,
+        "updatedAt": 1735689600,
+        "childCount": "12",
+        "smart": "1",
+        "content": "/library/sections/1/all?type=1&sort=addedAt:desc"
+      }
+    ]
+  }
+}

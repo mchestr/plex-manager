@@ -20,10 +20,13 @@ interface RadioGroupProps<T extends string> {
 /** A single choice among cards, on Base UI RadioGroup: arrow keys move, Space picks. */
 export function RadioGroup<T extends string>({ value, onValueChange, className, children, ...props }: RadioGroupProps<T>) {
   return (
-    <RadioGroupPrimitive<T>
+    <RadioGroupPrimitive<T | null>
       data-slot="radio-group"
-      value={value ?? undefined}
-      onValueChange={(next) => onValueChange(next)}
+      // null stays controlled with no card checked; undefined would make the group uncontrolled
+      value={value}
+      onValueChange={(next) => {
+        if (next !== null) onValueChange(next)
+      }}
       className={cn("flex flex-col gap-2", className)}
       {...props}
     >
@@ -40,6 +43,15 @@ interface RadioCardProps {
   /** Trailing content such as a status badge. */
   trailing?: ReactNode
   className?: string
+  /** Names the radio from parts of its content, in place of all of its text. */
+  "aria-labelledby"?: string
+  /** The card's description, or the reason a card that is not allowed gives (UX 11.1 item 8). */
+  "aria-describedby"?: string
+  /**
+   * Marks a card that cannot be chosen while it stays readable. The group must
+   * ignore its value in `onValueChange`. Base UI's arrow keys skip such a radio.
+   */
+  "aria-disabled"?: boolean
   "data-testid"?: string
 }
 

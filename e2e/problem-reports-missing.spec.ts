@@ -6,14 +6,14 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
-import { MOCK_SERIES, startMockSonarr, type MockEpisode, type MockSonarr } from './mocks/sonarr-server';
+import { MOCK_SERIES, startProblemReportsSonarr, type MockEpisode, type ProblemReportsSonarr } from './mocks/problem-reports-sonarr';
 
 /**
  * "Episodes are missing" (docs/problem-reports.md, "Fixes"): a member who
  * reports it gets an answer when the episode hasn't aired or the season
  * isn't monitored, and otherwise Look for the episodes starts and Sonarr is
  * asked to search; the admin can start it from a report too. Sonarr is the
- * mock in `e2e/mocks/sonarr-server.ts`, and the show comes from a stub Plex
+ * mock in `e2e/mocks/problem-reports-sonarr.ts`, and the show comes from a stub Plex
  * server in library section 1, which the plex.tv mock shares with the
  * regular member.
  */
@@ -81,11 +81,11 @@ const clearReports = () =>
 
 test.describe('Problem reports: missing episodes', () => {
   let plex: Server;
-  let sonarr: MockSonarr;
+  let sonarr: ProblemReportsSonarr;
   let originalUrl: string | null = null;
 
   test.beforeAll(async () => {
-    [plex, sonarr] = await Promise.all([startStubPlex(), startMockSonarr()]);
+    [plex, sonarr] = await Promise.all([startStubPlex(), startProblemReportsSonarr()]);
     await clearReports();
     await withDb(async (prisma) => {
       originalUrl = (await prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true } }))?.url ?? null;
