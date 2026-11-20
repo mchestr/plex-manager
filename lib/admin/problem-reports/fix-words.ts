@@ -31,6 +31,7 @@ export const TO_ADMIN_WORDS: Record<ToAdminReason, string> = {
   SPECIAL: "It's a special, which Sonarr numbers its own way",
   UNMONITORED: "It isn't monitored in Radarr or Sonarr",
   UNAVAILABLE: "Radarr, Sonarr or Plex couldn't be reached",
+  ERROR: "The fix stopped on an error. Its failed job is under Automations, Queues",
   NOTHING_MISSING: "Sonarr and Plex have every episode that has aired",
   NOT_ON_SERVER: "The missing episodes aren't monitored in Sonarr",
   NOT_AIRED: "The missing episodes haven't aired yet",
