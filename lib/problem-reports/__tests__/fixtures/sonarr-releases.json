@@ -1,0 +1,47 @@
+[
+  {
+    "guid": "https://indexer.example/details/2001",
+    "quality": { "quality": { "id": 3, "name": "WEBDL-1080p" }, "revision": { "version": 1, "real": 0 } },
+    "customFormatScore": 20,
+    "indexerId": 6,
+    "title": "Show.S01E01E02.1080p.WEB-DL.DDP5.1-GRP",
+    "fullSeason": false,
+    "seasonNumber": 1,
+    "languages": [{ "id": 1, "name": "English" }],
+    "mappedSeasonNumber": 1,
+    "mappedEpisodeNumbers": [1, 2],
+    "mappedEpisodeInfo": [{ "id": 11, "seasonNumber": 1, "episodeNumber": 1, "title": "Pilot" }, { "id": 12, "seasonNumber": 1, "episodeNumber": 2, "title": "Diversity Day" }],
+    "rejected": true,
+    "rejections": ["Existing file on disk is of equal or higher preference: WEBDL-1080p v1"],
+    "seeders": 30,
+    "protocol": "torrent"
+  },
+  {
+    "guid": "https://indexer.example/details/2002",
+    "quality": { "quality": { "id": 3, "name": "WEBDL-1080p" }, "revision": { "version": 1, "real": 0 } },
+    "customFormatScore": 20,
+    "indexerId": 6,
+    "title": "Show.S01.1080p.WEB-DL-PACK",
+    "fullSeason": true,
+    "seasonNumber": 1,
+    "languages": [{ "id": 1, "name": "English" }],
+    "mappedEpisodeInfo": [{ "id": 11 }, { "id": 12 }, { "id": 13 }],
+    "rejected": true,
+    "rejections": ["Existing file on disk is of equal or higher preference: WEBDL-1080p v1"],
+    "seeders": 99,
+    "protocol": "torrent"
+  },
+  {
+    "guid": "https://indexer.example/details/2003",
+    "quality": { "quality": { "id": 15, "name": "WEBRip-1080p" }, "revision": { "version": 1, "real": 0 } },
+    "customFormatScore": 25,
+    "indexerId": 7,
+    "title": "Show.S01E01.1080p.WEBRip-SINGLE",
+    "languages": [{ "id": 1, "name": "English" }],
+    "mappedEpisodeInfo": [{ "id": 11 }],
+    "rejected": false,
+    "rejections": [],
+    "seeders": 50,
+    "protocol": "torrent"
+  }
+]

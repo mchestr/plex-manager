@@ -28,6 +28,23 @@ describe("getArrQualityProfile", () => {
     expect(init.headers["X-Api-Key"]).toBe("arr-key")
   })
 
+  it("reads the profile's qualities from worst to best, a group's ranking together", async () => {
+    mockFetch.mockResolvedValue(
+      respond(200, {
+        id: 7,
+        upgradeAllowed: true,
+        cutoffFormatScore: 0,
+        items: [
+          { quality: { id: 1, name: "SDTV" }, items: [], allowed: false },
+          { name: "WEB 1080p", items: [{ quality: { id: 3, name: "WEBDL-1080p" } }, { quality: { id: 15, name: "WEBRip-1080p" } }], allowed: true },
+          { quality: { id: 7, name: "Bluray-1080p" }, items: [], allowed: true },
+        ],
+      })
+    )
+
+    expect(await getArrQualityProfile("Sonarr", CONFIG, 7)).toEqual({ success: true, data: { id: 7, upgradeAllowed: true, cutoffFormatScore: 0, qualityOrder: [[1], [3, 15], [7]] } })
+  })
+
   it("reads no custom format cutoff from a version without one", async () => {
     mockFetch.mockResolvedValue(respond(200, { id: 7, upgradeAllowed: false }))
 
@@ -100,14 +117,20 @@ describe("listTitleHistory", () => {
   it("reads a movie's history with each record's time", async () => {
     mockFetch.mockResolvedValue(
       respond(200, [
-        { id: 9, eventType: "grabbed", date: "2026-11-09T12:00:00Z", downloadId: "ABC", movieId: 5 },
+        { id: 9, eventType: "grabbed", date: "2026-11-09T12:00:00Z", downloadId: "ABC", movieId: 5, sourceTitle: "Heat.1995.720p.WEB-GRP", data: { torrentInfoHash: "ABCDEF", releaseSource: "Rss" } },
+        { id: 11, eventType: "downloadFolderImported", date: "2026-11-09T13:00:00Z", downloadId: "ABC", data: { fileId: "77", importedPath: "/movies/x.mkv" } },
+        { id: 12, eventType: "movieFileDeleted", date: "2026-11-09T14:00:00Z", data: { fileId: "seventy" } },
         { id: 10, eventType: "grabbed", date: "not a date" },
       ])
     )
 
     expect(await listTitleHistory(CONFIG, { service: "radarr", id: 5 })).toEqual({
       success: true,
-      data: [{ eventType: "grabbed", at: Date.parse("2026-11-09T12:00:00Z"), downloadId: "ABC", episodeId: null }],
+      data: [
+        { id: 9, eventType: "grabbed", at: Date.parse("2026-11-09T12:00:00Z"), sourceTitle: "Heat.1995.720p.WEB-GRP", downloadId: "ABC", episodeId: null, fileId: null, infoHash: "abcdef" },
+        { id: 11, eventType: "downloadFolderImported", at: Date.parse("2026-11-09T13:00:00Z"), sourceTitle: null, downloadId: "ABC", episodeId: null, fileId: 77, infoHash: null },
+        { id: 12, eventType: "movieFileDeleted", at: Date.parse("2026-11-09T14:00:00Z"), sourceTitle: null, downloadId: null, episodeId: null, fileId: null, infoHash: null },
+      ],
     })
     expect(mockFetch.mock.calls[0][0]).toBe("http://arr.local:7878/api/v3/history/movie?movieId=5")
   })
@@ -117,7 +140,7 @@ describe("listTitleHistory", () => {
 
     expect(await listTitleHistory(CONFIG, { service: "sonarr", id: 42 })).toEqual({
       success: true,
-      data: [{ eventType: "downloadFailed", at: Date.parse("2026-11-09T12:00:00.123Z"), downloadId: null, episodeId: 11 }],
+      data: [{ id: 9, eventType: "downloadFailed", at: Date.parse("2026-11-09T12:00:00.123Z"), sourceTitle: null, downloadId: null, episodeId: 11, fileId: null, infoHash: null }],
     })
     expect(mockFetch.mock.calls[0][0]).toBe("http://arr.local:7878/api/v3/history/series?seriesId=42")
   })

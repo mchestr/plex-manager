@@ -56,6 +56,8 @@ export const JOB_TYPES = {
   PROBLEM_REPORT_FIX: "problem-report:fix",
   // One member's DM when a report they made or follow is fixed or closed (lib/queue/jobs/problem-report-update.ts)
   PROBLEM_REPORT_UPDATE: "problem-report:update",
+  // The admins' DM when fixes that replace files trip the breaker (lib/queue/jobs/problem-breaker-alert.ts)
+  PROBLEM_BREAKER_ALERT: "problem-report:breaker",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -102,6 +104,7 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.PROBLEM_REPORT_NOTIFY]: "Problem report alert",
   [JOB_TYPES.PROBLEM_REPORT_FIX]: "Problem report fix",
   [JOB_TYPES.PROBLEM_REPORT_UPDATE]: "Problem report update",
+  [JOB_TYPES.PROBLEM_BREAKER_ALERT]: "Problem fixes paused",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
   [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
@@ -140,6 +143,7 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.PROBLEM_REPORT_NOTIFY,
   JOB_TYPES.PROBLEM_REPORT_FIX,
   JOB_TYPES.PROBLEM_REPORT_UPDATE,
+  JOB_TYPES.PROBLEM_BREAKER_ALERT,
 ] as const satisfies readonly JobType[]
 
 /** A job's label, or its raw name for a type this build does not know. */
@@ -510,6 +514,8 @@ interface JobPayloads {
   /** The member to tell, and the state the report reached. */
   /** `resolvedAt` is when it was fixed or closed, as ISO: a report that reopens and ends again is a new DM. */
   [JOB_TYPES.PROBLEM_REPORT_UPDATE]: { reportId: string; userId: string; status: "FIXED" | "CLOSED"; resolvedAt: string }
+  /** When the breaker tripped, as ISO; a later trip is a new alert. */
+  [JOB_TYPES.PROBLEM_BREAKER_ALERT]: { trippedAt: string }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
@@ -576,6 +582,7 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   // Job ids, kept while BullMQ keeps the finished job (24 hours): a run, or a member's DM about one state, happens once
   [JOB_TYPES.PROBLEM_REPORT_FIX]: { jobId: (data) => `problem-report:fix:${data.reportId}:${data.runToken}` },
   [JOB_TYPES.PROBLEM_REPORT_UPDATE]: { jobId: (data) => `problem-report:update:${data.reportId}:${data.userId}:${data.status}:${data.resolvedAt}` },
+  [JOB_TYPES.PROBLEM_BREAKER_ALERT]: { jobId: (data) => `problem-report:breaker:${data.trippedAt}` },
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
   [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },
   [JOB_TYPES.REWIND_GENERATE_USER]: { fromCaller: "the RewindGeneration id" },

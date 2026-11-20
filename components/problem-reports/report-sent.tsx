@@ -7,7 +7,7 @@ import { StepHeading } from "@/components/problem-reports/step-heading"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { answerWords, type ReportAnswer } from "@/lib/problem-reports/answers"
-import type { FixAction } from "@/lib/problem-reports/fixes"
+import type { MemberFixAction } from "@/lib/problem-reports/fixes"
 import type { ProblemCode } from "@/lib/problem-reports/taxonomy"
 import type { DeviceAnswer } from "@/lib/validations/problem-reports"
 
@@ -16,7 +16,7 @@ export interface SentOutcome {
   outcome: "reported" | "joined" | "fixing" | "answered"
   answer: ReportAnswer | null
   /** The fix that started, when the outcome is `fixing`. */
-  action: FixAction | null
+  action: MemberFixAction | null
 }
 
 /** What the member sent, so an answer they don't accept can still go to the server admin. */
@@ -35,7 +35,7 @@ const WORDS: Record<"reported" | "joined", { heading: string; line: string }> = 
   joined: { heading: "Sent", line: "This title already had an open report, so we added yours to it. We'll message you when it's fixed." },
 }
 
-const FIXING: Record<FixAction, { heading: string; line: string }> = {
+const FIXING: Record<MemberFixAction, { heading: string; line: string }> = {
   BETTER_COPY: {
     heading: "Looking for a better copy",
     line: "We'll look for a better copy now. The one you have keeps playing, and if there isn't a better one, nothing changes. We'll message you either way.",

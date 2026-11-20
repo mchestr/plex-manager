@@ -68,7 +68,7 @@ import { admit, refuse, type Refused } from "@/lib/problem-reports/admit"
 import { queueReportAlert } from "@/lib/problem-reports/alerts"
 import type { ReportAnswer } from "@/lib/problem-reports/answers"
 import { readEvidence } from "@/lib/problem-reports/evidence"
-import type { FixAction } from "@/lib/problem-reports/fixes"
+import type { MemberFixAction } from "@/lib/problem-reports/fixes"
 import { joinOpenReport } from "@/lib/problem-reports/join"
 import { decideBetterCopyForMember } from "@/lib/problem-reports/report-better-copy"
 import { decideMissingForMember } from "@/lib/problem-reports/report-missing"
@@ -99,11 +99,11 @@ function titleFields(item: PlexItemMetadata) {
 /** What a report led to: a new report (with a fix running, or with the server admin), a join, or an answer instead. */
 export type ReportOutcome =
   | { ok: true; outcome: "reported" | "joined"; reportId: string }
-  | { ok: true; outcome: "fixing"; reportId: string; action: FixAction }
+  | { ok: true; outcome: "fixing"; reportId: string; action: MemberFixAction }
   | { ok: true; outcome: "answered"; reportId: null; answer: ReportAnswer }
 
 /** What the app's own checks decided before the report is saved: a fix to start, or why it goes to the admins. */
-type Decided = { fix: FixAction } | { toAdmin: ToAdminReason } | null
+type Decided = { fix: MemberFixAction } | { toAdmin: ToAdminReason } | null
 
 /** The title a problem is about: for "Episodes are missing", an episode's show. */
 async function reportedTitle(userId: string, problem: ProblemCode, member: Extract<MemberItem, { ok: true }>): Promise<MemberItem> {

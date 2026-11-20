@@ -209,19 +209,3 @@ export async function arrList<T>(
   })
   return { success: true, data: records }
 }
-
-/**
- * POST a JSON body to an *arr v3 endpoint, such as `/api/v3/command`, and
- * parse the answer with `schema`.
- */
-export async function arrPost<T>(service: ArrService, config: ArrConfig, path: string, body: unknown, schema: z.ZodType<T>): Promise<ConnectionResult<T>> {
-  const result = await serviceFetch({
-    service,
-    url: `${config.url}${path}`,
-    method: "POST",
-    headers: { "X-Api-Key": config.apiKey, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    schema,
-  })
-  return toConnectionResult(service, result)
-}

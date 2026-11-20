@@ -12,7 +12,15 @@ import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 
 import { asTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { resolveProblemReport, resumeProblemFixes, runProblemFix, setSwapsNeedApproval, updateProblemReportSettings } from "@/actions/admin/problem-reports"
+import {
+  removeProblemFile,
+  resolveProblemReport,
+  resumeProblemFixes,
+  runProblemFix,
+  setSwapsNeedApproval,
+  swapProblemCopy,
+  updateProblemReportSettings,
+} from "@/actions/admin/problem-reports"
 import { principalSession } from "@/lib/mcp/principal"
 import { startFix } from "@/lib/problem-reports/run"
 import { queueMemberUpdates } from "@/lib/problem-reports/updates"
@@ -188,6 +196,49 @@ describe("runProblemFix", () => {
 
     await expect(runProblemFix({ reportId: REPORT, action: "REFRESH" })).resolves.toMatchObject({ success: false, code: "CONFLICT" })
     await expect(runProblemFix({ reportId: REPORT, action: "REFRESH" })).resolves.toMatchObject({ success: false, code: "UPSTREAM_UNAVAILABLE" })
+  })
+
+  it("leaves the fixes that replace the file to their own actions", async () => {
+    await expect(runProblemFix({ reportId: REPORT, action: "SWAP" as never })).resolves.toMatchObject({ success: false, code: "VALIDATION" })
+    await expect(runProblemFix({ reportId: REPORT, action: "REMOVE_AND_SEARCH" as never })).resolves.toMatchObject({ success: false, code: "VALIDATION" })
+    expect(startFix).not.toHaveBeenCalled()
+  })
+})
+
+describe("swapProblemCopy and removeProblemFile", () => {
+  beforeEach(() => {
+    prismaMock.problemReport.findUnique.mockResolvedValue({ mediaType: "MOVIE" } as never)
+    jest.mocked(startFix).mockResolvedValue({ ok: true, runToken: 3 })
+    jest.mocked(principalSession).mockReturnValue(undefined)
+  })
+
+  it("swaps the copy as the admin, from the web", async () => {
+    await expect(swapProblemCopy({ reportId: REPORT })).resolves.toEqual({ success: true, data: null })
+
+    expect(startFix).toHaveBeenCalledWith({ reportId: REPORT, action: "SWAP", trigger: "web", actorUserId: "admin-1" })
+    expect(revalidatePath).toHaveBeenCalledWith(`/admin/problem-reports/${REPORT}`)
+  })
+
+  it("removes an episode's file and searches, over MCP", async () => {
+    prismaMock.problemReport.findUnique.mockResolvedValue({ mediaType: "EPISODE" } as never)
+    jest.mocked(principalSession).mockReturnValue({ user: { id: "admin-1", isAdmin: true } } as never)
+
+    await expect(removeProblemFile({ reportId: REPORT })).resolves.toEqual({ success: true, data: null })
+    expect(startFix).toHaveBeenCalledWith({ reportId: REPORT, action: "REMOVE_AND_SEARCH", trigger: "mcp", actorUserId: "admin-1" })
+  })
+
+  it("refuses a show, which has no file of its own, and a report that isn't there", async () => {
+    prismaMock.problemReport.findUnique.mockResolvedValueOnce({ mediaType: "TV_SERIES" } as never).mockResolvedValueOnce(null)
+
+    await expect(swapProblemCopy({ reportId: REPORT })).resolves.toMatchObject({ success: false, code: "VALIDATION" })
+    await expect(removeProblemFile({ reportId: REPORT })).resolves.toMatchObject({ success: false, code: "NOT_FOUND" })
+    expect(startFix).not.toHaveBeenCalled()
+  })
+
+  it("says when a fix is already running", async () => {
+    jest.mocked(startFix).mockResolvedValue({ ok: false, reason: "NOT_OPEN" })
+
+    await expect(swapProblemCopy({ reportId: REPORT })).resolves.toMatchObject({ success: false, code: "CONFLICT" })
   })
 })
 

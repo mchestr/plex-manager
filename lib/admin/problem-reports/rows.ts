@@ -73,16 +73,24 @@ const DEVICE_WORDS: Record<DeviceAnswer, string> = {
 
 /** What a fix that worked did, after "Fixed: ". */
 const FIXED_WORDS: Record<FixAction, string> = {
+  SWAP: "a different copy is on the server",
   BETTER_COPY: "a better copy is on the server",
   LOOK_FOR_MISSING: "the missing episodes are on the server",
   REFRESH: "Plex read the details again",
+  REMOVE_AND_SEARCH: "a new copy is on the server",
 }
 
-/** The server admin's mark, or the words for what a fix did. */
+/** After a replacement's words: whether the bad copy's release is on the blocklist, when that was checked. */
+const BLOCKLIST_WORDS = { true: ". The old release is on the blocklist", false: ". The old release isn't on the blocklist, so it could be grabbed again" } as const
+
+/** The server admin's mark, or the words for what a fix did: "Fixed: a different copy is on the server (Heat.1995.1080p.BluRay-GRP)". */
 function fixedWords(data: unknown): string {
   const fixed = fixedEventDataSchema.safeParse(data).data
   if (fixed?.reason !== "fix") return "Marked fixed"
-  return fixed.action ? `Fixed: ${FIXED_WORDS[fixed.action]}` : "Fixed"
+  if (!fixed.action) return "Fixed"
+  const release = fixed.release ? ` (${fixed.release})` : ""
+  const blocklist = typeof fixed.blocklisted === "boolean" ? BLOCKLIST_WORDS[`${fixed.blocklisted}`] : ""
+  return `Fixed: ${FIXED_WORDS[fixed.action]}${release}${blocklist}`
 }
 
 const CLOSED_WORDS = { cancelled: "Cancelled", admin: "Closed", no_better_copy: "Closed: no better copy right now" } as const

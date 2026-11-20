@@ -28,7 +28,8 @@ export function ReportTimeline({ steps, f }: { steps: TimelineStep[]; f: BoundFo
         return (
           <li key={step.id} className="flex flex-col gap-2 rounded-lg border bg-card p-4" data-testid={`admin-problem-report-step-${step.id}`}>
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <p className="text-ui font-medium text-foreground">{step.words}</p>
+              {/* A fix's step can name a release, one long word that wraps anywhere on a phone */}
+              <p className="text-ui font-medium text-foreground wrap-anywhere">{step.words}</p>
               <p className="text-label text-muted-foreground" data-testid={`admin-problem-report-step-${step.id}-timestamp`}>
                 {f.dateTime(step.at, { zoneLabel: true })}
               </p>

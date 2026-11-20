@@ -8,7 +8,10 @@
  * |                    | scan of its folder when Sonarr has files Plex lacks       |                  |
  * | `BETTER_COPY`      | Radarr's or Sonarr's search with the file in place, which | No; an upgrade   |
  * |                    | grabs only an upgrade the quality profile wants           | replaces it      |
+ * | `SWAP`             | another release of the same quality or better, grabbed    | The old copy, once |
+ * |                    | from an interactive search (admins only)                  | the new one imports |
  * | `REFRESH`          | Plex reads the item's details again (admins only)         | No               |
+ * | `REMOVE_AND_SEARCH`| deletes the file, then searches (admins only, a confirm)  | Yes, at once     |
  *
  * ## The gate
  *
@@ -19,10 +22,10 @@
  *   {@link DAILY_SEARCH_CAP} searches in a day, from any trigger;
  * - a fix that replaces a file stops while the breaker is tripped, and trips
  *   it past {@link BREAKER_LIMITS} replacements an hour or a day, from any
- *   trigger. It stays tripped until an admin resumes fixes. No fix in this
- *   list replaces a file yet; the swap fixes will. A better copy is the
- *   server's own upgrade, which its quality profile asked for, so it counts
- *   as a search and not as a replacement.
+ *   trigger. It stays tripped until an admin resumes fixes. A swap and a
+ *   removal replace a file; a better copy is the server's own upgrade, which
+ *   its quality profile asked for, so it counts as a search and not as a
+ *   replacement.
  *
  * @module lib/problem-reports/fixes
  */
@@ -30,10 +33,16 @@
 import { PROBLEMS, type ProblemCode, type ReportableType } from "@/lib/problem-reports/taxonomy"
 
 /** A fix a report can run. */
-export type FixAction = "LOOK_FOR_MISSING" | "BETTER_COPY" | "REFRESH"
+export type FixAction = "SWAP" | "BETTER_COPY" | "LOOK_FOR_MISSING" | "REFRESH" | "REMOVE_AND_SEARCH"
+
+/** The fixes a member's report can start on its own; none of them replaces the file. */
+export type MemberFixAction = Exclude<FixAction, "SWAP" | "REMOVE_AND_SEARCH">
 
 /** Every fix, for `z.enum`. */
-export const FIX_ACTIONS = ["BETTER_COPY", "LOOK_FOR_MISSING", "REFRESH"] as const satisfies readonly FixAction[]
+export const FIX_ACTIONS = ["SWAP", "BETTER_COPY", "LOOK_FOR_MISSING", "REFRESH", "REMOVE_AND_SEARCH"] as const satisfies readonly FixAction[]
+
+/** Fixes that replace the file: each has its own action, so MCP clients see it as destructive; `runProblemFix` runs the rest. */
+export const FILE_FIXES = ["SWAP", "REMOVE_AND_SEARCH"] as const satisfies readonly FixAction[]
 
 /** Who started a run: the app on a member's report, an admin on the web, or an MCP client. */
 export type FixTrigger = "automatic" | "web" | "mcp"
@@ -53,6 +62,8 @@ export interface FixTraits {
 const TRAITS: Record<FixAction, FixTraits> = {
   LOOK_FOR_MISSING: { searches: true, replacesFile: false },
   BETTER_COPY: { searches: true, replacesFile: false },
+  SWAP: { searches: true, replacesFile: true },
+  REMOVE_AND_SEARCH: { searches: true, replacesFile: true },
   REFRESH: { searches: false, replacesFile: false },
 }
 
@@ -60,6 +71,8 @@ const TRAITS: Record<FixAction, FixTraits> = {
 export const FIX_WORDS: Record<FixAction, { button: string; running: string; started: string }> = {
   LOOK_FOR_MISSING: { button: "Look for the episodes", running: "Looking for the episodes", started: "Started looking for the episodes" },
   BETTER_COPY: { button: "Look for a better copy", running: "Looking for a better copy", started: "Started looking for a better copy" },
+  SWAP: { button: "Swap the copy", running: "Swapping the copy", started: "Started swapping the copy" },
+  REMOVE_AND_SEARCH: { button: "Remove the file and search", running: "Looking for a new copy", started: "Removed the file and started a search" },
   REFRESH: { button: "Refresh the details", running: "Refreshing the details", started: "Asked Plex to refresh the details" },
 }
 
@@ -97,7 +110,10 @@ export function suggestedFix(problem: string): FixAction | null {
   return FIX_ACTIONS.find((action) => action === fix) ?? null
 }
 
-/** The fixes an admin can run on a report about this type of title: a better copy needs a file, and missing episodes a show. */
+/** The fixes that need a file of the title's own, which a show doesn't have. */
+const NEEDS_FILE: ReadonlySet<FixAction> = new Set(["SWAP", "BETTER_COPY", "REMOVE_AND_SEARCH"])
+
+/** The fixes an admin can run on a report about this type of title: a file's fixes need one, and missing episodes a show. */
 export function fixesFor(type: ReportableType): FixAction[] {
-  return FIX_ACTIONS.filter((action) => (action === "BETTER_COPY" ? type !== "show" : action === "LOOK_FOR_MISSING" ? type !== "movie" : true))
+  return FIX_ACTIONS.filter((action) => (NEEDS_FILE.has(action) ? type !== "show" : action === "LOOK_FOR_MISSING" ? type !== "movie" : true))
 }

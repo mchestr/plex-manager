@@ -121,7 +121,7 @@ export const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set([
  */
 export const WRITES_DESPITE_READ_NAME: ReadonlySet<string> = new Set<string>()
 
-const DESTRUCTIVE_PREFIXES = ["delete", "remove", "revoke", "unshare", "rollback", "cancel", "disable", "adminCancel"]
+const DESTRUCTIVE_PREFIXES = ["delete", "remove", "revoke", "unshare", "rollback", "cancel", "disable", "adminCancel", "swap"]
 
 /**
  * Actions that start or widen deletions without a delete name, so their

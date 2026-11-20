@@ -33,6 +33,24 @@ export type ArrTitle = { service: "radarr" | "sonarr"; id: number }
 /** A field the service may leave out or send as null: always `null` when it isn't the type. */
 export const orNull = <T extends z.ZodType>(schema: T) => schema.nullish().catch(null).transform((value) => value ?? null)
 
+/** A quality and its revision (a proper or repack is a higher version), from a `QualityModel`. */
+export const arrQualitySchema = z
+  .looseObject({
+    quality: z.looseObject({ id: z.number().int(), name: orNull(z.string()) }),
+    revision: z.looseObject({ version: z.number().int(), real: z.number().int() }).optional().catch(undefined),
+  })
+  .transform(({ quality, revision }) => ({ id: quality.id, name: quality.name, version: revision?.version ?? 1, real: revision?.real ?? 0 }))
+
+/** A quality as the swap rules compare it. */
+export type ArrQuality = z.infer<typeof arrQualitySchema>
+
+/** Language ids; an unreadable list is none. */
+export const arrLanguagesSchema = z
+  .array(z.looseObject({ id: z.number().int() }))
+  .optional()
+  .catch(undefined)
+  .transform((languages) => (languages ?? []).map((language) => language.id))
+
 /** A movie's or episode's file, with the service's own judgement of it against the quality profile. */
 export const arrFileSchema = z
   .looseObject({
@@ -42,8 +60,21 @@ export const arrFileSchema = z
     size: orNull(z.number()),
     qualityCutoffNotMet: orNull(z.boolean()),
     customFormatScore: orNull(z.number().int()),
+    sceneName: orNull(z.string()),
+    quality: orNull(arrQualitySchema),
+    languages: arrLanguagesSchema,
   })
-  .transform(({ id, relativePath, path, size, qualityCutoffNotMet, customFormatScore }) => ({ id, relativePath, path, size, qualityCutoffNotMet, customFormatScore }))
+  .transform(({ id, relativePath, path, size, qualityCutoffNotMet, customFormatScore, sceneName, quality, languages }) => ({
+    id,
+    relativePath,
+    path,
+    size,
+    qualityCutoffNotMet,
+    customFormatScore,
+    sceneName,
+    quality,
+    languages,
+  }))
 
 /** A file in Radarr or Sonarr. */
 export type ArrFile = z.infer<typeof arrFileSchema>
@@ -52,12 +83,26 @@ const positiveId = z.number().int().positive()
 const movieParams = z.strictObject({ movieId: positiveId })
 const seriesParams = z.strictObject({ seriesId: positiveId })
 
-const profileSchema = z.looseObject({
-  id: z.number().int(),
-  upgradeAllowed: z.boolean(),
-  /** The custom format score at which upgrades stop; versions before custom formats have none. */
-  cutoffFormatScore: orNull(z.number().int()),
+const profileItemSchema = z.looseObject({
+  quality: orNull(z.looseObject({ id: z.number().int() })),
+  items: z.array(z.looseObject({ quality: orNull(z.looseObject({ id: z.number().int() })) })).optional().catch(undefined),
 })
+
+const profileSchema = z
+  .looseObject({
+    id: z.number().int(),
+    upgradeAllowed: z.boolean(),
+    /** The custom format score at which upgrades stop; versions before custom formats have none. */
+    cutoffFormatScore: orNull(z.number().int()),
+    items: z.array(profileItemSchema).optional().catch(undefined),
+  })
+  .transform(({ id, upgradeAllowed, cutoffFormatScore, items }) => ({
+    id,
+    upgradeAllowed,
+    cutoffFormatScore,
+    /** The profile's qualities from worst to best; a group's qualities rank the same. */
+    qualityOrder: (items ?? []).map((item) => (item.quality ? [item.quality.id] : (item.items ?? []).flatMap((inner) => (inner.quality ? [inner.quality.id] : [])))),
+  }))
 
 /** A quality profile, as far as the upgrade rule reads it. */
 export type ArrQualityProfile = z.infer<typeof profileSchema>
@@ -85,12 +130,26 @@ export type ArrQueueItem = z.infer<typeof queueSchema>
 
 const historySchema = z
   .looseObject({
+    id: z.number().int(),
     eventType: z.string(),
     date: z.iso.datetime({ offset: true }),
+    sourceTitle: orNull(z.string()),
     downloadId: orNull(z.string()),
     episodeId: orNull(z.number().int()),
+    data: z.record(z.string(), z.unknown()).nullish().catch(null),
   })
-  .transform(({ eventType, date, downloadId, episodeId }) => ({ eventType, at: Date.parse(date), downloadId, episodeId }))
+  .transform(({ id, eventType, date, sourceTitle, downloadId, episodeId, data }) => ({
+    id,
+    eventType,
+    at: Date.parse(date),
+    sourceTitle,
+    downloadId,
+    episodeId,
+    /** An import's file id, from `data.fileId`. */
+    fileId: typeof data?.fileId === "string" && /^\d+$/.test(data.fileId) ? Number(data.fileId) : null,
+    /** A torrent grab's info hash, lower case. */
+    infoHash: typeof data?.torrentInfoHash === "string" && data.torrentInfoHash ? data.torrentInfoHash.toLowerCase() : null,
+  }))
 
 /** One history record, with its time in epoch milliseconds. */
 export type ArrHistoryRecord = z.infer<typeof historySchema>

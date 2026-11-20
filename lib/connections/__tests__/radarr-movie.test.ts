@@ -1,8 +1,8 @@
 /**
- * A Radarr movie with its file, and the MoviesSearch command for one movie.
+ * A Radarr movie with its file.
  */
 
-import { getRadarrMovieFile, startRadarrMovieSearch } from "@/lib/connections/radarr-movie"
+import { getRadarrMovieFile } from "@/lib/connections/radarr-movie"
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
@@ -37,7 +37,17 @@ describe("getRadarrMovieFile", () => {
         monitored: true,
         qualityProfileId: 4,
         path: "/movies/Heat (1995)",
-        file: { id: 77, relativePath: "Heat (1995) WEBDL-720p.mkv", path: "/movies/Heat (1995)/Heat (1995) WEBDL-720p.mkv", size: 4200, qualityCutoffNotMet: true, customFormatScore: 10 },
+        file: {
+          id: 77,
+          relativePath: "Heat (1995) WEBDL-720p.mkv",
+          path: "/movies/Heat (1995)/Heat (1995) WEBDL-720p.mkv",
+          size: 4200,
+          qualityCutoffNotMet: true,
+          customFormatScore: 10,
+          sceneName: null,
+          quality: null,
+          languages: [],
+        },
       },
     })
     expect(mockFetch.mock.calls[0][0]).toBe("http://radarr.local:7878/api/v3/movie/5")
@@ -50,29 +60,12 @@ describe("getRadarrMovieFile", () => {
     expect(await getRadarrMovieFile(CONFIG, 5)).toMatchObject({ success: true, data: { monitored: false, path: null, file: null } })
     expect(await getRadarrMovieFile(CONFIG, 5)).toMatchObject({
       success: true,
-      data: { file: { id: 77, relativePath: null, path: null, size: null, qualityCutoffNotMet: null, customFormatScore: null } },
+      data: { file: { id: 77, relativePath: null, path: null, size: null, qualityCutoffNotMet: null, customFormatScore: null, sceneName: null, quality: null, languages: [] } },
     })
   })
 
   it("refuses a movie id that isn't a positive whole number", async () => {
     expect(await getRadarrMovieFile(CONFIG, 0)).toEqual({ success: false, error: "Invalid Radarr request parameters" })
-    expect(mockFetch).not.toHaveBeenCalled()
-  })
-})
-
-describe("startRadarrMovieSearch", () => {
-  it("asks Radarr to search for the one movie and answers the command's id", async () => {
-    mockFetch.mockResolvedValue(respond(201, { id: 31, name: "MoviesSearch", status: "queued" }))
-
-    expect(await startRadarrMovieSearch(CONFIG, 5)).toEqual({ success: true, data: { id: 31 } })
-    const [url, init] = mockFetch.mock.calls[0]
-    expect(url).toBe("http://radarr.local:7878/api/v3/command")
-    expect(init.method).toBe("POST")
-    expect(JSON.parse(init.body)).toEqual({ name: "MoviesSearch", movieIds: [5] })
-  })
-
-  it("refuses a movie id that isn't a positive whole number", async () => {
-    expect(await startRadarrMovieSearch(CONFIG, -5)).toEqual({ success: false, error: "Invalid Radarr request parameters" })
     expect(mockFetch).not.toHaveBeenCalled()
   })
 })

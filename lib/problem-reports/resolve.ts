@@ -62,8 +62,8 @@ export interface ResolvedFile {
   file: ArrFile
   /** Sonarr: the episodes in the file, two for a double episode. */
   episodeIds: number[]
-  /** The item in Plex, its library section, and the file and its folder as Plex sees them. */
-  plex: { ratingKey: string; sectionId: string | null; file: string; folder: string }
+  /** The item in Plex, its guid, its library section, and the file and its folder as Plex sees them. */
+  plex: { ratingKey: string; guid: string | null; sectionId: string | null; file: string; folder: string }
 }
 
 export type Resolution = { ok: true; resolved: ResolvedFile } | { ok: false; reason: ResolveRefusal }
@@ -159,7 +159,13 @@ async function resolveEpisode(server: PlexServer, item: PlexItemMetadata, file: 
   }
 }
 
-const plexSide = (item: PlexItemMetadata, file: { file: string }) => ({ ratingKey: item.ratingKey, sectionId: item.librarySectionId ?? null, file: file.file, folder: folderOf(file.file) })
+const plexSide = (item: PlexItemMetadata, file: { file: string }) => ({
+  ratingKey: item.ratingKey,
+  guid: item.guid ?? null,
+  sectionId: item.librarySectionId ?? null,
+  file: file.file,
+  folder: folderOf(file.file),
+})
 
 /**
  * Resolves the file of a movie or episode; see the module comment.

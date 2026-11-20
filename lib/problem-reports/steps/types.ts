@@ -17,6 +17,14 @@ export interface StepReport {
   plexRatingKey: string
 }
 
+/** What a fix that replaced the file tells the timeline, and the Plex item's new rating key when the title came back as a new item. */
+export interface FixedDetails {
+  release: string | null
+  /** Whether the bad copy's release is on the blocklist now; null when there was nothing to blocklist, or it couldn't be read. */
+  blocklisted: boolean | null
+  ratingKey?: string
+}
+
 /**
  * Wait until `at` with these payload changes, the report is fixed, it goes
  * back to the server admin, or a better copy wasn't found (which closes a
@@ -24,6 +32,6 @@ export interface StepReport {
  */
 export type StepOutcome =
   | { next: { at: number; data: Partial<ProblemReportFixPayload> } }
-  | { fixed: true }
+  | { fixed: true; details?: FixedDetails }
   | { toAdmin: ToAdminReason }
   | { noBetterCopy: true }

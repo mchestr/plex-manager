@@ -25,8 +25,9 @@ const SONARR = { name: "Sonarr", url: "http://sonarr.local:8989", apiKey: "sonar
 
 const version = (...files: string[]): PlexItemMetadata["media"][number] => ({ optimized: false, parts: files.map((file) => ({ file, size: 4200 })) })
 const MOVIE_FILE = "/data/movies/Heat (1995)/Heat (1995) WEBDL-720p.mkv"
-const MOVIE: PlexItemMetadata = { ratingKey: "555", type: "movie", title: "Heat", year: 1995, ids: { tmdb: 949 }, librarySectionId: "1", media: [version(MOVIE_FILE)], locations: [] }
-const RADARR_FILE = { id: 77, relativePath: "Heat (1995) WEBDL-720p.mkv", path: "/movies/Heat (1995)/Heat (1995) WEBDL-720p.mkv", size: 4200, qualityCutoffNotMet: true, customFormatScore: 0 }
+const MOVIE: PlexItemMetadata = { ratingKey: "555", type: "movie", title: "Heat", year: 1995, guid: "plex://movie/heat", ids: { tmdb: 949 }, librarySectionId: "1", media: [version(MOVIE_FILE)], locations: [] }
+const ABOUT_FILE = { sceneName: null, quality: null, languages: [] }
+const RADARR_FILE = { id: 77, relativePath: "Heat (1995) WEBDL-720p.mkv", path: "/movies/Heat (1995)/Heat (1995) WEBDL-720p.mkv", size: 4200, qualityCutoffNotMet: true, customFormatScore: 0, ...ABOUT_FILE }
 const RADARR_MOVIE = { id: 5, monitored: true, qualityProfileId: 4, path: "/movies/Heat (1995)", file: RADARR_FILE }
 
 const EPISODE_FILE = "/data/tv/The Office (US)/Season 01/The Office S01E01.mkv"
@@ -36,6 +37,7 @@ const EPISODE: PlexItemMetadata = {
   type: "episode",
   title: "Pilot",
   ids: {},
+  guid: "plex://episode/pilot",
   librarySectionId: "2",
   grandparentRatingKey: "6999",
   seasonNumber: 1,
@@ -43,7 +45,7 @@ const EPISODE: PlexItemMetadata = {
   media: [version(EPISODE_FILE)],
   locations: [],
 }
-const SONARR_FILE = { id: 501, relativePath: "Season 01/The Office S01E01.mkv", path: "/tv/The Office (US)/Season 01/The Office S01E01.mkv", size: 4200, qualityCutoffNotMet: false, customFormatScore: 20 }
+const SONARR_FILE = { id: 501, relativePath: "Season 01/The Office S01E01.mkv", path: "/tv/The Office (US)/Season 01/The Office S01E01.mkv", size: 4200, qualityCutoffNotMet: false, customFormatScore: 20, ...ABOUT_FILE }
 const episode = (id: number, overrides: Partial<{ seasonNumber: number; episodeNumber: number; monitored: boolean; episodeFileId: number | null }> = {}) => ({
   id,
   seasonNumber: 1,
@@ -85,7 +87,7 @@ describe("resolveFile: a movie", () => {
         qualityProfileId: 4,
         file: RADARR_FILE,
         episodeIds: [],
-        plex: { ratingKey: "555", sectionId: "1", file: MOVIE_FILE, folder: "/data/movies/Heat (1995)" },
+        plex: { ratingKey: "555", guid: "plex://movie/heat", sectionId: "1", file: MOVIE_FILE, folder: "/data/movies/Heat (1995)" },
       },
     })
     expect(findRadarrMovie).toHaveBeenCalledWith(RADARR, { tmdb: 949 })
@@ -144,7 +146,7 @@ describe("resolveFile: an episode", () => {
         qualityProfileId: 6,
         file: SONARR_FILE,
         episodeIds: [11],
-        plex: { ratingKey: "7001", sectionId: "2", file: EPISODE_FILE, folder: "/data/tv/The Office (US)/Season 01" },
+        plex: { ratingKey: "7001", guid: "plex://episode/pilot", sectionId: "2", file: EPISODE_FILE, folder: "/data/tv/The Office (US)/Season 01" },
       },
     })
     expect(findSonarrSeries).toHaveBeenCalledWith(SONARR, { tvdb: 73244 })

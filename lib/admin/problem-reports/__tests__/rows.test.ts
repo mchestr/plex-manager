@@ -70,6 +70,16 @@ describe("timelineStep", () => {
     expect(timelineStep(event("TO_ADMIN", { reason: "NO_UPGRADE", action: "BETTER_COPY" }, null)).words).toBe("The quality profile doesn't want a better copy of this file")
   })
 
+  it("says which copy a swap or a removal brought in, and whether the old release is on the blocklist", () => {
+    const swapped = { reason: "fix", action: "SWAP", release: "Heat.1995.1080p.BluRay-GOOD" }
+    expect(timelineStep(event("FIXED", { ...swapped, blocklisted: true })).words).toBe("Fixed: a different copy is on the server (Heat.1995.1080p.BluRay-GOOD). The old release is on the blocklist")
+    expect(timelineStep(event("FIXED", { ...swapped, blocklisted: false })).words).toBe(
+      "Fixed: a different copy is on the server (Heat.1995.1080p.BluRay-GOOD). The old release isn't on the blocklist, so it could be grabbed again"
+    )
+    expect(timelineStep(event("FIXED", { reason: "fix", action: "REMOVE_AND_SEARCH", release: null, blocklisted: null })).words).toBe("Fixed: a new copy is on the server")
+    expect(timelineStep(event("TO_ADMIN", { reason: "ONLY_LOWER", action: "SWAP" }, null)).words).toBe("The only other copies are lower quality. Remove the file and search can grab one of them")
+  })
+
   it("reads data of the wrong shape as nothing, and keeps an unknown step's kind", () => {
     expect(timelineStep(event("REPORTED", { problem: 7, device: "maybe", evidence: { lastPlay: "yesterday" } }))).toMatchObject({
       words: "Reported",
