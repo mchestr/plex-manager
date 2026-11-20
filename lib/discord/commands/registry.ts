@@ -5,8 +5,9 @@
  *
  * Central catalogue of the bot's slash (`/`) commands. Introduced in Step 9 as
  * the infrastructure the interaction router dispatches against. Migrated/added:
- * `/help` (Step 10), `/mark` (Step 12), `/assistant` (Step 13), and the personal
- * self-service commands `/mymarks`, `/mystats`, `/watching` (Phase 4).
+ * `/help` (Step 10), `/mark` (Step 12), `/assistant` (Step 13), the personal
+ * self-service commands `/mymarks`, `/mystats`, `/watching` (Phase 4), and
+ * `/report` (docs/problem-reports.md).
  *
  * Each command pairs the discord.js registration payload (`data`) with an audit
  * `commandType` and an async `handle` that receives a resolved
@@ -26,7 +27,7 @@ import type {
 } from "discord.js"
 import type { VerifyDiscordUserResult } from "../services"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
-import { MARK_SELECT_PREFIX, type CommandName } from "./definitions"
+import { MARK_SELECT_PREFIX, REPORT_PREFIX, type CommandName } from "./definitions"
 
 /**
  * Context handed to a slash-command handler after the router has resolved the
@@ -108,6 +109,12 @@ export const COMMANDS: readonly CommandEntry[] = [
     name: "mark",
     load: () => import("./mark").then((m) => m.markCommand),
     componentPrefixes: [MARK_SELECT_PREFIX],
+  },
+  {
+    name: "report",
+    load: () => import("./report").then((m) => m.reportCommand),
+    // The Report a problem button on /watching uses the prefix too, so /report owns it
+    componentPrefixes: [REPORT_PREFIX],
   },
   { name: "assistant", load: () => import("./assistant").then((m) => m.assistantCommand) },
   { name: "mymarks", load: () => import("./mymarks").then((m) => m.myMarksCommand) },

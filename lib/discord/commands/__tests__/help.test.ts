@@ -92,17 +92,12 @@ describe("COMMAND_REGISTRY", () => {
     expect(myMarks).toBeDefined()
     expect(myMarks?.syntax).toBe("/mymarks [type]")
 
-    for (const sub of [
-      "/mark finished",
-      "/mark keep",
-      "/mark notinterested",
-      "/mark rewatch",
-      "/mark badquality",
-    ]) {
+    for (const sub of ["/mark finished", "/mark keep", "/mark notinterested", "/mark rewatch", "/report"]) {
       const entry = mediaCommands.find((cmd) => cmd.name === sub)
       expect(entry).toBeDefined()
       expect(entry?.syntax).toContain("title:<name>")
     }
+    expect(mediaCommands.find((cmd) => cmd.name === "/mark badquality")).toBeUndefined()
   })
 
   it("should have valid structure for all commands", () => {
@@ -273,17 +268,13 @@ describe("command registry consistency with the slash-command surface", () => {
 
   it("should document every /mark subcommand", () => {
     // Mirrors MARK_SUBCOMMANDS in commands/mark/index.ts.
-    const expectedMarkSubcommands = [
-      "/mark finished",
-      "/mark keep",
-      "/mark notinterested",
-      "/mark rewatch",
-      "/mark badquality",
-    ]
+    const expectedMarkSubcommands = ["/mark finished", "/mark keep", "/mark notinterested", "/mark rewatch"]
 
     for (const name of expectedMarkSubcommands) {
       expect(findCommand(name)).toBeDefined()
     }
+    expect(findCommand("/report")).toBeDefined()
+    expect(findCommand("/mark badquality")).toBeUndefined()
   })
 
   it("should fold assistant reset into the /assistant entry (no standalone /clear)", () => {

@@ -134,13 +134,13 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
     category: "media",
   },
 
-  // Media marking commands - Poor Quality
+  // Problem reports
   {
-    name: "/mark badquality",
+    name: "/report",
     aliases: [],
-    description: "Report poor quality. The server may download it again",
-    syntax: "/mark badquality title:<name>",
-    examples: ["/mark badquality title:Blurry Movie"],
+    description: "Tell the server admin about a title that won't play right, looks wrong or is missing episodes. Only you see the replies",
+    syntax: "/report title:<name>",
+    examples: ["/report title:Heat"],
     category: "media",
   },
 ]

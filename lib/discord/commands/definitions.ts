@@ -13,7 +13,10 @@ import type { MarkType } from "@/lib/generated/prisma/client"
 /** `custom_id` prefix for `/mark`'s disambiguation select menu. */
 export const MARK_SELECT_PREFIX = "mark:select:"
 
-/** `/mymarks type:` choices, in the embed's group order. */
+/** `custom_id` prefix of every `/report` step, and of the Report a problem button on `/watching`. */
+export const REPORT_PREFIX = "report:"
+
+/** `/mymarks type:` choices, in the embed's group order. `badquality` lists the marks made before `/report` replaced `/mark badquality`. */
 export const MARK_TYPE_CHOICES: { name: string; value: MarkType }[] = [
   { name: "finished", value: "FINISHED_WATCHING" },
   { name: "keep", value: "KEEP_FOREVER" },
@@ -37,7 +40,6 @@ const markSubcommands: [name: string, description: string][] = [
   ["keep", "Mark it to keep forever. Automatic deletion does not remove it"],
   ["notinterested", "Mark it as not interesting to you. It is not recommended to you"],
   ["rewatch", "Mark it as a title to watch again"],
-  ["badquality", "Report poor quality. The server may download it again"],
 ]
 
 const mark = markSubcommands.reduce(
@@ -50,6 +52,11 @@ const mark = markSubcommands.reduce(
     ) as SlashCommandBuilder,
   new SlashCommandBuilder().setName("mark").setDescription("Mark a movie or show in the Plex library")
 )
+
+const report = new SlashCommandBuilder()
+  .setName("report")
+  .setDescription("Tell the server admin about a title that won't play right, looks wrong or is missing episodes")
+  .addStringOption((option) => option.setName("title").setDescription("The movie or show to find").setRequired(true)) as SlashCommandBuilder
 
 const assistant = new SlashCommandBuilder()
   .setName("assistant")
@@ -89,6 +96,7 @@ const watching = new SlashCommandBuilder()
 export const COMMAND_DEFINITIONS = {
   help,
   mark,
+  report,
   assistant,
   mymarks,
   mystats,

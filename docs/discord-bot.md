@@ -25,12 +25,13 @@ the invoking user sees them) and are hard-scoped to that user.
 | Command | Description |
 |---|---|
 | `/help [command]` | List commands, or details for one. |
-| `/mark finished\|keep\|notinterested\|rewatch\|badquality title:<name>` | Mark media; disambiguates multiple matches with a select menu. `finished` also marks it watched on your own Plex account (see *Marking as the member*). |
+| `/mark finished\|keep\|notinterested\|rewatch title:<name>` | Mark media; disambiguates multiple matches with a select menu. `finished` also marks it watched on your own Plex account (see *Marking as the member*). |
+| `/report title:<name>` | Report a problem with a title in your libraries to the server admin: choose the title, what kind of problem and which one, then **Send to the server admin**. A show, and "Something else" (which needs a note), continue on the web's `/report`. See `docs/problem-reports.md`. |
 | `/assistant ask prompt:<text>` | Ask the AI assistant (answers ephemerally; DM the bot to continue a multi-turn conversation). |
 | `/assistant reset` | Clear your assistant conversation context (a `reset`/`clear` DM also works). |
 | `/mystats` | Your watch statistics for this year, in your own time zone. |
 | `/mymarks [type]` | The media you've marked, optionally filtered by type. |
-| `/watching` | What you're currently watching. |
+| `/watching` | What you're currently watching. While problem reports are on, each movie or episode has a **Report a problem** button, which only you can use. |
 
 The **AI assistant** is DM-based: DM the bot for a full multi-turn conversation.
 DM content is delivered **without** the Message Content privileged intent.
@@ -125,7 +126,8 @@ hit, so a wrong pick now touches only the member's own history.
 ## Registering slash commands
 
 Slash commands must be registered with Discord once, and again whenever the
-command set changes (the changelog says when):
+command set changes, as when `/report` replaced `/mark badquality` (the
+changelog says when):
 
 ```bash
 # From a checkout (reads .env):
