@@ -14,6 +14,7 @@ import { getRetentionProcessor } from "./retention"
 import { getSecretsProcessor } from "./secrets"
 import { getCommunityStatsProcessor } from "./community-stats"
 import { getMemberActivityProcessor } from "./member-activity"
+import { getCleanupProcessor } from "./cleanup"
 import { getConversationReviewProcessor } from "./conversation-review"
 import { getEmailTestProcessor } from "./email-test"
 import { getInactivityNoticeProcessor } from "./inactivity-notice"
@@ -67,6 +68,11 @@ export function getJobProcessor(jobType: string): JobProcessor | null {
   const memberActivityProcessor = getMemberActivityProcessor(jobType)
   if (memberActivityProcessor) {
     return memberActivityProcessor
+  }
+
+  const cleanupProcessor = getCleanupProcessor(jobType)
+  if (cleanupProcessor) {
+    return cleanupProcessor
   }
 
   const conversationReviewProcessor = getConversationReviewProcessor(jobType)

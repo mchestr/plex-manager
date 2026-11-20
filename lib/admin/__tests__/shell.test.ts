@@ -21,7 +21,7 @@ import type { ChatConversation, LLMProvider } from "@/lib/generated/prisma/clien
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/brand", () => ({ serverName: jest.fn().mockResolvedValue("Northfield Plex") }))
 jest.mock("@/lib/admin/nav-counts", () => ({
-  getAdminNavCounts: jest.fn().mockResolvedValue({ users: 7, pendingAffiliates: 2, failedJobs: 0 }),
+  getAdminNavCounts: jest.fn().mockResolvedValue({ users: 7, pendingAffiliates: 2, failedJobs: 0, cleanupReview: 6 }),
 }))
 
 const admin = { id: "admin-1", name: "Dana Whitfield", isAdmin: true }
@@ -53,7 +53,7 @@ it("sends an admin every item at its own href, with the ids of every tab it has"
   expect(nav.find((entry) => entry.id === "automations")).toEqual({
     id: "automations",
     href: "/admin/watchlist",
-    childIds: ["watchlist", "inactivity", "request-limits", "queues"],
+    childIds: ["watchlist", "inactivity", "request-limits", "queues", "cleanup"],
   })
   expect(nav.find((entry) => entry.id === "overview")).toEqual({ id: "overview", href: "/admin", childIds: [] })
 })
@@ -87,7 +87,15 @@ it("reads nothing about the assistant for a member without assistant:use", async
 })
 
 it("gives a role the member count, and the pending applications with affiliates:read", async () => {
-  expect((await getAdminShellData(support)).navCounts).toStrictEqual({ users: 7, pendingAffiliates: 2, failedJobs: null })
-  expect((await getAdminShellData(member)).navCounts).toStrictEqual({ users: 7, pendingAffiliates: 0, failedJobs: null })
-  expect((await getAdminShellData(admin)).navCounts).toStrictEqual({ users: 7, pendingAffiliates: 2, failedJobs: 0 })
+  expect((await getAdminShellData(support)).navCounts).toStrictEqual({ users: 7, pendingAffiliates: 2, failedJobs: null, cleanupReview: null })
+  expect((await getAdminShellData(member)).navCounts).toStrictEqual({ users: 7, pendingAffiliates: 0, failedJobs: null, cleanupReview: null })
+  expect((await getAdminShellData(admin)).navCounts).toStrictEqual({ users: 7, pendingAffiliates: 2, failedJobs: 0, cleanupReview: 6 })
+})
+
+it("gives a Support session no media cleanup count, so it never sees a to review badge on Automations (lead decision 3)", async () => {
+  const { navCounts, nav } = await getAdminShellData(support)
+
+  expect(navCounts.cleanupReview).toBeNull()
+  expect(nav.map((entry) => entry.id)).not.toContain("automations")
+  expect(ADMIN_NAV.find((item) => item.id === "automations")?.badge?.(navCounts)).toBeNull()
 })

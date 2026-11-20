@@ -1,4 +1,6 @@
 import { TEST_USERS } from '../fixtures/auth';
+import { CLEANUP_A11Y_PREFIX, CLEANUP_A11Y_RULE_IDS } from '../helpers/cleanup-fixtures';
+import { clearCleanup, seedCleanupA11y, wipeCleanup } from '../helpers/seed-cleanup';
 import {
   clearVisualFixtures,
   seedVisualFixtures,
@@ -10,8 +12,10 @@ import { editSection } from '../helpers/settings';
 import { capture, expect, settlePage, skipUnlessProductionBuild, test } from './visual-test';
 
 /**
- * Admin and status screens (P1.6): 8 admin screens and 2 status screens per
- * viewport project.
+ * Admin and status screens (P1.6): 14 admin screens and 2 status screens per
+ * viewport project. The media cleanup rule editor and the Leaving soon tab
+ * (TS 16.11) run last, on the axe seed of media cleanup, so the cleanup
+ * members it adds never show on the users screens.
  *
  * The E2E Plex server is unreachable either way, so the two users screens
  * may match today. Both stay: P10.18 adds the Plex-down alert, and the pair
@@ -108,6 +112,27 @@ test.describe('Admin screens', () => {
 
   test('AI activity', async ({ page }) => {
     await capture(page, '/admin/ai', 'admin-ai-activity');
+  });
+
+  // Every absolute date has a `-timestamp` test id, and `capture` masks them
+  test.describe('media cleanup', () => {
+    test.beforeAll(async () => {
+      await seedCleanupA11y();
+    });
+
+    test.afterAll(async () => {
+      await wipeCleanup();
+      await clearCleanup(CLEANUP_A11Y_PREFIX);
+    });
+
+    // The builder, the preview card and the results; the phone project takes the condition boxes and the count bar
+    test('cleanup rule editor', async ({ page }) => {
+      await capture(page, `/admin/cleanup/rules/${CLEANUP_A11Y_RULE_IDS.dry}`, 'admin-cleanup-editor');
+    });
+
+    test('cleanup Leaving soon', async ({ page }) => {
+      await capture(page, '/admin/cleanup?tab=leaving-soon', 'admin-cleanup-leaving-soon');
+    });
   });
 });
 

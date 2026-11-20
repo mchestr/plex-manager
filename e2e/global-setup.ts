@@ -1,8 +1,28 @@
 import { createE2EPrismaClient } from './helpers/prisma';
 import { clearRateLimits, redisAnswers } from './helpers/rate-limits';
 import { startMockLlm } from './mocks/llm-server';
+import { startMockOverseerr } from './mocks/overseerr-server';
+import { startMockPlex } from './mocks/plex-server';
+import { startMockPlexTv } from './mocks/plex-tv-server';
+import { startMockRadarr } from './mocks/radarr-server';
+import { MOCK_URL_ENV } from './mocks/request-log';
 import { startSmtpSink } from './mocks/smtp-server';
+import { startMockSonarr } from './mocks/sonarr-server';
 import { startMockTautulli } from './mocks/tautulli-server';
+
+/**
+ * The fixed port of the plex.tv mock, from `E2E_PLEX_TV_URL`. playwright.config.ts
+ * sets the URL, because the web server, which starts before this setup, reads it
+ * from its own environment (TS E27).
+ */
+function plexTvPort(): number {
+  const url = process.env.E2E_PLEX_TV_URL;
+  const port = url ? Number(new URL(url).port) : NaN;
+  if (!Number.isInteger(port) || port <= 0) {
+    throw new Error('[E2E Setup] E2E_PLEX_TV_URL must be http://127.0.0.1:<port>; playwright.config.ts sets it for the plex.tv mock.');
+  }
+  return port;
+}
 
 /**
  * Global setup for Playwright tests
@@ -101,6 +121,15 @@ async function globalSetup() {
     const regularCount = await prisma.user.count({ where: { email: 'regular@example.com' } });
     console.log(`[E2E Setup] Admin users: ${adminCount}, Regular users: ${regularCount}`);
 
+    // No spec has run yet, and E2E schedules no cleanup job (TS 9.4), so a
+    // media cleanup claim here is one that a killed run left. Clear it, or
+    // every cleanup seed waits for it and fails (delivery-r6-11).
+    const claims = await prisma.cleanupSettings.updateMany({
+      where: { OR: [{ runClaimAt: { not: null } }, { readClaimAt: { not: null } }, { collectionsClaimAt: { not: null } }] },
+      data: { runClaimAt: null, readClaimAt: null, collectionsClaimAt: null },
+    });
+    if (claims.count > 0) console.log('[E2E Setup] Cleared the media cleanup claims that an earlier run left');
+
     // Rewind's checkRewindInfra() fails without Redis (FR-50), and every
     // Rewind spec would then screenshot or scan the unavailable panel.
     if (!(await redisAnswers(process.env.REDIS_URL))) {
@@ -133,6 +162,19 @@ async function globalSetup() {
   const tautulli = await startMockTautulli();
   process.env.E2E_TAUTULLI_URL = tautulli.url;
   console.log(`[E2E Setup] Mock Tautulli listening at ${tautulli.url}`);
+  // Media cleanup (TS 16.4): the library services and plex.tv, all in this
+  // process, so one counter orders the calls of every mock (e2e/mocks/request-log.ts).
+  // Specs point the service rows at them (e2e/helpers/seed-cleanup.ts); this
+  // setup changes no Plex row. The setup specs run this setup again in a
+  // worker, where the runner's mocks already hold plex.tv's fixed port and the
+  // mock URLs are already set, so only the first run starts them.
+  const cleanupMocks = process.env[MOCK_URL_ENV.plex]
+    ? []
+    : await Promise.all([startMockPlex(), startMockRadarr(), startMockSonarr(), startMockOverseerr(), startMockPlexTv(plexTvPort())]);
+  for (const mock of cleanupMocks) {
+    if (mock.mock !== 'plexTv') process.env[MOCK_URL_ENV[mock.mock]] = mock.url;
+    console.log(`[E2E Setup] Mock ${mock.mock} listening at ${mock.url}`);
+  }
   // And a mail server: the web server's SMTP_URL names its fixed port (playwright.config.ts).
   // The setup specs run this setup again in a worker, where the runner's sink still holds
   // that port and E2E_SMTP_INBOX_URL is already set, so only the first run starts it.
@@ -142,11 +184,12 @@ async function globalSetup() {
     console.log(`[E2E Setup] SMTP sink listening, inbox at ${smtp.inboxUrl}`);
   }
   return async () => {
-    await Promise.all(
-      [llm.server, tautulli.server, ...(smtp ? [smtp.smtp, smtp.http] : [])].map(
+    await Promise.all([
+      ...[llm.server, tautulli.server, ...(smtp ? [smtp.smtp, smtp.http] : [])].map(
         (server) => new Promise<void>((resolve) => server.close(() => resolve()))
-      )
-    );
+      ),
+      ...cleanupMocks.map((mock) => mock.close()),
+    ]);
   };
 }
 

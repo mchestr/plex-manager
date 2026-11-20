@@ -1,0 +1,68 @@
+{
+  "title": "The Lantern Keeper",
+  "originalTitle": "The Lantern Keeper",
+  "originalLanguage": {
+    "id": 1,
+    "name": "English"
+  },
+  "alternateTitles": [],
+  "secondaryYearSourceId": 0,
+  "sortTitle": "the lantern keeper",
+  "sizeOnDisk": 8589934592,
+  "status": "released",
+  "overview": "An invented film.",
+  "inCinemas": "2014-05-01T00:00:00Z",
+  "physicalRelease": "2014-08-01T00:00:00Z",
+  "digitalRelease": "2014-07-15T00:00:00Z",
+  "releaseDate": "2014-07-15T00:00:00Z",
+  "images": [
+    {
+      "coverType": "poster",
+      "url": "/MediaCover/1/poster.jpg",
+      "remoteUrl": "https://image.tmdb.org/t/p/original/invented.jpg"
+    }
+  ],
+  "website": "",
+  "year": 2014,
+  "youTubeTrailerId": "",
+  "studio": "Invented Pictures",
+  "path": "/data/movies/The Lantern Keeper (2014)",
+  "qualityProfileId": 4,
+  "hasFile": true,
+  "movieFileId": 1101,
+  "monitored": true,
+  "minimumAvailability": "released",
+  "isAvailable": true,
+  "folderName": "/data/movies/The Lantern Keeper (2014)",
+  "runtime": 105,
+  "cleanTitle": "thelanternkeeper",
+  "tmdbId": 990101,
+  "titleSlug": "the-lantern-keeper-990101",
+  "rootFolderPath": "/data/movies",
+  "certification": "PG-13",
+  "genres": [
+    "Drama"
+  ],
+  "keywords": [],
+  "tags": [
+    1
+  ],
+  "added": "2023-11-14T22:13:20Z",
+  "ratings": {
+    "imdb": {
+      "votes": 100,
+      "value": 7.1,
+      "type": "user"
+    }
+  },
+  "popularity": 3.2,
+  "statistics": {
+    "movieFileCount": 1,
+    "sizeOnDisk": 8589934592,
+    "releaseGroups": [
+      "INVENTED"
+    ]
+  },
+  "id": 11,
+  "imdbId": "tt9900101"
+}

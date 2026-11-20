@@ -174,6 +174,7 @@ describe('CommandMenu', () => {
       'admin-command-page-automations-inactivity',
       'admin-command-page-automations-request-limits',
       'admin-command-page-automations-queues',
+      'admin-command-page-automations-cleanup',
     ])
     expect(within(dialog).getByText('Automations › Watchlist sync')).toBeInTheDocument()
   })

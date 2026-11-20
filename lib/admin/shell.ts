@@ -71,13 +71,14 @@ export async function getAdminShellData(session: ({ id: string; name?: string | 
   return {
     serverName: name,
     user: { name: displayName, initials: initialsFor(displayName) },
-    // A role sees the member count and, with affiliates:read, the pending applications; never job health
+    // A role sees the member count and, with affiliates:read, the pending applications; never job health or media cleanup
     navCounts: session.isAdmin
       ? navCounts
       : {
           users: navCounts.users,
           pendingAffiliates: hasPermission(session, "affiliates:read") ? navCounts.pendingAffiliates : 0,
           failedJobs: null,
+          cleanupReview: null,
         },
     nav: items
       .filter((item) => item.id !== "assistant" || assistant)

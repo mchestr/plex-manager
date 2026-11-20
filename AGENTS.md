@@ -17,6 +17,7 @@ A Next.js-based Plex management platform that combines server management tools, 
 - **Purpose** - which job an `LLMProvider` row serves (`wrapped`, `chat`, `judge`, ...); `getLanguageModel(purpose)` builds the model from the active row for it.
 - **Assistant** - the admin assistant (`lib/chatbot/`), on the admin page and as the Discord `/assistant` command. The conversation judge reviews admin page conversations only, never member Discord chats.
 - **Action vs loader** - an action (`actions/`) is a mutation endpoint built with the action helpers and is also an MCP tool; a loader (`lib/data/`) is a server-only read that checks `assertAdmin()` itself.
+- **Leaving soon vs Keep vs Exclude** - media cleanup terms (`docs/media-cleanup.md`). Leaving soon is the state of a title that a cleanup rule matched. The title waits there for its grace period, then Radarr or Sonarr deletes it. Leaving soon is also the member page and the Plex collections that show those titles. A Keep is a member's protection of one title for a time (90 days by default). Exclude is an admin's protection of one title, with an optional end date, and the exclusion is the result. Copy never calls the stored library data a "snapshot".
 
 ## Non-goals and settled lines
 
@@ -41,7 +42,7 @@ These are decided. Do not write code against them; if a task asks for one, say s
 - **Styling**: Tailwind CSS v4 with utility-first approach; primitives in `components/ui/` are built on Base UI (`@base-ui/react`)
 - **Animation**: Motion (`motion/react`)
 - **Charts**: Recharts, through `ChartCard`
-- **Jobs**: BullMQ on Redis (Rewind generation, Stripe access, watchlist sync, retention, last seen and the inactivity sweep)
+- **Jobs**: BullMQ on Redis (Rewind generation, Stripe access, watchlist sync, retention, last seen and the inactivity sweep, and media cleanup: `cleanup:read`, `cleanup:run`, `cleanup:act`, `cleanup:collections`)
 - **LLM**: Vercel AI SDK (OpenAI, Anthropic, Google and OpenAI-compatible servers)
 - **Validation**: Zod schemas for all inputs/responses
 - **Testing**: Jest + Testing Library + Playwright (E2E)
@@ -82,7 +83,7 @@ app/                     # Next.js App Router (pages, layouts, routes)
 │   ├── (rewind)/       # Rewind: season, playground, shares, Rewind settings
 │   ├── discord/        # Discord: activity, settings (a segment, not a route group; its layout draws the tabs)
 │   ├── (ai)/           # AI: activity, cost analysis, AI settings
-│   ├── (automations)/  # Automations: watchlist sync, inactive members, request limits, queues
+│   ├── (automations)/  # Automations: watchlist sync, inactive members, request limits, queues, media cleanup
 │   └── …               # Single pages (assistant, announcements, audit, settings) and wrapped/, a stored Rewind's history
 ├── api/                # API routes (webhooks, health, metrics, admin search, Rewind cards and posters, one-click unsubscribe)
 ├── auth/               # Plex sign-in callback, access denied and auth error pages (sign-in itself is on /)
@@ -117,6 +118,7 @@ lib/                    # Utilities, helpers, business logic
 ├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
 ├── charts/            # Chart slot map (var(--chart-n)) and generated text summaries for ChartCard
 ├── chatbot/           # Admin assistant: tools, executors, prompts and the conversation loop (server-only)
+├── cleanup/           # Media cleanup: rules and their engine, library data, runs, Leaving soon, Plex collections (docs/media-cleanup.md)
 ├── connections/       # External API clients (Plex, Tautulli, Overseerr, Sonarr, Radarr)
 ├── data/              # Server-only admin loaders, each checking assertAdmin() next to its data
 ├── db/                # Encrypted fields and the ?schema= parameter
@@ -291,7 +293,13 @@ if (!result.success) {
 - **Utility modules**: Max ~150 lines per file
 - If a file exceeds these limits, it's a signal to refactor
 - ESLint's `max-lines` (blank lines and comments skipped, tests excluded) fails a file in `components/` or `actions/` above 300 lines and warns for `lib/` and `hooks/` above 150. Split along responsibilities; a `'use server'` file can export only async functions, so shared helpers move to `lib/`
-- Deliberate exceptions carry a file-level `/* eslint max-lines: ["error", N] -- cohesive: <reason> */` and a line here. None today
+- Deliberate exceptions carry a file-level `/* eslint max-lines: ["error", N] -- cohesive: <reason> */` and a line here:
+  - `lib/queue/types.ts` (360): the one registry of every job type, label, payload and id policy
+  - `lib/utils/format.ts` (220): every zone and locale formatter, covered by `npm run test:tz`
+  - `lib/ui/status.ts` (300): one table holds every status word, with its resolver and the Discord status rows
+  - `lib/security/audit-log.ts` (220): the one enum of every audit event type, beside the writers that take it
+  - `lib/audit/events.ts` (175): a Record over every audit event type, so a new type does not compile without its words
+  - `lib/admin/nav.ts` (230): one table feeds the sidebar, the tab bar, the command menu and the page titles, beside the rules that read it
 
 ### Testability First
 - Components should be independently testable
@@ -1015,6 +1023,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - MCP endpoint (API tokens, connecting Claude Code, the tool catalog): See `docs/mcp.md`
 - Affiliate invites (tiers, slots, server cap, the switch): See `docs/affiliate-invites.md`
 - Inactive members (last seen from Tautulli, the inactivity sweep and its safety rules): See `docs/inactive-members.md`
+- Media cleanup (rules, Leaving soon and member Keeps, deletion through Radarr and Sonarr, the safety stops, the Kometa change, the MCP tools): See `docs/media-cleanup.md`
 - Email (the SMTP variables, the transport in `lib/email/`, the test email, unsubscribe links): See `docs/email.md`
 - Audit log (who can read it, categories, what Support sees): See `docs/roles.md` and `docs/privacy.md`
 - Appearance (server name, login subtitle, accent colour, uploaded logos and images): See `docs/appearance.md`
