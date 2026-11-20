@@ -28,7 +28,7 @@ describe("the event table", () => {
 
   it("gives each event its own short, sentence-case label", () => {
     const labels = AUDIT_EVENT_NAMES.map(eventLabel)
-    const properNouns = /\b(?:Plex|Rewinds?|Discord|Stripe|LLM|MCP)\b/g
+    const properNouns = /\b(?:Plex|Rewinds?|Discord|Stripe|LLM|MCP|Leaving soon)\b/g
 
     expect(new Set(labels).size).toBe(labels.length)
     for (const label of labels) {
@@ -76,6 +76,46 @@ describe("eventLabel and eventCategory", () => {
     expect(isKnownEventType("constructor")).toBe(false)
     expect(eventLabel("toString")).toBe("toString")
     expect(eventCategory("__proto__")).toBeNull()
+  })
+})
+
+describe("the media cleanup events (TS 11.2)", () => {
+  it("files them under their own category, after Plex access", () => {
+    expect(AUDIT_CATEGORIES.slice(0, 3)).toEqual(["members", "access", "cleanup"])
+    expect(CATEGORY_LABELS.cleanup).toBe("Media cleanup")
+  })
+
+  const LABELS: [AuditEventType, string][] = [
+    [AuditEventType.CLEANUP_RULE_CREATED, "Cleanup rule created"],
+    [AuditEventType.CLEANUP_RULE_CHANGED, "Cleanup rule changed"],
+    [AuditEventType.CLEANUP_RULE_DELETED, "Cleanup rule deleted"],
+    [AuditEventType.CLEANUP_RULE_MODE_CHANGED, "Cleanup rule mode changed"],
+    [AuditEventType.CLEANUP_SETTINGS_CHANGED, "Media cleanup settings changed"],
+    [AuditEventType.CLEANUP_PAUSED, "Media cleanup paused"],
+    [AuditEventType.CLEANUP_RESUMED, "Media cleanup resumed"],
+    [AuditEventType.CLEANUP_RUN_STARTED, "Media cleanup run started"],
+    [AuditEventType.CLEANUP_RUN, "Media cleanup ran"],
+    [AuditEventType.CLEANUP_ITEMS_ENTERED, "Titles joined Leaving soon"],
+    [AuditEventType.CLEANUP_ITEMS_HELD, "New matches held for review"],
+    [AuditEventType.CLEANUP_ITEMS_RELEASED, "Titles released from Leaving soon"],
+    [AuditEventType.CLEANUP_BATCH_APPROVED, "Cleanup batch approved"],
+    [AuditEventType.CLEANUP_ITEMS_POSTPONED, "Leave dates postponed"],
+    [AuditEventType.CLEANUP_ITEMS_EXCLUDED, "Titles excluded from cleanup"],
+    [AuditEventType.CLEANUP_EXCLUSION_CHANGED, "Cleanup exclusion changed"],
+    [AuditEventType.CLEANUP_KEEP_ADDED, "Title kept by a member"],
+    [AuditEventType.CLEANUP_KEEP_ENDED, "Keep ended"],
+    [AuditEventType.CLEANUP_ITEM_RESCUED, "Title rescued from Leaving soon"],
+    [AuditEventType.CLEANUP_ITEM_DELETED, "Title deleted by cleanup"],
+    [AuditEventType.CLEANUP_ITEM_FAILED, "Cleanup deletion failed"],
+  ]
+
+  it.each(LABELS)("labels %s", (type, label) => {
+    expect(eventLabel(type)).toBe(label)
+    expect(eventCategory(type)).toBe("cleanup")
+  })
+
+  it("lists all 21 of them, in the order of TS 11.1, and nothing else in the category", () => {
+    expect(typesIn("cleanup")).toEqual(LABELS.map(([type]) => type))
   })
 })
 

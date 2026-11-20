@@ -1,0 +1,158 @@
+[
+  {
+    "seriesId": 21,
+    "seasonNumber": 1,
+    "relativePath": "Season 01/Paper Moon Station - S01E01.mkv",
+    "path": "/data/tv/Paper Moon Station/Season 01/Paper Moon Station - S01E01.mkv",
+    "size": 1073741824,
+    "dateAdded": "2023-07-22T03:06:40Z",
+    "sceneName": "Invented.Scene.Name",
+    "releaseGroup": "INVENTED",
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "source": "web",
+        "resolution": 1080
+      },
+      "revision": {
+        "version": 1,
+        "real": 0,
+        "isRepack": false
+      }
+    },
+    "customFormats": [],
+    "customFormatScore": 0,
+    "indexerFlags": 0,
+    "releaseType": "singleEpisode",
+    "mediaInfo": {
+      "audioBitrate": 384000,
+      "audioChannels": 5.1,
+      "audioCodec": "EAC3",
+      "audioLanguages": "eng",
+      "audioStreamCount": 1,
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoFps": 23.976,
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "resolution": "1920x1080",
+      "runTime": "25:00",
+      "scanType": "Progressive",
+      "subtitles": "eng"
+    },
+    "qualityCutoffNotMet": false,
+    "id": 2101
+  },
+  {
+    "seriesId": 21,
+    "seasonNumber": 1,
+    "relativePath": "Season 01/Paper Moon Station - S01E02.mkv",
+    "path": "/data/tv/Paper Moon Station/Season 01/Paper Moon Station - S01E02.mkv",
+    "size": 1073741824,
+    "dateAdded": "2023-07-22T03:06:40Z",
+    "sceneName": "Invented.Scene.Name",
+    "releaseGroup": "INVENTED",
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "source": "web",
+        "resolution": 1080
+      },
+      "revision": {
+        "version": 1,
+        "real": 0,
+        "isRepack": false
+      }
+    },
+    "customFormats": [],
+    "customFormatScore": 0,
+    "indexerFlags": 0,
+    "releaseType": "singleEpisode",
+    "mediaInfo": {
+      "audioBitrate": 384000,
+      "audioChannels": 5.1,
+      "audioCodec": "EAC3",
+      "audioLanguages": "eng",
+      "audioStreamCount": 1,
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoFps": 23.976,
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "resolution": "1920x1080",
+      "runTime": "25:00",
+      "scanType": "Progressive",
+      "subtitles": "eng"
+    },
+    "qualityCutoffNotMet": false,
+    "id": 2102
+  },
+  {
+    "seriesId": 21,
+    "seasonNumber": 2,
+    "relativePath": "Season 02/Paper Moon Station - S02E01.mkv",
+    "path": "/data/tv/Paper Moon Station/Season 02/Paper Moon Station - S02E01.mkv",
+    "size": 1181116006,
+    "dateAdded": "2023-07-22T03:06:40Z",
+    "sceneName": "Invented.Scene.Name",
+    "releaseGroup": "INVENTED",
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "source": "web",
+        "resolution": 1080
+      },
+      "revision": {
+        "version": 1,
+        "real": 0,
+        "isRepack": false
+      }
+    },
+    "customFormats": [],
+    "customFormatScore": 0,
+    "indexerFlags": 0,
+    "releaseType": "singleEpisode",
+    "mediaInfo": {
+      "audioBitrate": 384000,
+      "audioChannels": 5.1,
+      "audioCodec": "EAC3",
+      "audioLanguages": "eng",
+      "audioStreamCount": 1,
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoFps": 23.976,
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "resolution": "1920x1080",
+      "runTime": "25:00",
+      "scanType": "Progressive",
+      "subtitles": "eng"
+    },
+    "qualityCutoffNotMet": false,
+    "id": 2103
+  }
+]

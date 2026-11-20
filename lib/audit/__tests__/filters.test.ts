@@ -105,10 +105,45 @@ describe("auditWhere", () => {
     expect(where({ member: "u1" })).toEqual({ AND: [{ OR: [{ actorUserId: "u1" }, { targetUserId: "u1" }] }] })
   })
 
-  it("matches one inactivity run's rows by the run id in their details", () => {
+  it("matches one run's rows by the run id in their details: an inactivity run and a media cleanup run (TS 11.5)", () => {
     expect(where({ run: "run-1" })).toEqual({
-      AND: [{ type: { in: ["INACTIVITY_SWEEP_RUN", "MEMBER_UNSHARED"] }, details: { path: ["runId"], equals: "run-1" } }],
+      AND: [
+        {
+          type: {
+            in: [
+              "INACTIVITY_SWEEP_RUN",
+              "MEMBER_UNSHARED",
+              "CLEANUP_RUN",
+              "CLEANUP_ITEMS_ENTERED",
+              "CLEANUP_ITEMS_HELD",
+              "CLEANUP_ITEM_RESCUED",
+              "CLEANUP_ITEM_DELETED",
+              "CLEANUP_ITEM_FAILED",
+            ],
+          },
+          details: { path: ["runId"], equals: "run-1" },
+        },
+      ],
     })
+  })
+
+  it("leaves out the cleanup events that carry no run id", () => {
+    const [{ type }] = where({ run: "run-1" }).AND as [{ type: { in: string[] } }]
+
+    for (const other of ["CLEANUP_ITEMS_RELEASED", "CLEANUP_BATCH_APPROVED", "CLEANUP_RUN_STARTED", "CLEANUP_KEEP_ADDED"]) {
+      expect(type.in).not.toContain(other)
+    }
+  })
+
+  it("narrows a cleanup run's rows to one of its types", () => {
+    const filters = parseAuditFilters({ category: "cleanup", type: "CLEANUP_ITEM_DELETED", run: "clrun0000000000000000000a" })
+
+    expect(filters).toEqual({ category: "cleanup", type: "CLEANUP_ITEM_DELETED", run: "clrun0000000000000000000a", range: null })
+    expect(auditWhere(filters, "America/Chicago").AND).toEqual([
+      { type: { in: typesIn("cleanup") } },
+      { type: "CLEANUP_ITEM_DELETED" },
+      { type: { in: expect.arrayContaining(["CLEANUP_RUN", "CLEANUP_ITEM_DELETED"]) }, details: { path: ["runId"], equals: "clrun0000000000000000000a" } },
+    ])
   })
 
   it("places the day range in the server zone, the last day included", () => {

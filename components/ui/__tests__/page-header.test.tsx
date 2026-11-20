@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react"
+import { createRef } from "react"
 import { axe, toHaveNoViolations } from "jest-axe"
 
 import { Button } from "@/components/ui/button"
@@ -50,6 +51,19 @@ describe("PageHeader", () => {
       .getAllByRole("button")
       .map((button) => button.textContent)
     expect(names).toEqual(["Export", "Invite member"])
+  })
+
+  it("makes the h1 a focus target only with a titleRef", () => {
+    const ref = createRef<HTMLHeadingElement>()
+    const { rerender } = render(<PageHeader title="Turn on" />)
+    expect(screen.getByRole("heading", { level: 1 })).not.toHaveAttribute("tabindex")
+
+    rerender(<PageHeader title="Turn on" titleRef={ref} />)
+    const title = screen.getByRole("heading", { level: 1 })
+    expect(ref.current).toBe(title)
+    expect(title).toHaveAttribute("tabindex", "-1")
+    ref.current?.focus()
+    expect(title).toHaveFocus()
   })
 
   it("forwards data-testid and leaves out the breadcrumb nav when there are none", () => {

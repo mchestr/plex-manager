@@ -4,7 +4,7 @@
  * the first-use and filtered empty states.
  */
 
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { currentHref, resetUrl } from "@/__tests__/helpers/url-router"
@@ -36,6 +36,13 @@ const ROWS = [
     user: { id: "u2", name: null, email: "sam@example.com" },
   }),
 ]
+
+/** Clicks a Select option once the popup takes pointer events: it ignores them while it opens, which a loaded run can catch. */
+async function pickOption(user: ReturnType<typeof userEvent.setup>, testId: string) {
+  const option = await screen.findByTestId(testId)
+  await waitFor(() => expect(option.closest('[style*="pointer-events: none"]')).toBeNull())
+  await user.click(option)
+}
 
 function renderTable(props: Partial<Parameters<typeof WatchlistTable>[0]> = {}) {
   return render(
@@ -114,7 +121,7 @@ describe("WatchlistTable", () => {
       "Failed",
       "Removed from watchlist",
     ])
-    await user.click(screen.getByTestId("admin-watchlist-filters-filter-status-option-notAllowed"))
+    await pickOption(user, "admin-watchlist-filters-filter-status-option-notAllowed")
 
     expect(currentHref()).toBe("/admin/watchlist?status=notAllowed")
     expect(await screen.findByTestId("admin-watchlist-filters-chip-status")).toHaveTextContent("Status: Not allowed")
@@ -125,7 +132,7 @@ describe("WatchlistTable", () => {
     const user = userEvent.setup()
 
     await user.click(screen.getByTestId("admin-watchlist-filters-filter-type"))
-    await user.click(await screen.findByTestId("admin-watchlist-filters-filter-type-option-movie"))
+    await pickOption(user, "admin-watchlist-filters-filter-type-option-movie")
 
     expect(currentHref()).toBe("/admin/watchlist?type=movie")
     expect(await screen.findByTestId("admin-watchlist-filters-chip-type")).toHaveTextContent("Type: Movie")

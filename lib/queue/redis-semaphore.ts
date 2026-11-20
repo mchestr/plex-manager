@@ -5,7 +5,8 @@
  *
  * ## Algorithm
  *
- * Each service has a sorted set `rw:sem:<service>` whose members are holder
+ * Each service has a sorted set `rw:sem:<service>` (`rw:sem:tautulli`, and
+ * `rw:sem:radarr` and `rw:sem:sonarr` for media cleanup) whose members are holder
  * ids scored by their expiry time (Redis server time, so process clocks never
  * matter). One Lua script per operation keeps each step atomic:
  *
@@ -32,6 +33,12 @@ import { createLogger } from "@/lib/utils/logger"
 import type { UpstreamLimiter, UpstreamService } from "@/lib/wrapped/sources/watch-history-source"
 
 const logger = createLogger("REDIS_SEMAPHORE")
+
+/**
+ * The services the semaphore caps: Rewind's upstreams, plus Radarr and Sonarr
+ * for media cleanup. `UpstreamService` stays Rewind's own type.
+ */
+export type SemaphoreService = UpstreamService | "radarr" | "sonarr"
 
 const NOW_MS = `
 local t = redis.call('TIME')
@@ -98,13 +105,13 @@ export interface SemaphoreHolder {
 
 export interface RedisSemaphore extends UpstreamLimiter {
   /** Waits for a slot; rejects with the signal's reason if it aborts first. */
-  acquire(service: UpstreamService, signal?: AbortSignal): Promise<SemaphoreHolder>
+  acquire(service: SemaphoreService, signal?: AbortSignal): Promise<SemaphoreHolder>
   /**
    * Runs `fn` while holding a slot for `service`, renewing it on long calls and
    * releasing it in `finally`. This is P2.4's `UpstreamLimiter.run`; the
    * optional `options.signal` bounds the wait for a slot.
    */
-  run<T>(service: UpstreamService, fn: () => Promise<T>, options?: { signal?: AbortSignal }): Promise<T>
+  run<T>(service: SemaphoreService, fn: () => Promise<T>, options?: { signal?: AbortSignal }): Promise<T>
 }
 
 /**
@@ -131,7 +138,7 @@ export function createRedisSemaphore(
     return redis
   }
 
-  async function acquire(service: UpstreamService, signal?: AbortSignal): Promise<SemaphoreHolder> {
+  async function acquire(service: SemaphoreService, signal?: AbortSignal): Promise<SemaphoreHolder> {
     const key = `rw:sem:${service}`
     const id = randomUUID()
     for (let attempt = 0; ; attempt++) {
@@ -149,7 +156,7 @@ export function createRedisSemaphore(
   }
 
   async function run<T>(
-    service: UpstreamService,
+    service: SemaphoreService,
     fn: () => Promise<T>,
     options: { signal?: AbortSignal } = {}
   ): Promise<T> {
