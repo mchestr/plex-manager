@@ -1,0 +1,52 @@
+[
+  {
+    "title": "Fight Club",
+    "originalTitle": "Fight Club",
+    "originalLanguage": { "id": 1, "name": "English" },
+    "alternateTitles": [],
+    "secondaryYearSourceId": 0,
+    "sortTitle": "fight club",
+    "sizeOnDisk": 10947358412,
+    "status": "released",
+    "inCinemas": "1999-10-15T00:00:00Z",
+    "physicalRelease": "2000-06-06T00:00:00Z",
+    "images": [],
+    "year": 1999,
+    "studio": "Fox 2000 Pictures",
+    "path": "/data/movies/Fight Club (1999)",
+    "qualityProfileId": 4,
+    "hasFile": true,
+    "movieFileId": 1201,
+    "monitored": true,
+    "minimumAvailability": "released",
+    "isAvailable": true,
+    "folderName": "/data/movies/Fight Club (1999)",
+    "runtime": 139,
+    "cleanTitle": "fightclub",
+    "imdbId": "tt0137523",
+    "tmdbId": 550,
+    "titleSlug": "550",
+    "rootFolderPath": "/data/movies/",
+    "certification": "R",
+    "genres": ["Drama"],
+    "tags": [],
+    "added": "2023-11-14T22:13:20Z",
+    "ratings": { "imdb": { "votes": 2400000, "value": 8.8, "type": "user" } },
+    "movieFile": {
+      "movieId": 9,
+      "relativePath": "Fight Club (1999) Bluray-1080p.mkv",
+      "path": "/data/movies/Fight Club (1999)/Fight Club (1999) Bluray-1080p.mkv",
+      "size": 10947358412,
+      "dateAdded": "2023-11-14T22:20:00Z",
+      "quality": {
+        "quality": { "id": 7, "name": "Bluray-1080p", "source": "bluray", "resolution": 1080, "modifier": "none" },
+        "revision": { "version": 1, "real": 0, "isRepack": false }
+      },
+      "customFormatScore": 0,
+      "qualityCutoffNotMet": false,
+      "id": 1201
+    },
+    "statistics": { "movieFileCount": 1, "sizeOnDisk": 10947358412, "releaseGroups": [] },
+    "id": 9
+  }
+]

@@ -19,8 +19,11 @@
  * 1. Resolve the Plex `type` (`movie`/`show`/`episode`) into a {@link MediaType}.
  *    Unsupported types short-circuit with `{ ok: false }` so the caller can
  *    render its own error copy.
- * 2. Match a Radarr movie id (movies) or Sonarr series id (series/episodes) by
- *    title + year. Episodes match on `grandparentTitle` (the show title).
+ * 2. Link the Radarr movie (movies) or Sonarr series (shows and episodes) by
+ *    the ids Plex holds for the item (`findArrTitle`), never by title. A
+ *    title Radarr or Sonarr doesn't have is saved without a link. Marking it
+ *    again replaces an older link (one the title matcher may have got wrong),
+ *    but a lookup that finds nothing never clears one.
  * 3. Upsert the mark on the `(userId, plexRatingKey, markType)` composite key.
  * 4. For {@link MarkType.FINISHED_WATCHING} only, best-effort sync Plex's watched
  *    state **as the member** (SEC-48): the scrobble carries the member's own
@@ -35,13 +38,13 @@ import {
   markPlexItemWatched,
   type PlexMediaItem,
 } from "@/lib/connections/plex"
+import { findArrTitle } from "@/lib/connections/plex-arr"
 import { type PlexServerConfig } from "@/lib/connections/plex-config"
 import { resolveMemberServerToken } from "@/lib/connections/plex-member-token"
 import { type WatchStatusSync } from "@/lib/discord/media/mark-labels"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { MarkType, MediaType } from "@/lib/generated/prisma/client"
-import { findRadarrIdByTitle, findSonarrIdByTitle } from "@/lib/utils/media-matching"
 
 const logger = createLogger("DISCORD_MARK_MEDIA")
 
@@ -55,8 +58,9 @@ export interface ApplyMarkParams {
   /** Provenance string stored on the mark (e.g. `"discord"`, `"chatbot"`). */
   markedVia: string
   /**
-   * Active Plex server config, used only for the FINISHED_WATCHING sync: its
-   * URL, and its token only to read the server's identity.
+   * Active Plex server config. Its owner token reads the item's ids for the
+   * Radarr/Sonarr link and, for FINISHED_WATCHING, the server's identity;
+   * the scrobble itself never uses it.
    */
   plexConfig: PlexServerConfig
   /** Optional Discord channel id recorded on the mark. */
@@ -120,26 +124,14 @@ export async function applyMark(params: ApplyMarkParams): Promise<ApplyMarkResul
     return { ok: false, reason: "unsupported_media_type", mediaType: item.type }
   }
 
-  // Find Radarr/Sonarr ids for cross-linking.
-  let radarrId: number | null = null
-  let radarrTitleSlug: string | null = null
-  let sonarrId: number | null = null
-  let sonarrTitleSlug: string | null = null
-
-  if (mediaType === MediaType.MOVIE) {
-    const radarrMatch = await findRadarrIdByTitle(item.title, item.year)
-    if (radarrMatch) {
-      radarrId = radarrMatch.id
-      radarrTitleSlug = radarrMatch.titleSlug
-    }
-  } else {
-    // TV_SERIES or EPISODE — episodes match on the show (grandparent) title.
-    const showTitle = item.grandparentTitle || item.title
-    const sonarrMatch = await findSonarrIdByTitle(showTitle, item.year)
-    if (sonarrMatch) {
-      sonarrId = sonarrMatch.id
-      sonarrTitleSlug = sonarrMatch.titleSlug
-    }
+  const link = await findArrTitle(plexConfig, item.ratingKey)
+  const radarr = link?.service === "radarr" ? link : null
+  const sonarr = link?.service === "sonarr" ? link : null
+  const linkColumns = {
+    radarrId: radarr?.id ?? null,
+    radarrTitleSlug: radarr?.titleSlug ?? null,
+    sonarrId: sonarr?.id ?? null,
+    sonarrTitleSlug: sonarr?.titleSlug ?? null,
   }
 
   await prisma.userMediaMark.upsert({
@@ -160,16 +152,14 @@ export async function applyMark(params: ApplyMarkParams): Promise<ApplyMarkResul
       seasonNumber: item.parentIndex,
       episodeNumber: item.index,
       parentTitle: item.parentTitle || item.grandparentTitle,
-      radarrId,
-      radarrTitleSlug,
-      sonarrId,
-      sonarrTitleSlug,
+      ...linkColumns,
       markedVia,
       discordChannelId: channelId,
     },
     update: {
       markedAt: new Date(),
       discordChannelId: channelId,
+      ...(link ? linkColumns : {}),
     },
   })
 

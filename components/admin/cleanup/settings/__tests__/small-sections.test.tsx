@@ -59,6 +59,8 @@ describe("DefaultsSection", () => {
     expect(screen.getByTestId("cleanup-defaults-grace-error")).toHaveTextContent("Enter a whole number of days from 1 to 3650.")
     await user.click(screen.getByTestId("settings-cleanup-defaults-save"))
     expect(updateCleanupSettings).not.toHaveBeenCalled()
+    // The refused save runs in a transition that disables the fields until it ends, which a loaded CI runner ends late
+    await waitFor(() => expect(grace).toBeEnabled())
 
     await user.type(grace, "14")
     expect(screen.getByText("Changed from 30 days.")).toBeInTheDocument()

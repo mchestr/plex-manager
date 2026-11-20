@@ -16,10 +16,7 @@ import { searchPlexMedia } from "@/lib/connections/plex-search"
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/connections/plex-search", () => ({ searchPlexMedia: jest.fn() }))
 jest.mock("@/lib/connections/plex-config", () => ({ getActivePlexServerConfig: jest.fn() }))
-jest.mock("@/lib/utils/media-matching", () => ({
-  findRadarrIdByTitle: jest.fn().mockResolvedValue(null),
-  findSonarrIdByTitle: jest.fn().mockResolvedValue(null),
-}))
+jest.mock("@/lib/connections/plex-arr", () => ({ findArrTitle: jest.fn().mockResolvedValue(null) }))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
 }))

@@ -11,8 +11,9 @@
  *    (`GET https://plex.tv/api/servers/<machineIdentifier>/shared_servers`,
  *    owner token; parsed by `./plex-shared-servers-xml`). The host comes from
  *    `plexTvBaseUrl()`, the E2E seam.
- * 2. {@link getItemSectionKey} asks the Plex server for an item's metadata
- *    (`GET <url>/library/metadata/<ratingKey>`).
+ * 2. {@link getItemSectionKey} reads an item's section from its metadata
+ *    (`getPlexItemMetadata` in `./plex-metadata`, the same read that gives
+ *    the item's ids and files).
  *
  * {@link getSharedSectionFilters} reads the same share list, with the filter
  * text of each section, for media cleanup's member pages.
@@ -35,14 +36,13 @@
 
 import "server-only"
 
-import { z } from "zod"
-
 import { plexTvBaseUrl } from "@/lib/security/test-mode"
 import { fetchWithTimeout } from "@/lib/utils/fetch-with-timeout"
 import { createLoadingCache, createTtlCache } from "@/lib/utils/ttl-cache"
 
 import { getPlexServerIdentity } from "./plex-connection"
 import { getClientIdentifier, logger } from "./plex-core"
+import { getPlexItemMetadata } from "./plex-metadata"
 import { filtersOf, keysOf, parseSharedServersDocument, type SharedSectionFilters, type SharedSectionKeys } from "./plex-shared-servers-xml"
 
 export type { SharedSectionFilters, SharedSectionKeys } from "./plex-shared-servers-xml"
@@ -72,14 +72,6 @@ export type ItemSectionLookup =
   | { status: "found"; sectionKey: string }
   | { status: "missing" }
   | { status: "unknown" }
-
-const sectionIdSchema = z.object({
-  librarySectionID: z.union([z.number().int().nonnegative(), z.string().regex(/^\d+$/)]).transform(String),
-})
-
-const itemMetadataSchema = z.object({
-  MediaContainer: z.object({ Metadata: z.array(z.unknown()).optional() }).loose(),
-})
 
 /** One parse of the share list, read by both lookups (13.1 rule 2). */
 interface SharedServers {
@@ -197,23 +189,11 @@ export async function getSharedSectionFilters(
   return loaded.filters.get(plexUserId) ?? new Map<string, string | null>()
 }
 
-/** Reads `MediaContainer.librarySectionID`, falling back to the first item's. */
-function readSectionKey(body: unknown): string | null {
-  const parsed = itemMetadataSchema.safeParse(body)
-  if (!parsed.success) return null
-  const container = parsed.data.MediaContainer
-  for (const candidate of [container, container.Metadata?.[0]]) {
-    const section = sectionIdSchema.safeParse(candidate)
-    if (section.success) return section.data.librarySectionID
-  }
-  return null
-}
-
 /**
  * The library section key (`librarySectionID`) of a Plex item.
  *
  * @param server - The active Plex server (URL and owner token)
- * @param ratingKey - The item's rating key (digits only; the caller validates it)
+ * @param ratingKey - The item's rating key; anything but digits is `missing`
  */
 export async function getItemSectionKey(
   server: PlexServerConfig,
@@ -224,25 +204,13 @@ export async function getItemSectionKey(
   const cached = itemSectionCache.get(cacheKey)
   if (cached) return { status: "found", sectionKey: cached }
 
-  try {
-    const response = await fetchWithTimeout(`${server.url}/library/metadata/${ratingKey}`, {
-      method: "GET",
-      headers: { Accept: "application/json", "X-Plex-Token": server.token },
-      timeoutMs,
-      timeoutCoversBody: true,
-    })
-    if (response.status === 404) return { status: "missing" }
-    if (!response.ok) return { status: "unknown" }
+  const lookup = await getPlexItemMetadata(server, ratingKey, { timeoutMs })
+  if (lookup.status !== "found") return lookup
+  const sectionKey = lookup.item.librarySectionId
+  if (sectionKey === undefined) return { status: "unknown" }
 
-    const sectionKey = readSectionKey(await response.json())
-    if (sectionKey === null) return { status: "unknown" }
-
-    itemSectionCache.set(cacheKey, sectionKey)
-    return { status: "found", sectionKey }
-  } catch (error) {
-    logger.debug("Item section lookup failed", { ratingKey, error: errorMessage(error) })
-    return { status: "unknown" }
-  }
+  itemSectionCache.set(cacheKey, sectionKey)
+  return { status: "found", sectionKey }
 }
 
 /**

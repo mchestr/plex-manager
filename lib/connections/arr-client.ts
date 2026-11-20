@@ -131,6 +131,36 @@ export async function arrGetPaged(
 }
 
 /**
+ * The first record of an unpaged *arr list that parses with `schema` and
+ * passes `matches`, or `null`. A record that fails the schema is skipped, so
+ * one odd entry doesn't hide the rest of a library.
+ *
+ * @param query - From {@link arrQuery}; `""` for none.
+ */
+export async function arrFind<T>(
+  service: ArrService,
+  config: ArrConfig,
+  path: string,
+  query: string | null,
+  schema: z.ZodType<T>,
+  matches: (record: T) => boolean
+): Promise<ConnectionResult<T | null>> {
+  if (query === null) return invalidArrParams(service)
+  const result = await serviceFetch({
+    service,
+    url: `${config.url}${path}${query ? `?${query}` : ""}`,
+    headers: { "X-Api-Key": config.apiKey },
+    schema: z.array(z.unknown()),
+  })
+  if (!result.ok) return toConnectionResult(service, result)
+  for (const record of result.data) {
+    const parsed = schema.safeParse(record)
+    if (parsed.success && matches(parsed.data)) return { success: true, data: parsed.data }
+  }
+  return { success: true, data: null }
+}
+
+/**
  * GET an unpaged *arr list (such as `/api/v3/history/series`) as an
  * {@link ArrPage}: the first `limit` records and the full count.
  */

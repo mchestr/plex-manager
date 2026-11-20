@@ -1,7 +1,8 @@
 import { z } from "zod"
 
 import { type RadarrParsed } from "@/lib/validations/radarr";
-import { arrGet, arrGetList, arrGetPaged, arrQuery, invalidArrParams, testArrConnection, type ArrPage } from "@/lib/connections/arr-client";
+import { arrFind, arrGet, arrGetList, arrGetPaged, arrQuery, invalidArrParams, testArrConnection, type ArrPage } from "@/lib/connections/arr-client";
+import { type PlexExternalIds } from "@/lib/connections/plex-guids";
 import { type ConnectionResult } from "@/types/connection";
 
 /*
@@ -15,6 +16,15 @@ const movieHistoryParams = z.strictObject({ movieId: z.number().int(), includeMo
 const queueParams = z.strictObject({ includeMovie: z.literal(true) })
 const calendarParams = z.strictObject({ start: z.string().optional(), end: z.string().optional() })
 const missingParams = z.strictObject({ sortKey: z.literal("physicalRelease") })
+const movieParams = z.strictObject({ tmdbId: z.number().int().positive() })
+
+/** The `MovieResource` fields a link to the movie needs. */
+const movieSchema = z.looseObject({
+  id: z.number().int(),
+  titleSlug: z.string(),
+  tmdbId: z.number().int(),
+  imdbId: z.string().nullish(),
+})
 
 export async function testRadarrConnection(config: RadarrParsed): Promise<{ success: boolean; error?: string }> {
   return testArrConnection("Radarr", config)
@@ -59,6 +69,24 @@ export async function getRadarrHistory(
 
 export async function getRadarrMovies(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
   return arrGet("Radarr", config, "/api/v3/movie")
+}
+
+/**
+ * The library movie with a TMDB or IMDb id, or `null`. Radarr filters a TMDB
+ * id itself (`GET /api/v3/movie?tmdbId=`); without one, or when it finds
+ * nothing, the IMDb id is looked for across the whole library.
+ */
+export async function findRadarrMovie(
+  config: RadarrParsed,
+  { tmdb, imdb }: PlexExternalIds
+): Promise<ConnectionResult<z.infer<typeof movieSchema> | null>> {
+  if (tmdb !== undefined) {
+    const query = arrQuery(movieParams, { tmdbId: tmdb })
+    const byTmdb = await arrFind("Radarr", config, "/api/v3/movie", query, movieSchema, (movie) => movie.tmdbId === tmdb)
+    if (!byTmdb.success || byTmdb.data || imdb === undefined) return byTmdb
+  }
+  if (imdb === undefined) return { success: true, data: null }
+  return arrFind("Radarr", config, "/api/v3/movie", "", movieSchema, (movie) => movie.imdbId === imdb)
 }
 
 export async function getRadarrMovieById(config: RadarrParsed, movieId: number): Promise<ConnectionResult<unknown>> {
