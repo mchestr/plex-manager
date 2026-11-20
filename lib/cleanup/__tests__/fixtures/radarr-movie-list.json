@@ -1,0 +1,203 @@
+[
+  {
+    "title": "The Lantern Keeper",
+    "originalTitle": "The Lantern Keeper",
+    "originalLanguage": {
+      "id": 1,
+      "name": "English"
+    },
+    "alternateTitles": [],
+    "secondaryYearSourceId": 0,
+    "sortTitle": "the lantern keeper",
+    "sizeOnDisk": 8589934592,
+    "status": "released",
+    "overview": "An invented film.",
+    "inCinemas": "2014-05-01T00:00:00Z",
+    "physicalRelease": "2014-08-01T00:00:00Z",
+    "digitalRelease": "2014-07-15T00:00:00Z",
+    "releaseDate": "2014-07-15T00:00:00Z",
+    "images": [
+      {
+        "coverType": "poster",
+        "url": "/MediaCover/1/poster.jpg",
+        "remoteUrl": "https://image.tmdb.org/t/p/original/invented.jpg"
+      }
+    ],
+    "website": "",
+    "year": 2014,
+    "youTubeTrailerId": "",
+    "studio": "Invented Pictures",
+    "path": "/data/movies/The Lantern Keeper (2014)",
+    "qualityProfileId": 4,
+    "hasFile": true,
+    "movieFileId": 1101,
+    "monitored": true,
+    "minimumAvailability": "released",
+    "isAvailable": true,
+    "folderName": "/data/movies/The Lantern Keeper (2014)",
+    "runtime": 105,
+    "cleanTitle": "thelanternkeeper",
+    "tmdbId": 990101,
+    "titleSlug": "the-lantern-keeper-990101",
+    "rootFolderPath": "/data/movies",
+    "certification": "PG-13",
+    "genres": [
+      "Drama"
+    ],
+    "keywords": [],
+    "tags": [
+      1
+    ],
+    "added": "2023-11-14T22:13:20Z",
+    "ratings": {
+      "imdb": {
+        "votes": 100,
+        "value": 7.1,
+        "type": "user"
+      }
+    },
+    "popularity": 3.2,
+    "statistics": {
+      "movieFileCount": 1,
+      "sizeOnDisk": 8589934592,
+      "releaseGroups": [
+        "INVENTED"
+      ]
+    },
+    "id": 11,
+    "imdbId": "tt9900101"
+  },
+  {
+    "title": "Harbor of Glass",
+    "originalTitle": "Harbor of Glass",
+    "originalLanguage": {
+      "id": 1,
+      "name": "English"
+    },
+    "alternateTitles": [],
+    "secondaryYearSourceId": 0,
+    "sortTitle": "harbor of glass",
+    "sizeOnDisk": 4294967296,
+    "status": "released",
+    "overview": "An invented film.",
+    "inCinemas": "2019-05-01T00:00:00Z",
+    "physicalRelease": "2019-08-01T00:00:00Z",
+    "digitalRelease": "2019-07-15T00:00:00Z",
+    "releaseDate": "2019-07-15T00:00:00Z",
+    "images": [
+      {
+        "coverType": "poster",
+        "url": "/MediaCover/1/poster.jpg",
+        "remoteUrl": "https://image.tmdb.org/t/p/original/invented.jpg"
+      }
+    ],
+    "website": "",
+    "year": 2019,
+    "youTubeTrailerId": "",
+    "studio": "Invented Pictures",
+    "path": "/data/movies/Harbor of Glass (2019)",
+    "qualityProfileId": 4,
+    "hasFile": true,
+    "movieFileId": 1102,
+    "monitored": true,
+    "minimumAvailability": "released",
+    "isAvailable": true,
+    "folderName": "/data/movies/Harbor of Glass (2019)",
+    "runtime": 105,
+    "cleanTitle": "harborofglass",
+    "tmdbId": 990102,
+    "titleSlug": "harbor-of-glass-990102",
+    "rootFolderPath": "/data/movies",
+    "certification": "PG-13",
+    "genres": [
+      "Drama"
+    ],
+    "keywords": [],
+    "tags": [
+      2
+    ],
+    "added": "2024-07-10T09:46:40Z",
+    "ratings": {
+      "imdb": {
+        "votes": 100,
+        "value": 7.1,
+        "type": "user"
+      }
+    },
+    "popularity": 3.2,
+    "statistics": {
+      "movieFileCount": 1,
+      "sizeOnDisk": 4294967296,
+      "releaseGroups": [
+        "INVENTED"
+      ]
+    },
+    "id": 12,
+    "imdbId": "tt9900102"
+  },
+  {
+    "title": "Quiet Orchard",
+    "originalTitle": "Quiet Orchard",
+    "originalLanguage": {
+      "id": 1,
+      "name": "English"
+    },
+    "alternateTitles": [],
+    "secondaryYearSourceId": 0,
+    "sortTitle": "quiet orchard",
+    "sizeOnDisk": 0,
+    "status": "released",
+    "overview": "An invented film.",
+    "inCinemas": "2008-05-01T00:00:00Z",
+    "physicalRelease": "2008-08-01T00:00:00Z",
+    "digitalRelease": "2008-07-15T00:00:00Z",
+    "releaseDate": "2008-07-15T00:00:00Z",
+    "images": [
+      {
+        "coverType": "poster",
+        "url": "/MediaCover/1/poster.jpg",
+        "remoteUrl": "https://image.tmdb.org/t/p/original/invented.jpg"
+      }
+    ],
+    "website": "",
+    "year": 2008,
+    "youTubeTrailerId": "",
+    "studio": "Invented Pictures",
+    "path": "/data/movies/Quiet Orchard (2008)",
+    "qualityProfileId": 4,
+    "hasFile": false,
+    "movieFileId": 0,
+    "monitored": true,
+    "minimumAvailability": "released",
+    "isAvailable": true,
+    "folderName": "/data/movies/Quiet Orchard (2008)",
+    "runtime": 105,
+    "cleanTitle": "quietorchard",
+    "tmdbId": 990103,
+    "titleSlug": "quiet-orchard-990103",
+    "rootFolderPath": "/data/movies",
+    "certification": "PG-13",
+    "genres": [
+      "Drama"
+    ],
+    "keywords": [],
+    "tags": [],
+    "added": "2022-04-15T05:20:00Z",
+    "ratings": {
+      "imdb": {
+        "votes": 100,
+        "value": 7.1,
+        "type": "user"
+      }
+    },
+    "popularity": 3.2,
+    "statistics": {
+      "movieFileCount": 0,
+      "sizeOnDisk": 0,
+      "releaseGroups": [
+        "INVENTED"
+      ]
+    },
+    "id": 13
+  }
+]

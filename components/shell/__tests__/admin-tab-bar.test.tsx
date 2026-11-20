@@ -26,13 +26,14 @@ const mockNav = useAdminNav as jest.Mock
 const failedJobsBadge: AdminNavItem['badge'] = ({ failedJobs }) =>
   failedJobs ? { text: `${failedJobs} failed`, tone: 'destructive' } : null
 const usersBadge: AdminNavItem['badge'] = ({ users }) => ({ text: String(users) })
+const reviewBadge: AdminNavItem['badge'] = () => ({ text: '6 to review', tone: 'warning' })
 
 function bare(id: string, mobile: AdminNavItem['mobile'], badge?: AdminNavItem['badge']): AdminNavItem {
   return { id, label: id, href: `/admin/${id}` as Route, icon: icons.users, match: 'prefix', mobile, ...(badge && { badge }) }
 }
 
 function renderTabBar(items: AdminNavItem[], failedJobs: number | null) {
-  const counts: NavCounts = { users: 3, pendingAffiliates: 0, failedJobs }
+  const counts: NavCounts = { users: 3, pendingAffiliates: 0, failedJobs, cleanupReview: 0 }
   mockNav.mockReturnValue({ items, scoped: false })
   return render(<AdminTabBar navCounts={counts} />)
 }
@@ -74,6 +75,14 @@ describe('AdminTabBar failed dot', () => {
     expect(links).toHaveLength(4)
     expect(links.filter((tab) => tab.getAttribute('aria-current') === 'page')).toEqual([])
     expect(screen.getByTestId('admin-tab-more')).toHaveClass('text-foreground')
+  })
+
+  it('is absent for a warning badge, such as media cleanup items to review', () => {
+    renderTabBar([bare('overview', 'tab'), bare('jobs', 'tab', reviewBadge), bare('other', 'more', reviewBadge)], 0)
+
+    expect(screen.queryByTestId('admin-tab-jobs-failed')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('admin-tab-more-failed')).not.toBeInTheDocument()
+    expect(screen.getByTestId('admin-tab-jobs')).toHaveAccessibleName('jobs')
   })
 
   it.each([0, null])('is absent with %p failed jobs (null is Redis down)', (failedJobs) => {
