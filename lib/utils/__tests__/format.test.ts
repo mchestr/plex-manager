@@ -31,6 +31,10 @@ const LOCALES = ["en-US", "en-GB", "de-DE"] as const
 
 // 23:30 UTC on 31 December: still 2026 in UTC and Los Angeles, already 2027 east of Greenwich.
 const NEW_YEARS_EVE = Date.parse("2026-12-31T23:30:00Z")
+// Midday UTC on 15 March 2024: 15 March in every zone of ZONES and in Pacific/Kiritimati.
+const MID_MARCH_2024 = Date.parse("2024-03-15T12:00:00Z")
+// The last minute of March in UTC: still March in Los Angeles, April from Berlin eastwards.
+const END_OF_MARCH_2024 = Date.parse("2024-03-31T23:59:00Z")
 
 const SHORT_DATES: Record<(typeof ZONES)[number], Record<(typeof LOCALES)[number], string>> = {
   UTC: { "en-US": "Dec 31, 2026", "en-GB": "31 Dec 2026", "de-DE": "31. Dez. 2026" },
@@ -61,6 +65,32 @@ describe.each(ZONES)("in %s", (timeZone) => {
   it("reads a day key from its parts, never shifting it a day", () => {
     expect(formatDayKey("2026-10-17", "short", { locale: "en-US" })).toBe("Oct 17, 2026")
     expect(bindFormat({ timeZone, locale: "en-GB" }).dayKey("2026-12-01", "day-month")).toBe("1 December")
+  })
+
+  it("formats the month-year-short style as Mar 2024", () => {
+    const settings = { timeZone, locale: "en-US" }
+    expect(formatDate(MID_MARCH_2024, "month-year-short", settings)).toBe("Mar 2024")
+    expect(formatDayKey("2024-03-01", "month-year-short", settings)).toBe("Mar 2024")
+    expect(formatDayKey("2024-03-31", "month-year-short", settings)).toBe("Mar 2024")
+    expect(bindFormat(settings).date(MID_MARCH_2024, "month-year-short")).toBe("Mar 2024")
+  })
+})
+
+describe("month-year-short", () => {
+  it.each([
+    ["UTC", "Mar 2024"],
+    ["America/Los_Angeles", "Mar 2024"],
+    ["Europe/Berlin", "Apr 2024"],
+    ["Australia/Sydney", "Apr 2024"],
+  ])("reads the month in %s, not in the process zone", (timeZone, expected) => {
+    expect(formatDate(END_OF_MARCH_2024, "month-year-short", { timeZone, locale: "en-US" })).toBe(expected)
+  })
+
+  it.each([
+    ["en-GB", "Mar 2024"],
+    ["de-DE", "März 2024"],
+  ])("follows the locale %s", (locale, expected) => {
+    expect(formatDate(MID_MARCH_2024, "month-year-short", { timeZone: "UTC", locale })).toBe(expected)
   })
 })
 

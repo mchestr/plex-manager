@@ -29,6 +29,9 @@ refuse, revoke, overrides, unblock) are refused on the server (a page
 checks `assertAdmin()` or `assertPermission()`, and an action is built with
 `adminAction` or `permissionAction`), not only hidden from the navigation.
 
+Support has no access to Media cleanup (`docs/media-cleanup.md`): its page,
+loaders, actions and MCP tools are admin only.
+
 ### The audit log for a Support user
 
 - Support reads **Admin > Audit log**: each event's time, words, category, who

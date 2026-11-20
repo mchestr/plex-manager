@@ -15,6 +15,10 @@ jest.mock('server-only', () => ({}))
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))
 jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').navigationModule)
 jest.mock('@/actions/member-data', () => ({ deleteMyMark: jest.fn(), forgetWatchlistItem: jest.fn() }))
+// The Keeps block of the section loads the session and the member's Keeps; with no session it renders nothing
+jest.mock('@/actions/cleanup-keeps', () => ({ keepCleanupTitle: jest.fn(), removeMyCleanupKeep: jest.fn() }))
+jest.mock('@/lib/data/session', () => ({ getSession: jest.fn().mockResolvedValue(null) }))
+jest.mock('@/lib/data/leaving-soon', () => ({ getMyKeeps: jest.fn() }))
 const mockShowSuccess = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: mockShowSuccess, showError: jest.fn() }) }))
 

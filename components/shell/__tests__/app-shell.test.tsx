@@ -42,7 +42,7 @@ const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initi
 function renderShell(user: ShellUser = member, notice?: MemberNotice) {
   return render(
     <ToastProvider>
-      <AppShell serverName="Northfield Plex" user={user} nav={memberNav({ rewindYear: 2026, invites: false, membership: false })} notice={notice}>
+      <AppShell serverName="Northfield Plex" user={user} nav={memberNav({ leavingSoon: false, rewindYear: 2026, invites: false, membership: false })} notice={notice}>
         <p>Page</p>
       </AppShell>
     </ToastProvider>
@@ -77,10 +77,21 @@ describe('AppShell', () => {
   it('marks Rewind current on its subpaths', () => {
     // The shell hides its bar on Rewind pages, so this reads the nav island itself.
     mockPathname.mockReturnValue('/rewind/2025/read')
-    render(<MemberNav items={memberNav({ rewindYear: 2026, invites: false, membership: false })} />)
+    render(<MemberNav items={memberNav({ leavingSoon: false, rewindYear: 2026, invites: false, membership: false })} />)
 
     expect(screen.getByTestId('member-nav-rewind')).toHaveAttribute('aria-current', 'page')
     expect(screen.getByTestId('member-nav-home')).not.toHaveAttribute('aria-current')
+  })
+
+  it('shows Leaving soon right after Home, current on its page', () => {
+    mockPathname.mockReturnValue('/leaving-soon')
+    render(<MemberNav items={memberNav({ leavingSoon: true, rewindYear: 2026, invites: false, membership: false })} />)
+
+    const leaving = screen.getByTestId('member-nav-leaving-soon')
+    expect(leaving).toHaveAttribute('href', '/leaving-soon')
+    expect(leaving).toHaveTextContent('Leaving soon')
+    expect(leaving).toHaveAttribute('aria-current', 'page')
+    expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Leaving soon', 'Rewind 2026', 'Help'])
   })
 
   it('steps aside on Rewind pages, which draw their own chrome', () => {

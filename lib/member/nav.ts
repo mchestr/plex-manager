@@ -1,9 +1,11 @@
 /**
  * The member top bar's links (ui-design-system 6.1).
  *
- * `memberNav()` starts with Home and, when the member can open something
- * there, "Rewind {year}", then Invites and Membership when the member has
- * those pages, and Help always (Account settings lives in the account menu). Each step that
+ * `memberNav()` starts with Home, then "Leaving soon" while the member sees
+ * media cleanup's Leaving soon (TS 13.1), and, when the member can open
+ * something there, "Rewind {year}", then Invites and Membership when the
+ * member has those pages, and Help always (Account settings lives in the
+ * account menu). Each step that
  * ships a route adds its entry, because `typedRoutes` rejects links to routes
  * that do not exist yet.
  *
@@ -20,6 +22,8 @@ export interface MemberNavItem {
 }
 
 interface MemberNavOptions {
+  /** `memberSeesLeavingSoon()` gave `true` (TS 12.3 item 5): a `false` or a late plex.tv answer hides the item. */
+  leavingSoon: boolean
   /** The season year, for the "Rewind {year}" label; `null` hides the item. */
   rewindYear: number | null
   /** The affiliate switch is on and the member has a Plex id, so `/invites` exists. */
@@ -28,8 +32,9 @@ interface MemberNavOptions {
   membership: boolean
 }
 
-export function memberNav({ rewindYear, invites, membership }: MemberNavOptions): MemberNavItem[] {
+export function memberNav({ leavingSoon, rewindYear, invites, membership }: MemberNavOptions): MemberNavItem[] {
   const items: MemberNavItem[] = [{ href: "/", label: "Home", match: "exact" }]
+  if (leavingSoon) items.push({ href: "/leaving-soon", label: "Leaving soon", match: "exact" })
   if (rewindYear !== null) items.push({ href: "/rewind", label: `Rewind ${rewindYear}`, match: "prefix" })
   if (invites) items.push({ href: "/invites", label: "Invites", match: "exact" })
   if (membership) items.push({ href: "/membership", label: "Membership", match: "exact" })

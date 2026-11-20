@@ -108,6 +108,33 @@ describe("auditMemberListed", () => {
     ])
   })
 
+  it.each(["cleanup-requesters", "cleanup-keeps"] as const)("writes MEMBER_CONTENT_LISTED for the media cleanup surface %s", async (surface) => {
+    await auditMemberListed(surface, "admin-11", { kind: "keep", page: 1 })
+    await auditMemberListed(surface, "admin-11", { kind: "exclude", page: 2 })
+    await flush()
+
+    expect(rows()).toEqual([
+      expect.objectContaining({
+        type: AuditEventType.MEMBER_CONTENT_LISTED,
+        actorUserId: "admin-11",
+        targetUserId: null,
+        details: { surface, filters: { kind: "keep", page: 1 } },
+      }),
+    ])
+  })
+
+  it("keeps a separate hour for each media cleanup surface", async () => {
+    await auditMemberListed("cleanup-requesters", "admin-12")
+    await auditMemberListed("cleanup-keeps", "admin-12")
+    await auditMemberListed("cleanup-requesters", "admin-12")
+    await flush()
+
+    expect(rows().map((row) => row.details)).toEqual([
+      { surface: "cleanup-requesters", filters: {} },
+      { surface: "cleanup-keeps", filters: {} },
+    ])
+  })
+
   it("records no filters for a page without any", async () => {
     await auditMemberListed("affiliates", "admin-10")
     await flush()
