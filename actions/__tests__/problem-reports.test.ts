@@ -64,9 +64,19 @@ describe('reportProblem', () => {
 
 describe('followProblemReport', () => {
   it('says a report that closed is closed', async () => {
-    jest.mocked(service.followProblemReport).mockResolvedValue({ ok: false, refusal: 'NOT_FOUND' })
+    jest.mocked(service.followProblemReport).mockResolvedValue({ ok: false, refusal: 'CLOSED' })
 
     await expect(followProblemReport({ reportId: REPORT_ID })).resolves.toEqual({ success: false, code: 'NOT_FOUND', error: 'This report is closed.' })
+  })
+
+  it("says a title outside the member's libraries can't be found, not that the report closed", async () => {
+    jest.mocked(service.followProblemReport).mockResolvedValue({ ok: false, refusal: 'NOT_FOUND' })
+
+    await expect(followProblemReport({ reportId: REPORT_ID })).resolves.toEqual({
+      success: false,
+      code: 'NOT_FOUND',
+      error: "We couldn't find that title in your libraries.",
+    })
   })
 })
 

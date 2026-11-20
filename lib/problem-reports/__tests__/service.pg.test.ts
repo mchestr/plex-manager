@@ -88,4 +88,20 @@ describePg('reportProblem on PostgreSQL', (databaseUrl) => {
     await expect(mockDb.problemReport.count({ where: { titleKey: GUID } })).resolves.toBe(2)
     await expect(mockDb.problemReport.findUniqueOrThrow({ where: { id: open.id } })).resolves.toMatchObject({ status: 'CLOSED', activeKey: null })
   })
+
+  it('keeps one member sending the same report twice at once to one report, with no ALSO_REPORTED event', async () => {
+    const guid = `${GUID}-twice`
+    jest.mocked(readMemberItem).mockResolvedValue({
+      ok: true,
+      server: SERVER,
+      item: { ratingKey: '556', type: 'movie', title: 'Ronin', year: 1998, guid, ids: {}, librarySectionId: '1', parts: [], locations: [] },
+    })
+
+    const results = await Promise.all([0, 1].map(() => reportProblem({ userId: MEMBERS[1], ratingKey: '556', problem: 'wont_start', note: null })))
+
+    expect(results.map((result) => result.ok && result.outcome).sort()).toEqual(['joined', 'reported'])
+    const reports = await mockDb.problemReport.findMany({ where: { titleKey: guid }, include: { events: true } })
+    expect(reports).toHaveLength(1)
+    expect(reports[0].events.map((event) => event.kind)).toEqual(['REPORTED'])
+  })
 })

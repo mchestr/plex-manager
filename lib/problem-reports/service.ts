@@ -58,12 +58,17 @@ import { titleKeyOf } from "@/lib/problem-reports/title"
 import { consume } from "@/lib/security/rate-limit"
 import { alsoReportedDataSchema, type DeviceAnswer } from "@/lib/validations/problem-reports"
 
-/** Why a report, follow or cancel was refused. */
+/**
+ * Why a report, follow or cancel was refused. `NOT_FOUND` is a title outside
+ * the member's libraries (or a report that can't be cancelled); `CLOSED` is a
+ * report to follow that is no longer open.
+ */
 export type ReportRefusal =
   | "OFF"
   | "NOT_ENTITLED"
   | "RATE_LIMITED"
   | "NOT_FOUND"
+  | "CLOSED"
   | "UNAVAILABLE"
   | "NOTE_REQUIRED"
   | "WRONG_KIND"
@@ -197,11 +202,11 @@ export async function followProblemReport({ userId, reportId }: { userId: string
   if (refused) return refused
 
   const report = await prisma.problemReport.findFirst({ where: { id: reportId, activeKey: { not: null } }, select: { plexRatingKey: true } })
-  if (!report) return refuse("NOT_FOUND")
+  if (!report) return refuse("CLOSED")
   const member = await readMemberItem(userId, report.plexRatingKey)
   if (!member.ok) return refuse(member.reason)
 
-  return (await joinOpenReport({ id: reportId }, userId, {})) ? { ok: true } : refuse("NOT_FOUND")
+  return (await joinOpenReport({ id: reportId }, userId, {})) ? { ok: true } : refuse("CLOSED")
 }
 
 /** Cancels the member's own report while nothing has run on it. */
