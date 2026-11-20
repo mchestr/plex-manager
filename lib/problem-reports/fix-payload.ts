@@ -43,6 +43,16 @@ export interface ReplaceWatch {
   monitored?: boolean
 }
 
+/** What Fix the Plex match checks after it asked Plex to match (`lib/problem-reports/steps/fix-match.ts`). @internal */
+export interface MatchWatch {
+  /** The movie or show it matched. */
+  ratingKey: string
+  /** The ids the match must end with: Radarr's for a movie, Sonarr's for a show. */
+  expected: { tmdb: number; imdb: string | null } | { tvdb: number }
+  /** What Plex had it matched to before, to match back to. */
+  before: { guid: string | null; title: string }
+}
+
 /**
  * One run of a problem report's fix (lib/problem-reports/run.ts). The job
  * delays itself between steps, and the step and what it waits for travel in
@@ -69,4 +79,6 @@ export interface ProblemReportFixPayload {
   replace?: ReplaceWatch
   /** Swap the copy and Remove the file and search: the file seen while they waited to start; another file means the copy changed meanwhile. */
   seenFileId?: number
+  /** Fix the Plex match: what it waits to see. */
+  match?: MatchWatch
 }

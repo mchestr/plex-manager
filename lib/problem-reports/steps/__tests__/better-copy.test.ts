@@ -34,7 +34,7 @@ const DAY = 24 * 60 * MINUTE
 const SERVER = { name: "Home", url: "http://plex.local:32400", token: "owner-token", adminPlexUserId: "owner", machineIdentifier: "m" }
 const RADARR = { name: "Radarr", url: "http://radarr.local:7878", apiKey: "radarr-key" }
 const SONARR = { name: "Sonarr", url: "http://sonarr.local:8989", apiKey: "sonarr-key" }
-const REPORT = { id: "report-1", runToken: 3, action: "BETTER_COPY" as const, reporterId: "member-1", plexRatingKey: "555" }
+const REPORT = { id: "report-1", runToken: 3, action: "BETTER_COPY" as const, reporterId: "member-1", plexRatingKey: "555", titleKey: "plex://movie/heat" }
 const START: ProblemReportFixPayload = { reportId: "report-1", runToken: 3, step: "start", trigger: "automatic", actorUserId: "member-1" }
 const FILE = {
   id: 77,
@@ -84,7 +84,7 @@ describe("the start", () => {
     })
     expect(resolveFile).toHaveBeenCalledWith(SERVER, "555")
     expect(gateAndRecord).toHaveBeenCalledWith(
-      expect.objectContaining({ target: "radarr:movie:5", action: "BETTER_COPY", traits: { searches: true, replacesFile: false }, trigger: "automatic", reportId: "report-1", runToken: 3 }),
+      expect.objectContaining({ target: "radarr:movie:5", action: "BETTER_COPY", traits: { searches: true, replacesFile: false, changesPlex: false }, trigger: "automatic", reportId: "report-1", runToken: 3 }),
       NOW
     )
     expect(startRadarrMovieSearch).toHaveBeenCalledWith(RADARR, 5)

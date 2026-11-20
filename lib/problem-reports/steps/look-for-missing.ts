@@ -69,7 +69,7 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
       trigger: data.trigger,
       target: `sonarr:series:${state.seriesId}`,
       action: search ? "LOOK_FOR_MISSING" : "SCAN",
-      traits: search ? fixTraits("LOOK_FOR_MISSING") : { searches: false, replacesFile: false },
+      traits: search ? fixTraits("LOOK_FOR_MISSING") : { searches: false, replacesFile: false, changesPlex: false },
     },
     now
   )

@@ -15,6 +15,7 @@ const FIXED_WORDS: Record<FixAction, string> = {
   SWAP: "A different copy is on the server now",
   BETTER_COPY: "A better copy is on the server now",
   LOOK_FOR_MISSING: "The missing episodes are on the server now",
+  FIX_MATCH: "The title and poster are fixed",
   REFRESH: "The details are refreshed",
   REMOVE_AND_SEARCH: "A new copy is on the server now",
 }

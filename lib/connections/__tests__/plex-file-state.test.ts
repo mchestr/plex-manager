@@ -55,16 +55,16 @@ describe("findPlexItemByGuid", () => {
   it("finds the section's item for a guid", async () => {
     mockFetch.mockResolvedValue(respond(200, { MediaContainer: { Metadata: [{ ratingKey: "9001", title: "Heat" }] } }))
 
-    expect(await findPlexItemByGuid(SERVER, "1", "plex://movie/heat")).toBe("9001")
+    expect(await findPlexItemByGuid(SERVER, "1", "plex://movie/heat")).toEqual({ status: "found", ratingKey: "9001" })
     expect(mockFetch.mock.calls[0][0]).toBe("http://plex.local:32400/library/sections/1/all?guid=plex%3A%2F%2Fmovie%2Fheat")
   })
 
-  it("is null with no match, a section that isn't digits, or Plex down", async () => {
+  it("is missing with no match, and unknown for a section that isn't digits or Plex down", async () => {
     mockFetch.mockResolvedValueOnce(respond(200, { MediaContainer: { size: 0 } })).mockResolvedValueOnce(respond(500))
 
-    expect(await findPlexItemByGuid(SERVER, "1", "plex://movie/heat")).toBeNull()
-    expect(await findPlexItemByGuid(SERVER, "1", "plex://movie/heat")).toBeNull()
-    expect(await findPlexItemByGuid(SERVER, "../1", "plex://movie/heat")).toBeNull()
+    expect(await findPlexItemByGuid(SERVER, "1", "plex://movie/heat")).toEqual({ status: "missing" })
+    expect(await findPlexItemByGuid(SERVER, "1", "plex://movie/heat")).toEqual({ status: "unknown" })
+    expect(await findPlexItemByGuid(SERVER, "../1", "plex://movie/heat")).toEqual({ status: "unknown" })
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 })

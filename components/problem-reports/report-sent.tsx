@@ -41,7 +41,7 @@ const FIXING: Record<MemberFixAction, { heading: string; line: string }> = {
     line: "We'll look for a better copy now. The one you have keeps playing, and if there isn't a better one, nothing changes. We'll message you either way.",
   },
   LOOK_FOR_MISSING: { heading: "Looking for them", line: "We'll look for the missing episodes now. Nothing is removed. We'll message you when they're on the server." },
-  REFRESH: { heading: "Refreshing the details", line: "We'll ask Plex to read the details again. We'll message you when it's done." },
+  REFRESH: { heading: "Refreshing the details", line: "We'll check the details and ask Plex to read them again. We'll message you when it's done." },
 }
 
 const ANSWER_HEADINGS: Record<ReportAnswer["kind"], string> = { NOT_AIRED: "Not out yet", NOT_ON_SERVER: "Not on the server", BEST_COPY: "Already the best copy" }

@@ -70,7 +70,14 @@ async function withDb<T>(run: (prisma: ReturnType<typeof createE2EPrismaClient>)
   }
 }
 
-const clearReports = () => withDb((prisma) => prisma.problemReport.deleteMany({ where: { titleKey: SHOW.guid } }));
+/** The reports and the ledger rows their fixes wrote, so the day's search cap counts from nothing in each test. */
+const clearReports = () =>
+  withDb((prisma) =>
+    prisma.$transaction([
+      prisma.problemFixLedger.deleteMany({ where: { target: `sonarr:series:${MOCK_SERIES.id}` } }),
+      prisma.problemReport.deleteMany({ where: { titleKey: SHOW.guid } }),
+    ])
+  );
 
 test.describe('Problem reports: missing episodes', () => {
   let plex: Server;

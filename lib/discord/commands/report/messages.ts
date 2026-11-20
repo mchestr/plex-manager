@@ -96,7 +96,7 @@ export function confirmProblem(title: string, problem: ProblemCode, ratingKey: s
 const FIXING: Record<MemberFixAction, string> = {
   BETTER_COPY: "We'll look for a better copy now. The one you have keeps playing, and if there isn't a better one, nothing changes.",
   LOOK_FOR_MISSING: "We'll look for the missing episodes now. Nothing is removed.",
-  REFRESH: "We'll ask Plex to read the details again.",
+  REFRESH: "We'll check the details and ask Plex to read them again.",
 }
 
 /** A show's problem is with an episode, which the member picks on the web. */

@@ -70,6 +70,12 @@ describe("memberUpdateText", () => {
     expect(memberUpdateText({ ...heat, action: undefined }, BASE)).toBe(`Heat \\(1995\\) is fixed.${link}`)
   })
 
+  it("says Plex has the right title, or read the details again", () => {
+    const heat = { ...update, title: "Heat (1995)" }
+    expect(memberUpdateText({ ...heat, action: "FIX_MATCH" }, BASE)).toBe(`Heat \\(1995\\) has the right title and poster in Plex now.${link}`)
+    expect(memberUpdateText({ ...heat, action: "REFRESH" }, BASE)).toBe(`Plex has read the details of Heat \\(1995\\) again.${link}`)
+  })
+
   it("says a swap or a removal brought in another copy", () => {
     const heat = { ...update, title: "Heat (1995)" }
     expect(memberUpdateText({ ...heat, action: "SWAP" }, BASE)).toBe(`A different copy of Heat \\(1995\\) is on the server now.${link}`)

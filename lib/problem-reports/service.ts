@@ -71,6 +71,7 @@ import { readEvidence } from "@/lib/problem-reports/evidence"
 import type { MemberFixAction } from "@/lib/problem-reports/fixes"
 import { joinOpenReport } from "@/lib/problem-reports/join"
 import { decideBetterCopyForMember } from "@/lib/problem-reports/report-better-copy"
+import { decideDetailsForMember } from "@/lib/problem-reports/report-details"
 import { decideMissingForMember } from "@/lib/problem-reports/report-missing"
 import { startFix } from "@/lib/problem-reports/run"
 import { queueMemberUpdates } from "@/lib/problem-reports/updates"
@@ -143,8 +144,10 @@ export async function reportProblem(input: {
   const evidence = await readEvidence(userId, member.item)
   const betterCopy = problem === "blurry" && !toAdmin && member.item.type !== "show" ? await decideBetterCopyForMember(member.server, member.item.ratingKey, evidence) : null
   if (betterCopy && "answer" in betterCopy) return { ok: true, outcome: "answered", reportId: null, answer: betterCopy.answer }
-  const checked = missing ?? betterCopy
-  const decided: Decided = !checked ? null : checked.startsFix ? { fix: missing ? "LOOK_FOR_MISSING" : "BETTER_COPY" } : { toAdmin: checked.reason }
+  const details = problem === "wrong_details" && !toAdmin ? await decideDetailsForMember(member.item.type) : null
+  const checked = missing ?? betterCopy ?? details
+  const fix: MemberFixAction = missing ? "LOOK_FOR_MISSING" : betterCopy ? "BETTER_COPY" : "REFRESH"
+  const decided: Decided = !checked ? null : checked.startsFix ? { fix } : { toAdmin: checked.reason }
   // The player question is asked only for some playback problems, about the player of the member's last play of
   // the title. An answer is kept only then, so it is about the player in this event's evidence, unless the member
   // started the title on another player between opening the sheet and sending it.

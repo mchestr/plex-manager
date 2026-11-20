@@ -22,6 +22,15 @@ describe("sendAction", () => {
     expect(sendAction("blurry", { ...ALL, type: "episode", sonarr: false })).toBe("TO_ADMIN")
   })
 
+  it("refreshes wrong details of a movie with Radarr, or a show or an episode with Sonarr", () => {
+    expect(sendAction("wrong_details", ALL)).toBe("REFRESH")
+    expect(sendAction("wrong_details", { ...ALL, type: "show" })).toBe("REFRESH")
+    expect(sendAction("wrong_details", { ...ALL, type: "episode", radarr: false })).toBe("REFRESH")
+    expect(sendAction("wrong_details", { ...ALL, radarr: false })).toBe("TO_ADMIN")
+    expect(sendAction("wrong_details", { ...ALL, type: "show", sonarr: false })).toBe("TO_ADMIN")
+    expect(sendAction("different_title", ALL)).toBe("TO_ADMIN")
+  })
+
   it("sends a whole show's blurry picture, a converted play, and every other problem to the server admin", () => {
     expect(sendAction("blurry", { ...ALL, type: "show" })).toBe("TO_ADMIN")
     expect(sendAction("blurry", { ...ALL, transcoded: true })).toBe("TO_ADMIN")
@@ -33,6 +42,7 @@ describe("consequence", () => {
   it("names the button for what happens", () => {
     expect(consequence("blurry", ALL)).toEqual({ action: "BETTER_COPY", line: "We'll look for a better copy. If there isn't one, nothing changes.", button: "Look for a better copy" })
     expect(consequence("missing_episodes", { ...ALL, type: "show" })).toMatchObject({ button: "Look for them" })
+    expect(consequence("wrong_details", ALL)).toEqual({ action: "REFRESH", line: "We'll check the details and ask Plex to read them again. The file stays the same.", button: "Fix the details" })
     expect(consequence("stops", ALL)).toEqual({ action: "TO_ADMIN", line: "The server admin will take a look. We'll message you when it's done.", button: "Send to the server admin" })
   })
 

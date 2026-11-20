@@ -70,7 +70,14 @@ async function withDb<T>(run: (prisma: ReturnType<typeof createE2EPrismaClient>)
   }
 }
 
-const clearReports = () => withDb((prisma) => prisma.problemReport.deleteMany({ where: { titleKey: MOVIE.guid } }));
+/** The reports and the ledger rows their fixes wrote, so the day's search cap counts from nothing in each test. */
+const clearReports = () =>
+  withDb((prisma) =>
+    prisma.$transaction([
+      prisma.problemFixLedger.deleteMany({ where: { target: `radarr:movie:${MOCK_MOVIE.id}` } }),
+      prisma.problemReport.deleteMany({ where: { titleKey: MOVIE.guid } }),
+    ])
+  );
 const fileAt = (qualityCutoffNotMet: boolean) => ({ id: 70, relativePath: FILE_NAME, size: 4200, qualityCutoffNotMet, customFormatScore: 0 });
 
 test.describe('Problem reports: a better copy', () => {
