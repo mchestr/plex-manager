@@ -20,13 +20,18 @@ process.env.ENCRYPTION_KEYS ||= 'e2e:ZTJlLWVuY3J5cHRpb24ta2V5LTAxMjM0NTY3ODlhYmM
 const port = process.env.E2E_PORT || '3100';
 // The SMTP sink's fixed port (e2e/mocks/smtp-server.ts): the web server's SMTP_URL is set as this file loads.
 const smtpPort = process.env.E2E_SMTP_PORT || '2526';
-// The plex.tv mock's fixed port, for the same reason (e2e/mocks/plex-tv-server.ts)
-const plexTvPort = process.env.E2E_PLEX_TV_PORT || '2527';
 const baseURL = `http://localhost:${port}`;
 // E2E_SERVER=prod builds the app and serves it with `next start`; the default
 // is still `next dev`. Visual baselines are taken and compared only in prod.
 const prodServer = process.env.E2E_SERVER === 'prod';
 console.log(`Running tests on ${baseURL} (${prodServer ? 'production build' : 'next dev'})`);
+
+// The plex.tv mock (e2e/mocks/plex-tv-server.ts, TS E27). The web server starts
+// before the global setup, so the mock gets a fixed port, 1000 above the web
+// server's (a second run on another port does not collide), and the web server
+// gets its URL below. The global setup reads the same variable to listen on it.
+const plexTvUrl = `http://127.0.0.1:${Number(port) + 1000}`;
+process.env.E2E_PLEX_TV_URL = plexTvUrl;
 
 const VISUAL_SPECS = /visual\/(member|admin|primitives)\.visual\.spec\.ts$/;
 const VISUAL_SETUP_SPEC = /visual\/setup\.visual\.spec\.ts$/;
@@ -247,11 +252,11 @@ export default defineConfig({
       SKIP_CONNECTION_TESTS: 'true',
       ENABLE_DEV_UI: '1',
       FAST_REFRESH: 'false',
+      // plex.tv calls go to the mock, which refuses every token but the cleanup one
+      E2E_PLEX_TV_URL: plexTvUrl,
       // Every spec runs with email set up, against the sink global setup starts
       SMTP_URL: `smtp://127.0.0.1:${smtpPort}`,
       EMAIL_FROM: 'noreply@example.test',
-      // The library share list reads the plex.tv mock global setup starts
-      E2E_PLEX_TV_URL: `http://127.0.0.1:${plexTvPort}`,
     },
   },
 });

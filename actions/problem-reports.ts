@@ -59,7 +59,7 @@ export const followProblemReport = memberAction({
   fallbackError: "Could not follow the report",
   handler: async ({ reportId }, { userId }): Promise<ActionResult<null>> => {
     const result = await followReport({ userId, reportId })
-    if (!result.ok) return refused(result.refusal, result.retryAfterSec, "This report is closed.")
+    if (!result.ok) return refused(result.refusal, result.retryAfterSec)
     refresh()
     return ok(null)
   },
