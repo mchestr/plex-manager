@@ -23,6 +23,7 @@ export const TO_ADMIN_WORDS: Record<ToAdminReason, string> = {
   NO_SONARR: "Sonarr isn't set up, so nothing could look for the episodes",
   NOT_IN_SONARR: "Sonarr doesn't have this show",
   UNAVAILABLE: "Sonarr or Plex couldn't be reached",
+  ERROR: "The fix stopped on an error. Its failed job is under Automations, Queues",
   NOTHING_MISSING: "Sonarr and Plex have every episode that has aired",
   NOT_ON_SERVER: "The missing episodes aren't monitored in Sonarr",
   NOT_AIRED: "The missing episodes haven't aired yet",

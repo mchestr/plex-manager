@@ -8,7 +8,7 @@
 import { mockReset } from "jest-mock-extended"
 
 import { asTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { startFix, runFixStep } from "@/lib/problem-reports/run"
+import { giveUpFix, runFixStep, startFix } from "@/lib/problem-reports/run"
 import { runLookForMissing } from "@/lib/problem-reports/steps/look-for-missing"
 import { runRefresh } from "@/lib/problem-reports/steps/refresh"
 import { queueAdminAlertFromWorker, queueMemberUpdates } from "@/lib/problem-reports/updates"
@@ -133,6 +133,26 @@ describe("runFixStep", () => {
     await runFixStep({ ...DATA, trigger: "web", actorUserId: "admin-1" }, NOW)
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({ data: { reportId: "report-1", kind: "TO_ADMIN", data: { reason: "REFRESHED", action: "REFRESH" } } })
     expect(prismaMock.problemFixLedger.updateMany).toHaveBeenCalledWith({ where: { id: "report-1:3", endedAt: null }, data: { outcome: "REFRESHED", endedAt: NOW } })
+    expect(queueAdminAlertFromWorker).not.toHaveBeenCalled()
+  })
+})
+
+describe("giveUpFix", () => {
+  it("hands a run whose job failed for good back to the server admin, ends its ledger row and alerts the admins", async () => {
+    await giveUpFix(DATA, NOW)
+
+    expect(runLookForMissing).not.toHaveBeenCalled()
+    expect(prismaMock.problemReport.updateMany).toHaveBeenCalledWith({ where: { id: "report-1", runToken: 3, status: "FIXING" }, data: { status: "WITH_ADMIN" } })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({ data: { reportId: "report-1", kind: "TO_ADMIN", data: { reason: "ERROR", action: "LOOK_FOR_MISSING" } } })
+    expect(prismaMock.problemFixLedger.updateMany).toHaveBeenCalledWith({ where: { id: "report-1:3", endedAt: null }, data: { outcome: "ERROR", endedAt: NOW } })
+    expect(queueAdminAlertFromWorker).toHaveBeenCalledWith("report-1")
+  })
+
+  it("changes nothing once another run holds the report", async () => {
+    prismaMock.problemReport.findUnique.mockResolvedValue({ ...ROW, runToken: 4 } as never)
+
+    await giveUpFix(DATA, NOW)
+    expect(prismaMock.problemReport.updateMany).not.toHaveBeenCalled()
     expect(queueAdminAlertFromWorker).not.toHaveBeenCalled()
   })
 })
