@@ -43,6 +43,9 @@ export const LIMITS = {
   // Affiliate applications and affiliate invites made, per member
   "affiliate:apply": { points: 5, duration: HOUR },
   "affiliate:invite": { points: 20, duration: HOUR },
+  // Problem reports a member sends or follows, per member: 10 an hour and 20 a day
+  "problem-report:create": { points: 10, duration: HOUR },
+  "problem-report:create:day": { points: 20, duration: DAY },
   // Member removals per admin (P11.13)
   "admin:remove-member": { points: 10, duration: HOUR },
   // Media cleanup previews: the preview route by address, the preview actions per admin

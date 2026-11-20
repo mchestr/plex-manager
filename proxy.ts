@@ -32,6 +32,7 @@ import { processRole } from "@/lib/db/pool-config"
 import { isMemberAppPath, needsSubscribeRedirect } from "@/lib/access-paths"
 import { getEnv, usesSecureCookies } from "@/lib/env"
 import { hasInvitesPage } from "@/lib/member/invites-page"
+import { hasReportPage } from "@/lib/problem-reports/settings"
 import { hasMembershipPage } from "@/lib/member/membership-page"
 import { isValidRequestId, PATHNAME_HEADER, REQUEST_ID_HEADER } from "@/lib/request-headers"
 import { contentSecurityPolicy, createNonce, cspHeaderName, NONCE_HEADER, REPORTING_ENDPOINTS } from "@/lib/security/csp"
@@ -89,13 +90,14 @@ async function pageToken(request: NextRequest) {
 const CONDITIONAL_MEMBER_PAGES: Readonly<Record<string, (userId: string) => Promise<boolean>>> = {
   "/membership": hasMembershipPage,
   "/invites": hasInvitesPage,
+  "/report": hasReportPage,
 }
 
 /**
  * Whether the path is a conditional member page the signed-in member does not
  * have: `/membership` while Stripe is off and they have no subscription row
- * (P10.22), or `/invites` while affiliate invites are off or they have no Plex
- * id. The page renders its not-found itself, but streamed behind
+ * (P10.22), `/invites` while affiliate invites are off or they have no Plex
+ * id, or `/report` while problem reports are off. The page renders its not-found itself, but streamed behind
  * `app/loading.tsx`, so this gives it the 404 status, as for a Rewind year. A
  * failed check decides nothing.
  */

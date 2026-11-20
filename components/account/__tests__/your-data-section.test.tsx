@@ -24,7 +24,7 @@ jest.mock("@/actions/cleanup-keeps", () => ({ keepCleanupTitle: jest.fn(), remov
 jest.mock("@/actions/member-data", () => ({ deleteMyMark: jest.fn(), forgetWatchlistItem: jest.fn() }))
 jest.mock("@/components/ui/toast", () => ({ useToast: () => ({ toast: jest.fn(), showSuccess: jest.fn(), showError: jest.fn() }) }))
 
-const DATA: YourData = { marks: { page: 1, total: 0, rows: [] }, watchlist: { total: 0, rows: [] } }
+const DATA: YourData = { marks: { page: 1, total: 0, rows: [] }, watchlist: { total: 0, rows: [] }, reports: { total: 0, rows: [] } }
 const KEEP: MyKeepRow = {
   id: "keep-1",
   item: { itemKey: "show:tvdb:1", level: "show", title: "Invented Empire", year: 2010, seasonNumber: null, episodeCount: null, seasonCount: null,

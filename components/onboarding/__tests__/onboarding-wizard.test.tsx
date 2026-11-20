@@ -25,6 +25,7 @@ const PLEX: OnboardingData = {
   requestsUrl: "https://requests.example.com",
   discord: { linkEnabled: true, handle: null, inviteUrl: null, supportChannelUrl: null },
   instructions: null,
+  reportsEnabled: false,
   rewind: true,
 }
 

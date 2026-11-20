@@ -43,6 +43,8 @@ export interface HomeData {
   watchlist: WatchlistSyncSettings | null
   hasSubscription: boolean
   supportChannelUrl: string | null
+  /** Problem reports are on, so the help card links to `/report`. */
+  reportsEnabled: boolean
   format: FormatSettings
 }
 
@@ -105,6 +107,7 @@ export async function getHomeData(userId: string, now: Date = new Date()): Promi
     watchlist: watchlistResult.success ? watchlistResult.data : null,
     hasSubscription: Boolean(subscription),
     supportChannelUrl: help.discord?.supportChannelUrl ?? null,
+    reportsEnabled: help.reportsEnabled,
     format,
   }
 }

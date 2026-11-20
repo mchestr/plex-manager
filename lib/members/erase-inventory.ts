@@ -9,9 +9,10 @@
  * rows keyed by the member's Discord id (command log, chat sessions, pending
  * selections), and LLM text that admins generated for the member under their
  * own user id (the admin regenerate path, P2.1), which is anonymised.
- * Affiliate invites are in `lib/members/erase-affiliates`. The member's
- * media cleanup Keeps (`CleanupProtection`) go through the cascade; admin
- * exclusions have no member and stay.
+ * Affiliate invites are in `lib/members/erase-affiliates`, problem reports in
+ * `lib/members/erase-problem-reports`. The member's media cleanup Keeps
+ * (`CleanupProtection`) go through the cascade; admin exclusions have no
+ * member and stay.
  *
  * @module lib/members/erase-inventory
  */
@@ -20,6 +21,7 @@ import "server-only"
 
 import type { Prisma } from "@/lib/generated/prisma/client"
 import { countAffiliateRows, deleteUnusedAffiliateInvites, type AffiliateCounts } from "@/lib/members/erase-affiliates"
+import { countProblemReportRows, deleteProblemReportEvents, type ProblemReportCounts } from "@/lib/members/erase-problem-reports"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 
 /** Everything that identifies the member's rows. */
@@ -65,7 +67,8 @@ export type InventoryCounts = Record<
   | "inactivityNotice",
   number
 > &
-  AffiliateCounts
+  AffiliateCounts &
+  ProblemReportCounts
 
 /** Reads the ids that find the member's rows. */
 export async function loadEraseSubject(userId: string, linkedDiscordUserId: string | null): Promise<EraseSubject> {
@@ -108,6 +111,7 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
     conversationReview, conversationFinding,
     discordChatSession, discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState,
     userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, cleanupProtection, inactivityNotice, affiliates,
+    problemReports,
   ] = await Promise.all([
     prisma.user.count({ where: { id: userId } }),
     prisma.plexWrapped.count(byUser),
@@ -140,6 +144,7 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
     prisma.cleanupProtection.count({ where: { memberId: userId } }),
     prisma.inactivityNotice.count(byUser),
     countAffiliateRows(userId),
+    countProblemReportRows(userId),
   ])
   return {
     user, plexWrapped, rewindGeneration, rewindShare, rewindShareVisitDay, rewindView, wrappedShareVisit,
@@ -148,6 +153,7 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
     discordChatSession, discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState,
     userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, cleanupProtection, inactivityNotice,
     ...affiliates,
+    ...problemReports,
   }
 }
 
@@ -162,5 +168,6 @@ export async function deleteInventory(tx: PrismaTransactionClient, subject: Eras
   await tx.discordPendingSelection.deleteMany({ where: { discordUserId: { in: discordUserIds } } })
   await tx.lLMUsage.updateMany({ where: anonymiseWhere(subject), data: { prompt: null, response: null } })
   await deleteUnusedAffiliateInvites(tx, userId)
+  await deleteProblemReportEvents(tx, userId)
   await tx.user.deleteMany({ where: { id: userId } })
 }

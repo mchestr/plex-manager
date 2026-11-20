@@ -1024,6 +1024,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - Affiliate invites (tiers, slots, server cap, the switch): See `docs/affiliate-invites.md`
 - Inactive members (last seen from Tautulli, the inactivity sweep and its safety rules): See `docs/inactive-members.md`
 - Media cleanup (rules, Leaving soon and member Keeps, deletion through Radarr and Sonarr, the safety stops, the Kometa change, the MCP tools): See `docs/media-cleanup.md`
+- Problem reports (members report a problem with a title from `/report`; the switch, the sheet, the rules): See `docs/problem-reports.md`
 - Email (the SMTP variables, the transport in `lib/email/`, the test email, unsubscribe links): See `docs/email.md`
 - Audit log (who can read it, categories, what Support sees): See `docs/roles.md` and `docs/privacy.md`
 - Appearance (server name, login subtitle, accent colour, uploaded logos and images): See `docs/appearance.md`

@@ -1,3 +1,6 @@
+import type { Route } from "next"
+import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { icons } from "@/lib/ui/icons"
@@ -23,6 +26,8 @@ interface SupportGuideProps {
    * redirects to Discord. Default `/discord/link`.
    */
   linkHref?: string
+  /** `/report` while problem reports are on: the reporting guidance becomes a link to it (Help only). */
+  reportHref?: Route
   /** The admin's server notes for Discord, shown as plain text. */
   instructions?: string | null
 }
@@ -48,19 +53,30 @@ function ExternalButton({ href, children, testId }: { href: string; children: st
  * Help and onboarding. With Discord off only the Discord block hides; there
  * is no "coming soon". Server-safe: no hooks and no server imports.
  */
-export function SupportGuide({ discord, linkHref = "/discord/link", instructions }: SupportGuideProps) {
+export function SupportGuide({ discord, linkHref = "/discord/link", instructions, reportHref }: SupportGuideProps) {
   const hasDiscordActions = discord && (discord.linkEnabled || discord.inviteUrl || discord.supportChannelUrl)
 
   return (
     <div className="flex flex-col gap-4 text-ui text-foreground" data-testid="support-guide">
-      <div className="flex flex-col gap-2">
-        <p className="text-muted-foreground">
-          Tell us about problems with playback, subtitles or missing episodes.
-        </p>
-        <p className="text-muted-foreground">
-          Include the title, the episode if it is a show, your device and what went wrong.
-        </p>
-      </div>
+      {reportHref ? (
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-muted-foreground">
+            Report a title that won't play right, looks wrong or is missing episodes, and follow what happens to it.
+          </p>
+          <Button variant="secondary" size="sm" nativeButton={false} render={<Link href={reportHref} />} data-testid="support-guide-report">
+            Report a problem
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <p className="text-muted-foreground">
+            Tell us about problems with playback, subtitles or missing episodes.
+          </p>
+          <p className="text-muted-foreground">
+            Include the title, the episode if it is a show, your device and what went wrong.
+          </p>
+        </div>
+      )}
 
       {hasDiscordActions && (
         <div className="flex flex-col gap-3 rounded-md border bg-muted p-4" data-testid="support-guide-discord">

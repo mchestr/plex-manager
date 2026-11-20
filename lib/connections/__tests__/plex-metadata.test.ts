@@ -70,7 +70,15 @@ describe('getPlexItemMetadata', () => {
 
     expect(lookup).toMatchObject({
       status: 'found',
-      item: { type: 'episode', title: 'Pilot', grandparentRatingKey: '6999', ids: { tvdb: 110413 } },
+      item: {
+        type: 'episode',
+        title: 'Pilot',
+        grandparentRatingKey: '6999',
+        showTitle: 'The Office',
+        seasonNumber: 1,
+        episodeNumber: 1,
+        ids: { tvdb: 110413 },
+      },
     })
   })
 

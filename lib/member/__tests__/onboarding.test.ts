@@ -18,6 +18,7 @@ const HELP: HelpData = {
   requestsUrl: null,
   discord: null,
   instructions: null,
+  reportsEnabled: false,
 }
 
 describe("getOnboardingData", () => {

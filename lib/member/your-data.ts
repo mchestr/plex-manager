@@ -1,7 +1,9 @@
 import "server-only"
 
 import { getMarkTypeLabel } from "@/lib/discord/media/mark-labels"
+import type { ProblemReportStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import { reportTitle } from "@/lib/problem-reports/title"
 
 /** Marks per page of the account page's table. */
 export const MARKS_PAGE_SIZE = 25
@@ -21,9 +23,15 @@ export interface DataItem {
   at: string
 }
 
+/** One of the member's problem reports, as Your data lists it. */
+interface ReportItem extends DataItem {
+  status: ProblemReportStatus
+}
+
 export interface YourData {
   marks: { rows: MarkRow[]; page: number; total: number }
   watchlist: { rows: DataItem[]; total: number }
+  reports: { rows: ReportItem[]; total: number }
 }
 
 function markTitle(mark: { title: string; year: number | null; parentTitle: string | null; seasonNumber: number | null; episodeNumber: number | null }) {
@@ -34,10 +42,11 @@ function markTitle(mark: { title: string; year: number | null; parentTitle: stri
 
 /**
  * The "Your data" lists on `/account` (P11.15): one page of the member's
- * marks, and the newest watchlist history items.
+ * marks, and the newest watchlist history items and problem reports. Reports
+ * are listed whether or not problem reports are on.
  */
 export async function getYourData(userId: string, marksPage: number): Promise<YourData> {
-  const [marks, markTotal, history, historyTotal] = await Promise.all([
+  const [marks, markTotal, history, historyTotal, reports, reportTotal] = await Promise.all([
     prisma.userMediaMark.findMany({
       where: { userId },
       orderBy: [{ markedAt: "desc" }, { id: "asc" }],
@@ -53,6 +62,13 @@ export async function getYourData(userId: string, marksPage: number): Promise<Yo
       select: { id: true, title: true, year: true, syncedAt: true },
     }),
     prisma.watchlistSyncHistory.count({ where: { userId } }),
+    prisma.problemReport.findMany({
+      where: { reporterId: userId },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: LIST_LIMIT,
+      select: { id: true, title: true, year: true, showTitle: true, seasonNumber: true, episodeNumber: true, status: true, createdAt: true },
+    }),
+    prisma.problemReport.count({ where: { reporterId: userId } }),
   ])
 
   return {
@@ -64,6 +80,10 @@ export async function getYourData(userId: string, marksPage: number): Promise<Yo
     watchlist: {
       total: historyTotal,
       rows: history.map((item) => ({ id: item.id, title: item.year ? `${item.title} (${item.year})` : item.title, at: item.syncedAt.toISOString() })),
+    },
+    reports: {
+      total: reportTotal,
+      rows: reports.map((report) => ({ id: report.id, title: reportTitle(report), status: report.status, at: report.createdAt.toISOString() })),
     },
   }
 }
