@@ -67,6 +67,24 @@ describe("JOB_ID_POLICY", () => {
     })
   })
 
+  it("gives the media cleanup types their TS 9.2 ids", () => {
+    expect(jobIdOptions(JOB_TYPES.CLEANUP_READ, { trigger: "system", chain: false })).toEqual({
+      deduplication: { id: "cleanup:read" },
+    })
+    expect(jobIdOptions(JOB_TYPES.CLEANUP_RUN, { trigger: "create", act: false, dryRunRuleIds: ["r2", "r1"] })).toEqual({
+      deduplication: { id: "cleanup:dry-run:r1+r2" },
+    })
+    expect(jobIdOptions(JOB_TYPES.CLEANUP_RUN, { trigger: "scheduled", act: true, waits: 3 })).toEqual({
+      deduplication: { id: "cleanup:run:nightly:3" },
+    })
+    expect(jobIdOptions(JOB_TYPES.CLEANUP_ACT, { trigger: "approval", actorId: "a", waits: 2 })).toEqual({
+      deduplication: { id: "cleanup:act:retry:2" },
+    })
+    expect(jobIdOptions(JOB_TYPES.CLEANUP_COLLECTIONS, { reason: "change" })).toEqual({
+      deduplication: { id: "cleanup:collections" },
+    })
+  })
+
   it("refuses a caller-named type without an id", () => {
     expect(() => jobIdOptions(JOB_TYPES.STRIPE_WEBHOOK, { eventId: "evt_1" })).toThrow(/needs a job id from its caller/)
   })
@@ -101,6 +119,24 @@ describe("addJob", () => {
 
     expect(mockJobs.size).toBe(1)
     expect(jobIdOptions(type, { triggeredBy: "admin" })).toEqual({ deduplication: { id } })
+  })
+
+  it("collapses two dry runs of the same rules at the same revision into one", async () => {
+    const first = await addJob(JOB_TYPES.CLEANUP_RUN, { trigger: "admin", act: false, dryRunRuleIds: ["r1"], dryRunRevision: 2 })
+    const second = await addJob(JOB_TYPES.CLEANUP_RUN, { trigger: "admin", act: false, dryRunRuleIds: ["r1"], dryRunRevision: 2 })
+
+    expect(second).toBe(first)
+    expect(mockJobs.size).toBe(1)
+  })
+
+  it.each([
+    [JOB_TYPES.CLEANUP_READ, { trigger: "admin", chain: false }],
+    [JOB_TYPES.CLEANUP_COLLECTIONS, { reason: "change" }],
+  ] as const)("collapses repeated adds of %s into one", async (type, data) => {
+    await addJob(type, data)
+    await addJob(type, data)
+
+    expect(mockJobs.size).toBe(1)
   })
 
   it("never falls back to a clock-based id", async () => {

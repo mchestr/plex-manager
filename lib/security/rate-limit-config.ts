@@ -45,6 +45,12 @@ export const LIMITS = {
   "affiliate:invite": { points: 20, duration: HOUR },
   // Member removals per admin (P11.13)
   "admin:remove-member": { points: 10, duration: HOUR },
+  // Media cleanup previews: the preview route by address, the preview actions per admin
+  "admin:cleanup-preview": { points: 120, duration: MINUTE },
+  // Every media cleanup admin write (rules, titles, settings, runs), per admin
+  "admin:cleanup": { points: 60, duration: 10 * MINUTE },
+  // A member's Keep and end-Keep in media cleanup
+  "cleanup:keep": { points: 30, duration: HOUR },
   // Deleting a mark or a watchlist item from /account, per member (P11.15)
   "account:data": { points: 60, duration: HOUR },
   checkout: { points: 10, duration: MINUTE },

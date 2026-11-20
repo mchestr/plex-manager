@@ -1,0 +1,99 @@
+{
+  "MediaContainer": {
+    "size": 3,
+    "Metadata": [
+      {
+        "addedAt": 1700000000,
+        "duration": 6300000,
+        "key": "/library/metadata/101",
+        "librarySectionID": "1",
+        "ratingKey": "101",
+        "sessionKey": "21",
+        "title": "The Lantern Keeper",
+        "type": "movie",
+        "viewOffset": 1200000,
+        "year": 2014,
+        "Media": [
+          {
+            "videoResolution": "1080"
+          }
+        ],
+        "User": {
+          "id": "9400001",
+          "thumb": "https://plex.tv/users/0000000000000001/avatar?c=1735689600",
+          "title": "viewer-one"
+        },
+        "Player": {
+          "address": "192.0.2.21",
+          "device": "Invented TV",
+          "machineIdentifier": "invented-player-1",
+          "platform": "Android",
+          "product": "Plex for Android (TV)",
+          "state": "playing",
+          "title": "Living room"
+        },
+        "Session": {
+          "id": "invented-session-1",
+          "bandwidth": 12000,
+          "location": "lan"
+        }
+      },
+      {
+        "addedAt": 1690000100,
+        "duration": 1500000,
+        "grandparentKey": "/library/metadata/201",
+        "grandparentRatingKey": "201",
+        "grandparentTitle": "Paper Moon Station",
+        "index": 2,
+        "key": "/library/metadata/402",
+        "librarySectionID": "2",
+        "parentIndex": 1,
+        "parentKey": "/library/metadata/301",
+        "parentRatingKey": "301",
+        "ratingKey": 402,
+        "sessionKey": "22",
+        "title": "Episode 2",
+        "type": "episode",
+        "viewOffset": 600000,
+        "Media": [
+          {
+            "videoResolution": "1080"
+          }
+        ],
+        "User": {
+          "id": "9400002",
+          "title": "viewer-two"
+        },
+        "Player": {
+          "address": "192.0.2.22",
+          "device": "Invented Phone",
+          "platform": "iOS",
+          "product": "Plex for iOS",
+          "state": "paused",
+          "title": "Phone"
+        },
+        "Session": {
+          "id": "invented-session-2",
+          "bandwidth": 4000,
+          "location": "wan"
+        }
+      },
+      {
+        "key": "/livetv/sessions/invented-live-1",
+        "ratingKey": "invented-live-1",
+        "sessionKey": "23",
+        "title": "Invented News Hour",
+        "type": "episode",
+        "live": 1,
+        "User": {
+          "id": "9400003",
+          "title": "viewer-three"
+        },
+        "Player": {
+          "address": "192.0.2.23",
+          "state": "playing"
+        }
+      }
+    ]
+  }
+}

@@ -10,6 +10,7 @@ This directory contains end-to-end tests for the Plex Wrapped application using 
 - [Test Utilities](#test-utilities)
 - [Running Tests](#running-tests)
 - [Rewind](#rewind)
+- [Media cleanup](#media-cleanup)
 - [Writing New Tests](#writing-new-tests)
 - [Best Practices](#best-practices)
 
@@ -317,17 +318,56 @@ spec folder that the `chromium` project ignores:
   VoiceOver and TalkBack scripts and their results table, the manual release
   gate before the soft launch (P7.15, P7.16).
 
+## Media cleanup
+
+The global setup starts one mock for each service that Media cleanup reads.
+Each mock serves the answers of `buildCleanupWorld(now)` from
+`e2e/helpers/cleanup-fixtures.ts`, so the seeded snapshot and the services
+agree.
+
+| Mock | File | URL variable |
+| --- | --- | --- |
+| Plex | `e2e/mocks/plex-server.ts` | `E2E_PLEX_URL` |
+| plex.tv | `e2e/mocks/plex-tv-server.ts` | `E2E_PLEX_TV_URL` |
+| Radarr | `e2e/mocks/radarr-server.ts` | `E2E_RADARR_URL` |
+| Sonarr | `e2e/mocks/sonarr-server.ts` | `E2E_SONARR_URL` |
+| Overseerr | `e2e/mocks/overseerr-server.ts` | `E2E_OVERSEERR_URL` |
+| Tautulli | `e2e/mocks/tautulli-server.ts` | `E2E_TAUTULLI_URL` |
+
+- **Ports.** Each mock listens on a free port, except plex.tv. The web
+  server needs the plex.tv URL before the global setup runs, so
+  `playwright.config.ts` fixes it at `E2E_PORT + 1000` on `127.0.0.1`.
+- **Control routes.** Every mock answers three routes that it does not
+  record. `GET /__requests` gives the records, oldest first.
+  `DELETE /__requests` forgets them. `POST /__reset` with the body
+  `{ "now": <epoch ms> }` builds the state again at that clock. Each record
+  holds a `seq` from one shared counter, so a spec can order the calls of two
+  mocks. `mockRequests()`, `clearMockRequests()`, `resetMock()` and
+  `mockUrl()` in `e2e/mocks/request-log.ts` wrap these routes.
+- **Live sessions.** `POST /__sessions` with `{ "sessions": [...] }` sets the
+  Plex sessions. `POST /__activity` with `{ "rows": [...] }` sets the
+  Tautulli live rows.
+- **Seed.** `e2e/helpers/seed-cleanup.ts` holds the seed helpers.
+  `seedCleanup()` writes rules in all three modes and items in every state.
+  `seedCleanupPipeline()` writes the smaller seed of the pipeline spec.
+  `seedCleanupA11y()` writes the rows with fixed ids that the axe routes use.
+  `clearCleanup()` and `wipeCleanup()` remove the rows again. A seed waits
+  while a cleanup job holds a claim, and fails after 30 seconds.
+- **Plex row.** `useCleanupPlex()` points the active Plex server at the mock,
+  `useUnreachablePlex()` points it at a closed port, and `restorePlex()`
+  puts the old values back.
+- **Redis.** Without `REDIS_URL`, the seed opens no Redis connection. Cases
+  that need the job queue skip themselves.
+
 ## Library access for a member
 
 The SEC-21 library check (the poster route, and anything else that checks a
 rating key against a member's shared libraries) reads the server's share list
-from plex.tv. Global setup starts a plex.tv mock (`e2e/mocks/plex-tv-server.ts`)
-on `E2E_PLEX_TV_PORT` (default 2527), and the web server's `E2E_PLEX_TV_URL`
-points the share list at it. The app uses the mock only while `E2E_TEST_MODE`
-is `true` and at a loopback address (`lib/connections/plex-tv-origin.ts`).
-
-The regular user has section 1 shared and section 2 not
-(`MOCK_SHARED_SECTIONS`). A spec still needs a stub Plex server that answers
+from plex.tv, which the E2E web server reads from the plex.tv mock
+(`e2e/mocks/plex-tv-server.ts`, see Media cleanup). Besides the cleanup
+world's server, the mock answers the share list of any other server with
+`MOCK_SHARED_SECTIONS`, whatever the token: the regular user has section 1
+shared and section 2 not. A spec still needs a stub Plex server that answers
 `/identity` and the item's `/library/metadata/{ratingKey}`;
 `e2e/poster-library-access.spec.ts` shows both.
 

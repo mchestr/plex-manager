@@ -1,7 +1,7 @@
 /**
  * The action modules the MCP endpoint offers as tools (`lib/mcp/action-tools.ts`),
  * and the action files it leaves out. Every file under `actions/` is in one
- * of the two lists; `lib/mcp/__tests__/action-modules.test.ts` checks it.
+ * of the two lists; `lib/mcp/__tests__/catalog.test.ts` checks it.
  *
  * @module lib/mcp/action-modules
  */
@@ -18,6 +18,11 @@ import * as adminAffiliates from "@/actions/admin/affiliates"
 import * as assistantSkills from "@/actions/admin/assistant-skills"
 import * as assistantSources from "@/actions/admin/assistant-sources"
 import * as branding from "@/actions/admin/branding"
+import * as cleanupItems from "@/actions/admin/cleanup-items"
+import * as cleanupPreview from "@/actions/admin/cleanup-preview"
+import * as cleanupProtections from "@/actions/admin/cleanup-protections"
+import * as cleanupRules from "@/actions/admin/cleanup-rules"
+import * as cleanupSettings from "@/actions/admin/cleanup-settings"
 import * as connectionHealth from "@/actions/admin/connection-health"
 import * as conversationReview from "@/actions/admin/conversation-review"
 import * as discordStats from "@/actions/admin/discord-stats"
@@ -37,6 +42,7 @@ import * as adminWatchlist from "@/actions/admin/watchlist"
 import * as affiliate from "@/actions/affiliate"
 import * as announcements from "@/actions/announcements"
 import * as chatbot from "@/actions/chatbot"
+import * as cleanupKeeps from "@/actions/cleanup-keeps"
 import * as discord from "@/actions/discord"
 import * as importPlexUsers from "@/actions/import-plex-users"
 import * as memberData from "@/actions/member-data"
@@ -64,6 +70,11 @@ export const ACTION_MODULES: Readonly<Record<string, Record<string, unknown>>> =
   "admin/assistant-skills": assistantSkills,
   "admin/assistant-sources": assistantSources,
   "admin/branding": branding,
+  "admin/cleanup-items": cleanupItems,
+  "admin/cleanup-preview": cleanupPreview,
+  "admin/cleanup-protections": cleanupProtections,
+  "admin/cleanup-rules": cleanupRules,
+  "admin/cleanup-settings": cleanupSettings,
   "admin/connection-health": connectionHealth,
   "admin/conversation-review": conversationReview,
   "admin/discord-stats": discordStats,
@@ -83,6 +94,7 @@ export const ACTION_MODULES: Readonly<Record<string, Record<string, unknown>>> =
   affiliate,
   announcements,
   "chatbot/index": chatbot,
+  "cleanup-keeps": cleanupKeeps,
   discord,
   "import-plex-users": importPlexUsers,
   "member-data": memberData,

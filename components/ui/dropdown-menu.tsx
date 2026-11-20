@@ -123,6 +123,38 @@ export function DropdownMenuLinkItem({ className, icon, children, ...props }: Li
   )
 }
 
+/** A nested menu (Base UI `Menu.SubmenuRoot`): a `DropdownMenuSubTrigger`, then its `DropdownMenuContent` with `side="inline-end"`. */
+export function DropdownMenuSub(props: MenuPrimitive.SubmenuRoot.Props) {
+  return <MenuPrimitive.SubmenuRoot {...props} />
+}
+
+interface SubTriggerProps extends Omit<MenuPrimitive.SubmenuTrigger.Props, "className"> {
+  className?: string
+  /** A 16px lucide glyph before the label. */
+  icon?: ReactNode
+}
+
+/** The item that opens a `DropdownMenuSub`: the item styles, an accent while its submenu is open, and a chevron after the label. */
+export function DropdownMenuSubTrigger({ className, icon, children, ...props }: SubTriggerProps) {
+  return (
+    <MenuPrimitive.SubmenuTrigger
+      data-slot="dropdown-menu-sub-trigger"
+      className={cn(
+        "flex h-8 cursor-default items-center gap-2 rounded-sm px-2 text-ui outline-none select-none",
+        "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+        "data-highlighted:bg-accent data-highlighted:text-accent-foreground data-popup-open:bg-accent",
+        "data-disabled:pointer-events-none data-disabled:text-muted-foreground",
+        className
+      )}
+      {...props}
+    >
+      {icon}
+      {children}
+      <Icon icon={icons.chevronRight} className="ms-auto" />
+    </MenuPrimitive.SubmenuTrigger>
+  )
+}
+
 /** A set of `DropdownMenuRadioItem`s, one of them checked (`menuitemradio`). */
 export function DropdownMenuRadioGroup(props: MenuPrimitive.RadioGroup.Props) {
   return <MenuPrimitive.RadioGroup data-slot="dropdown-menu-radio-group" {...props} />
