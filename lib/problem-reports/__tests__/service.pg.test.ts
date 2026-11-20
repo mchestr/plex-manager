@@ -28,6 +28,7 @@ jest.mock('@/lib/prisma', () => ({
   },
 }))
 jest.mock('@/lib/problem-reports/access', () => ({ readMemberItem: jest.fn() }))
+jest.mock('@/lib/problem-reports/evidence', () => ({ readEvidence: jest.fn().mockResolvedValue({ lastPlay: null, playedToEnd: null }) }))
 jest.mock('@/lib/actions/entitlement', () => ({ hasEntitlement: jest.fn() }))
 jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn() }))
 

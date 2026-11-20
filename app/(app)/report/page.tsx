@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation"
 import { ReportList } from "@/components/problem-reports/report-list"
 import { ReportSearch } from "@/components/problem-reports/report-search"
 import { ReportSheet } from "@/components/problem-reports/report-sheet"
+import { TitleList } from "@/components/problem-reports/title-list"
 import { getSession } from "@/lib/data/session"
 import { getReportPageData } from "@/lib/member/problem-reports"
 import { hasReportPage } from "@/lib/problem-reports/settings"
@@ -16,9 +17,10 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
 
 /**
- * Report a problem with a title (docs/problem-reports.md): find a title in
- * the member's libraries, open its sheet (`?item=`), and follow your reports.
- * A 404 while the switch is off.
+ * Report a problem with a title (docs/problem-reports.md), top to bottom:
+ * Watching now (only while the member streams), Find a title, Recently
+ * watched, and Your reports. A title opens its sheet (`?item=`). A 404
+ * while the switch is off.
  */
 export default async function ReportPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await getSession()
@@ -38,7 +40,31 @@ export default async function ReportPage({ searchParams }: { searchParams: Searc
           <h1 className="text-h1 text-foreground">Report a problem</h1>
           <p className="text-ui text-muted-foreground">Tell the server admin about a title that won't play right, looks wrong or is missing episodes.</p>
         </div>
+        {data.watching && data.watching.length > 0 && (
+          <section aria-labelledby="report-watching-title" className="flex flex-col gap-3" data-testid="report-watching">
+            <h2 id="report-watching-title" className="text-h2 text-foreground">
+              Watching now
+            </h2>
+            <TitleList titles={data.watching} query={query} testId="report-watching-title" />
+          </section>
+        )}
         <ReportSearch query={query} search={data.search} />
+        <section aria-labelledby="report-recent-title" className="flex flex-col gap-3" data-testid="report-recent">
+          <h2 id="report-recent-title" className="text-h2 text-foreground">
+            Recently watched
+          </h2>
+          {data.recent === null ? (
+            <p className="text-ui text-muted-foreground" data-testid="report-recent-unavailable">
+              We can't load what you watched recently right now. Find the title above instead.
+            </p>
+          ) : data.recent.length === 0 ? (
+            <p className="text-ui text-muted-foreground" data-testid="report-recent-empty">
+              Nothing you watched recently is in your libraries.
+            </p>
+          ) : (
+            <TitleList titles={data.recent} query={query} testId="report-recent-title" />
+          )}
+        </section>
         <section aria-labelledby="report-yours-title" className="flex flex-col gap-3" data-testid="report-yours">
           <h2 id="report-yours-title" className="text-h2 text-foreground">
             Your reports

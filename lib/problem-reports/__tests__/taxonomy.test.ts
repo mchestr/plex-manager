@@ -3,7 +3,7 @@
  * suggested fix, and the kinds a title offers depend on its type.
  */
 
-import { kindsFor, needsNote, PROBLEM_CODES, PROBLEM_KINDS, PROBLEMS, problemLabel, problemsOf } from '@/lib/problem-reports/taxonomy'
+import { asksDevice, kindsFor, needsNote, PROBLEM_CODES, PROBLEM_KINDS, PROBLEMS, problemLabel, problemsOf, showsTranscodeTip } from '@/lib/problem-reports/taxonomy'
 
 const FIXES = ['SWAP', 'BETTER_COPY', 'LOOK_FOR_MISSING', 'FIX_MATCH', 'REFRESH', 'ADMIN']
 
@@ -39,5 +39,15 @@ describe('problem taxonomy', () => {
   it('labels an unknown code as something else', () => {
     expect(problemLabel('out_of_sync')).toBe('Sound is out of sync')
     expect(problemLabel('retired_code')).toBe('Something else')
+  })
+})
+
+describe('the sheet questions', () => {
+  it('asks about the device for playback problems that may be the device', () => {
+    expect(PROBLEM_CODES.filter(asksDevice)).toEqual(['wont_start', 'stops', 'glitches', 'out_of_sync', 'no_sound'])
+  })
+
+  it('explains a converted play for picture problems', () => {
+    expect(PROBLEM_CODES.filter(showsTranscodeTip)).toEqual(['glitches', 'blurry'])
   })
 })

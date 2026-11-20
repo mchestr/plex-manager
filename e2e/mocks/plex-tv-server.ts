@@ -1,5 +1,6 @@
 import { buildCleanupWorld, CLEANUP_PLEX, plexTvUsersXml, sharedServersXml, type CleanupWorld } from '../helpers/cleanup-fixtures';
 import { notFound, startMockServer, text, type MockAnswer, type MockCall, type MockServer } from './request-log';
+import { MOCK_HISTORY_MEMBER } from './tautulli-server';
 
 /**
  * A stand-in for plex.tv (TS 16.4, TS E27). The E2E web server reaches it
@@ -34,9 +35,14 @@ import { notFound, startMockServer, text, type MockAnswer, type MockCall, type M
  */
 const REGULAR_PLEX_USER_ID = 'regular-plex-id';
 
-/** Section keys shared with each Plex account on a server other than the cleanup world's. The regular member gets section 1, never section 2. */
+/**
+ * Section keys shared with each Plex account on a server other than the
+ * cleanup world's. The regular member and the history member get section 1,
+ * never section 2.
+ */
 export const MOCK_SHARED_SECTIONS: Readonly<Record<string, readonly string[]>> = {
   [REGULAR_PLEX_USER_ID]: ['1'],
+  [String(MOCK_HISTORY_MEMBER.userId)]: ['1'],
 };
 
 const MEMBER_SECTIONS = [

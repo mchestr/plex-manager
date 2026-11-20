@@ -2,8 +2,10 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import { expect, test } from './fixtures/auth';
+import { signInAs } from './fixtures/session';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
+import { MOCK_HISTORY_MEMBER } from './mocks/tautulli-server';
 
 /**
  * Problem reports on `/report` (docs/problem-reports.md) for a member who
@@ -11,12 +13,16 @@ import { WAIT_TIMEOUTS } from './helpers/test-utils';
  * (section 1 shared, section 2 not) and the titles from a stub Plex server.
  * The regular member reports a title from Find a title, the admin finds it
  * already reported and follows it, and the member cancels their report.
+ * Then a member with plays in the Tautulli mock reports from Recently
+ * watched, and the sheet asks about their player.
  */
 
 const SHARED = { ratingKey: '93001', section: 1, title: 'Harbour Lights', guid: 'plex://movie/e2e-harbour-lights' };
 const UNSHARED = { ratingKey: '94001', section: 2, title: 'Harbour Nights', guid: 'plex://movie/e2e-harbour-nights' };
 const MOVIES = [SHARED, UNSHARED];
 const SETTINGS_ID = 'problem-reports';
+const TAUTULLI_ID = 'e2e-reports-tautulli';
+const HISTORY_MEMBER = { id: 'e2e-reports-history-member', plexUserId: String(MOCK_HISTORY_MEMBER.userId) };
 
 const metadata = (movie: (typeof MOVIES)[number]) => ({
   ratingKey: movie.ratingKey,
@@ -71,6 +77,15 @@ test.describe('Problem reports', () => {
       originalUrl = (await prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true } }))?.url ?? null;
       await prisma.plexServer.updateMany({ where: { isActive: true }, data: { url: `http://127.0.0.1:${(stub.address() as AddressInfo).port}` } });
       await prisma.problemReportSettings.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID, enabled: true }, update: { enabled: true } });
+      const url = process.env.E2E_TAUTULLI_URL;
+      if (!url) throw new Error('E2E_TAUTULLI_URL is unset: e2e/global-setup.ts starts the mock Tautulli server');
+      const tautulli = { name: 'E2E Tautulli', url, apiKey: 'e2e-tautulli-key', isActive: true };
+      await prisma.tautulli.upsert({ where: { id: TAUTULLI_ID }, create: { id: TAUTULLI_ID, ...tautulli }, update: tautulli });
+      await prisma.user.upsert({
+        where: { id: HISTORY_MEMBER.id },
+        create: { ...HISTORY_MEMBER, name: 'History Member', email: 'history-member@example.com', primaryAuthService: 'plex', onboardingStatus: { plex: true } },
+        update: {},
+      });
     });
   });
 
@@ -79,6 +94,8 @@ test.describe('Problem reports', () => {
     await withDb(async (prisma) => {
       if (originalUrl) await prisma.plexServer.updateMany({ where: { isActive: true }, data: { url: originalUrl } });
       await prisma.problemReportSettings.deleteMany({ where: { id: SETTINGS_ID } });
+      await prisma.tautulli.deleteMany({ where: { id: TAUTULLI_ID } });
+      await prisma.user.deleteMany({ where: { id: HISTORY_MEMBER.id } });
     });
     await new Promise((resolve) => stub.close(resolve));
   });
@@ -131,5 +148,31 @@ test.describe('Problem reports', () => {
 
     await page.goto(`/report?item=${SHARED.ratingKey}`);
     await expect(page.getByTestId('report-sheet').getByTestId('report-kind-playback')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+  });
+
+  test('a member reports a title from Recently watched, naming their player', async ({ browser, baseURL }) => {
+    const context = await browser.newContext();
+    await signInAs(context, baseURL ?? '', HISTORY_MEMBER.id);
+    const page = await context.newPage();
+
+    await page.goto('/report');
+    await expect(page.getByTestId(`report-recent-title-${SHARED.ratingKey}`)).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId(`report-recent-title-${UNSHARED.ratingKey}`)).toHaveCount(0);
+    await page.getByTestId(`report-recent-title-${SHARED.ratingKey}`).click();
+
+    const sheet = page.getByTestId('report-sheet');
+    await sheet.getByTestId('report-kind-playback').click();
+    await sheet.getByTestId('report-problem-wont_start').click();
+    await expect(sheet.getByTestId('report-device-question')).toHaveText('Does anything else play on Living Room?');
+    await sheet.getByTestId('report-device-others_play').click();
+    await sheet.getByTestId('report-send').click();
+    await expect(sheet.getByTestId('report-sent')).toBeVisible();
+
+    await withDb(async (prisma) => {
+      const event = await prisma.problemReportEvent.findFirstOrThrow({ where: { kind: 'REPORTED', actorUserId: HISTORY_MEMBER.id } });
+      expect(event.data).toMatchObject({ problem: 'wont_start', device: 'others_play', evidence: { lastPlay: { player: 'Living Room', transcoded: false } } });
+      expect(JSON.stringify(event.data)).not.toContain('10.0.0.9');
+    });
+    await context.close();
   });
 });

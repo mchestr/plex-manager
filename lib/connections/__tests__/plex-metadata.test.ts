@@ -41,6 +41,7 @@ describe('getPlexItemMetadata', () => {
         type: 'movie',
         title: 'Fight Club',
         year: 1999,
+        addedAt: 1700000000,
         guid: 'plex://movie/5d776b59ad5437001f79c6f8',
         ids: { imdb: 'tt0137523', tmdb: 550, tvdb: 194 },
         librarySectionId: '1',

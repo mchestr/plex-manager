@@ -35,7 +35,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   jest.mocked(getServerSession).mockResolvedValue({ user: { id: 'member-1' } })
   jest.mocked(hasReportPage).mockResolvedValue(true)
-  jest.mocked(getReportPageData).mockResolvedValue({ reports: [], search: null, selected: null })
+  jest.mocked(getReportPageData).mockResolvedValue({ reports: [], watching: null, recent: [], search: null, selected: null })
 })
 
 describe('ReportPage', () => {
@@ -65,7 +65,9 @@ describe('ReportPage', () => {
   it('lists the search results as links that open the sheet', async () => {
     jest.mocked(getReportPageData).mockResolvedValue({
       reports: [],
-      search: { results: [{ ratingKey: '555', type: 'movie', title: 'Heat (1995)' }], error: null },
+      watching: null,
+      recent: [],
+      search: { results: [{ ratingKey: '555', type: 'movie', title: 'Heat (1995)', posterKey: '555' }], error: null },
       selected: null,
     })
 
@@ -73,5 +75,27 @@ describe('ReportPage', () => {
 
     expect(screen.getByTestId('report-result-555')).toHaveAttribute('href', '/report?q=heat&item=555')
     expect(screen.getByTestId('report-search-input')).toHaveValue('heat')
+  })
+
+  it('shows Watching now only while the member streams, and says when recent plays cannot load', async () => {
+    jest.mocked(getReportPageData).mockResolvedValue({
+      reports: [],
+      watching: [{ ratingKey: '7001', type: 'episode', title: 'The Office S1E1: Pilot', posterKey: '6999' }],
+      recent: null,
+      search: null,
+      selected: null,
+    })
+
+    render(await ReportPage({ searchParams: params({}) }))
+
+    expect(screen.getByTestId('report-watching-title-7001')).toHaveAttribute('href', '/report?item=7001')
+    expect(screen.getByTestId('report-recent-unavailable')).toBeInTheDocument()
+  })
+
+  it('hides Watching now when the member streams nothing', async () => {
+    render(await ReportPage({ searchParams: params({}) }))
+
+    expect(screen.queryByTestId('report-watching')).not.toBeInTheDocument()
+    expect(screen.getByTestId('report-recent-empty')).toBeInTheDocument()
   })
 })

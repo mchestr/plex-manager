@@ -42,6 +42,7 @@ const itemSchema = z.looseObject({
   type: z.string(),
   title: z.string(),
   year: z.number().int().optional().catch(undefined),
+  addedAt: z.number().int().optional().catch(undefined),
   guid: z.string().optional().catch(undefined),
   librarySectionID: optionalKey,
   grandparentRatingKey: optionalKey,
@@ -67,6 +68,8 @@ export interface PlexItemMetadata {
   type: string
   title: string
   year?: number
+  /** When the item (its current file) was added, in seconds. */
+  addedAt?: number
   /** The agent's guid: `plex://movie/…`, or a legacy agent's. */
   guid?: string
   ids: PlexExternalIds
@@ -120,6 +123,7 @@ export async function getPlexItemMetadata(
       type: item.type,
       title: item.title,
       year: item.year,
+      addedAt: item.addedAt,
       guid: item.guid,
       ids: parsePlexExternalIds(item.guid, item.Guid?.map((tag) => tag.id) ?? []),
       librarySectionId: item.librarySectionID ?? container.librarySectionID,
