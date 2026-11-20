@@ -13,12 +13,17 @@ import { hasEntitlement } from "@/lib/actions/entitlement"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
 import { consume } from "@/lib/security/rate-limit"
 
-/** Why a report, follow or cancel was refused. */
+/**
+ * Why a report, follow or cancel was refused. `NOT_FOUND` is a title outside
+ * the member's libraries (or a report that can't be cancelled); `CLOSED` is a
+ * report to follow that is no longer open.
+ */
 export type ReportRefusal =
   | "OFF"
   | "NOT_ENTITLED"
   | "RATE_LIMITED"
   | "NOT_FOUND"
+  | "CLOSED"
   | "UNAVAILABLE"
   | "NOTE_REQUIRED"
   | "WRONG_KIND"

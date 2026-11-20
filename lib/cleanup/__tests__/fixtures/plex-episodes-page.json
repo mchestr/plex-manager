@@ -1,0 +1,216 @@
+{
+  "MediaContainer": {
+    "size": 5,
+    "totalSize": 5,
+    "offset": 0,
+    "allowSync": true,
+    "librarySectionID": 2,
+    "Metadata": [
+      {
+        "ratingKey": "401",
+        "key": "/library/metadata/401",
+        "parentRatingKey": "301",
+        "grandparentRatingKey": "201",
+        "guid": "plex://episode/5d9c1276e9d5a1001f4e0401",
+        "parentGuid": "plex://season/602e67e61d3358002c41301",
+        "grandparentGuid": "plex://show/5d9c086fe9d5a1001f4d0201",
+        "type": "episode",
+        "title": "Episode 1",
+        "grandparentTitle": "Paper Moon Station",
+        "parentTitle": "Season 1",
+        "contentRating": "TV-14",
+        "summary": "An invented episode.",
+        "index": 1,
+        "parentIndex": 1,
+        "year": 2016,
+        "thumb": "/library/metadata/401/thumb/1735689600",
+        "duration": 1500000,
+        "originallyAvailableAt": "2016-09-01",
+        "addedAt": 1690000000,
+        "updatedAt": 1735689600,
+        "Media": [
+          {
+            "id": 4010,
+            "duration": 1500000,
+            "videoResolution": "1080",
+            "container": "mkv",
+            "Part": [
+              {
+                "id": 40100,
+                "key": "/library/parts/40100/1735689600/file.mkv",
+                "duration": 1500000,
+                "file": "/data/tv/Paper Moon Station/Season 01/Paper Moon Station - S01E01.mkv",
+                "size": 1073741824,
+                "container": "mkv"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "ratingKey": "402",
+        "key": "/library/metadata/402",
+        "parentRatingKey": "301",
+        "grandparentRatingKey": "201",
+        "guid": "plex://episode/5d9c1276e9d5a1001f4e0402",
+        "parentGuid": "plex://season/602e67e61d3358002c41301",
+        "grandparentGuid": "plex://show/5d9c086fe9d5a1001f4d0201",
+        "type": "episode",
+        "title": "Episode 2",
+        "grandparentTitle": "Paper Moon Station",
+        "parentTitle": "Season 1",
+        "contentRating": "TV-14",
+        "summary": "An invented episode.",
+        "index": 2,
+        "parentIndex": 1,
+        "year": 2016,
+        "thumb": "/library/metadata/402/thumb/1735689600",
+        "duration": 1500000,
+        "originallyAvailableAt": "2016-09-01",
+        "addedAt": 1690000100,
+        "updatedAt": 1735689600,
+        "Media": [
+          {
+            "id": 4020,
+            "duration": 1500000,
+            "videoResolution": "1080",
+            "container": "mkv",
+            "Part": [
+              {
+                "id": 40200,
+                "key": "/library/parts/40200/1735689600/file.mkv",
+                "duration": 1500000,
+                "file": "/data/tv/Paper Moon Station/Season 01/Paper Moon Station - S01E02.mkv",
+                "size": 1073741824,
+                "container": "mkv"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "ratingKey": "403",
+        "key": "/library/metadata/403",
+        "parentRatingKey": "302",
+        "grandparentRatingKey": "201",
+        "guid": "plex://episode/5d9c1276e9d5a1001f4e0403",
+        "parentGuid": "plex://season/602e67e61d3358002c41302",
+        "grandparentGuid": "plex://show/5d9c086fe9d5a1001f4d0201",
+        "type": "episode",
+        "title": "Episode 1",
+        "grandparentTitle": "Paper Moon Station",
+        "parentTitle": "Season 2",
+        "contentRating": "TV-14",
+        "summary": "An invented episode.",
+        "index": 1,
+        "parentIndex": 2,
+        "year": 2016,
+        "thumb": "/library/metadata/403/thumb/1735689600",
+        "duration": 1500000,
+        "originallyAvailableAt": "2016-09-01",
+        "addedAt": 1700000000,
+        "updatedAt": 1735689600,
+        "Media": [
+          {
+            "id": 4030,
+            "duration": 1500000,
+            "videoResolution": "1080",
+            "container": "mkv",
+            "Part": [
+              {
+                "id": 40300,
+                "key": "/library/parts/40300/1735689600/file.mkv",
+                "duration": 1500000,
+                "file": "/data/tv/Paper Moon Station/Season 02/Paper Moon Station - S02E01.mkv",
+                "size": 1181116006,
+                "container": "mkv"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "ratingKey": "404",
+        "key": "/library/metadata/404",
+        "parentRatingKey": "303",
+        "grandparentRatingKey": "202",
+        "guid": "plex://episode/5d9c1276e9d5a1001f4e0404",
+        "parentGuid": "plex://season/602e67e61d3358002c41303",
+        "grandparentGuid": "plex://show/5d9c086fe9d5a1001f4d0202",
+        "type": "episode",
+        "title": "Episode 1",
+        "grandparentTitle": "The Copper Valley",
+        "parentTitle": "Season 0",
+        "contentRating": "TV-14",
+        "summary": "An invented episode.",
+        "index": 1,
+        "parentIndex": 0,
+        "year": 2016,
+        "thumb": "/library/metadata/404/thumb/1735689600",
+        "duration": 1500000,
+        "originallyAvailableAt": "2016-09-01",
+        "addedAt": 1710000000,
+        "updatedAt": 1735689600,
+        "Media": [
+          {
+            "id": 4040,
+            "duration": 1500000,
+            "videoResolution": "1080",
+            "container": "mkv",
+            "Part": [
+              {
+                "id": 40400,
+                "key": "/library/parts/40400/1735689600/file.mkv",
+                "duration": 1500000,
+                "file": "/data/tv/The Copper Valley/Specials/The Copper Valley - S00E01.mkv",
+                "size": 536870912,
+                "container": "mkv"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "ratingKey": "405",
+        "key": "/library/metadata/405",
+        "parentRatingKey": "304",
+        "grandparentRatingKey": "202",
+        "guid": "plex://episode/5d9c1276e9d5a1001f4e0405",
+        "parentGuid": "plex://season/602e67e61d3358002c41304",
+        "grandparentGuid": "plex://show/5d9c086fe9d5a1001f4d0202",
+        "type": "episode",
+        "title": "Episode 1",
+        "grandparentTitle": "The Copper Valley",
+        "parentTitle": "Season 1",
+        "contentRating": "TV-14",
+        "summary": "An invented episode.",
+        "index": 1,
+        "parentIndex": 1,
+        "year": 2016,
+        "thumb": "/library/metadata/405/thumb/1735689600",
+        "duration": 1500000,
+        "originallyAvailableAt": "2016-09-01",
+        "addedAt": 1710000100,
+        "updatedAt": 1735689600,
+        "Media": [
+          {
+            "id": 4050,
+            "duration": 1500000,
+            "videoResolution": "1080",
+            "container": "mkv",
+            "Part": [
+              {
+                "id": 40500,
+                "key": "/library/parts/40500/1735689600/file.mkv",
+                "duration": 1500000,
+                "file": "/data/tv/The Copper Valley/Season 01/The Copper Valley - S01E01.mkv",
+                "size": 1288490188,
+                "container": "mkv"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

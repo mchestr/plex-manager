@@ -4,6 +4,7 @@ import { Queue } from "bullmq"
 import { unstable_cache } from "next/cache"
 
 import type { NavCounts } from "@/lib/admin/nav"
+import { CLEANUP_SETTINGS_ID, isLive, today } from "@/lib/cleanup/settings"
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { prisma } from "@/lib/prisma"
 import { QUEUE_NAME } from "@/lib/queue/client"
@@ -57,20 +58,34 @@ async function failedJobs(): Promise<number | null> {
 }
 
 /**
+ * Media cleanup items that wait for an admin (TS 12.3 item 3): those held by
+ * the entry check, and those due in a Review first deletion batch (leave date
+ * today or earlier, in the server zone). Zero while the feature is off or
+ * paused, because no batch can then be approved.
+ */
+async function cleanupReviewCount(): Promise<number> {
+  const settings = await prisma.cleanupSettings.findUnique({ where: { id: CLEANUP_SETTINGS_ID }, select: { enabled: true, pausedAt: true } })
+  if (!settings || !isLive(settings)) return 0
+  const day = await today()
+  return prisma.cleanupItem.count({ where: { OR: [{ state: "held" }, { state: "leaving", needsApproval: true, leaveOn: { lte: day } }] } })
+}
+
+/**
  * The admin sidebar's badges: members, affiliate applications waiting for a
- * decision, failed jobs, and problem reports with the server admin. Cached
- * for 30 seconds under `admin-nav-counts`, so every admin page render does
- * not count again.
+ * decision, failed jobs, the problem reports with the server admin and the
+ * media cleanup items to review. Cached for 30 seconds under
+ * `admin-nav-counts`, so every admin page render does not count again.
  */
 export const getAdminNavCounts = unstable_cache(
   async (): Promise<NavCounts> => {
-    const [users, pendingAffiliates, failed, reportsToReview] = await Promise.all([
+    const [users, pendingAffiliates, failed, reportsToReview, cleanupReview] = await Promise.all([
       prisma.user.count(),
       prisma.affiliateApplication.count({ where: { status: "PENDING" } }),
       failedJobs(),
       prisma.problemReport.count({ where: { status: "WITH_ADMIN" } }),
+      cleanupReviewCount(),
     ])
-    return { users, pendingAffiliates, failedJobs: failed, reportsToReview }
+    return { users, pendingAffiliates, failedJobs: failed, reportsToReview, cleanupReview }
   },
   [ADMIN_NAV_COUNTS_TAG],
   { tags: [ADMIN_NAV_COUNTS_TAG], revalidate: 30 }

@@ -94,6 +94,7 @@ describe("AuditTable", () => {
       "All",
       "Members and roles",
       "Plex access",
+      "Media cleanup",
       "Sign-in sessions",
       "Invites",
       "Affiliates",
