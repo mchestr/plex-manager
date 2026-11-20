@@ -18,6 +18,7 @@ import { getCleanupProcessor } from "./cleanup"
 import { getConversationReviewProcessor } from "./conversation-review"
 import { getEmailTestProcessor } from "./email-test"
 import { getInactivityNoticeProcessor } from "./inactivity-notice"
+import { getProblemReportNotifyProcessor } from "./problem-report-notify"
 import { getConversationReviewSweepProcessor } from "@/lib/judge/sweep"
 
 /**
@@ -93,6 +94,11 @@ export function getJobProcessor(jobType: string): JobProcessor | null {
   const inactivityNoticeProcessor = getInactivityNoticeProcessor(jobType)
   if (inactivityNoticeProcessor) {
     return inactivityNoticeProcessor
+  }
+
+  const problemReportNotifyProcessor = getProblemReportNotifyProcessor(jobType)
+  if (problemReportNotifyProcessor) {
+    return problemReportNotifyProcessor
   }
 
   // Add more processor lookups here as new job types are added

@@ -115,7 +115,7 @@ test.describe('Admin inactive members', () => {
     await page.goto('/admin');
     const link = page.getByTestId('admin-sidebar').getByTestId('admin-nav-automations').first();
     await link.click();
-    await expect(page).toHaveURL(/\/admin\/watchlist$/);
+    await expect(page).toHaveURL(/\/admin\/problem-reports$/);
     await page.getByTestId('admin-section-tab-inactivity').click();
     await expect(page).toHaveURL(/\/admin\/inactivity$/);
     await expect(page.getByTestId('admin-inactivity-header')).toContainText('Inactive members');

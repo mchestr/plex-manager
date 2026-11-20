@@ -97,7 +97,7 @@ const CONDITIONAL_MEMBER_PAGES: Readonly<Record<string, (userId: string) => Prom
  * Whether the path is a conditional member page the signed-in member does not
  * have: `/membership` while Stripe is off and they have no subscription row
  * (P10.22), `/invites` while affiliate invites are off or they have no Plex
- * id, or `/report` while problem reports are off. The page renders its not-found itself, but streamed behind
+ * id, or `/report` while problem reports are off and they made or follow none. The page renders its not-found itself, but streamed behind
  * `app/loading.tsx`, so this gives it the 404 status, as for a Rewind year. A
  * failed check decides nothing.
  */

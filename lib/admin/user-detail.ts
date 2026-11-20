@@ -43,6 +43,8 @@ export interface UserDetailHeaderData {
   lastSeenReadAt: Date | null
   /** The inactivity sweep never removes this member's Plex access. */
   inactivityExcluded: boolean
+  /** A swap of the copy for one of their problem reports waits for an admin. */
+  swapsNeedApproval: boolean
   plexAccess: PlexAccess
   subscription: {
     status: SubscriptionStatus
@@ -101,6 +103,7 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
       lastSeenAt: true,
       lastSeenReadAt: true,
       inactivityExcluded: true,
+      swapsNeedApproval: true,
       subscription: {
         select: {
           status: true,
@@ -142,6 +145,7 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
     lastSeenAt: user.lastSeenAt,
     lastSeenReadAt: user.lastSeenReadAt,
     inactivityExcluded: user.inactivityExcluded,
+    swapsNeedApproval: user.swapsNeedApproval,
     plexAccess,
     subscription: user.subscription,
     stripeEnabled: Boolean(config?.stripeEnabled),

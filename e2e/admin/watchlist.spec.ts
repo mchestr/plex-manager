@@ -69,7 +69,7 @@ test.describe('Admin watchlist sync', () => {
     }
   });
 
-  test('Automations opens on it, its tab selected, and Settings no longer holds it', async ({ adminPage: page }) => {
+  test('Automations reaches it through its Watchlist sync tab, and Settings no longer holds it', async ({ adminPage: page }) => {
     await page.goto('/admin/settings');
     await expect(page.getByTestId('settings-stripe-section')).toHaveCount(1);
     await expect(page.getByTestId('settings-watchlist-section')).toHaveCount(0);
@@ -77,6 +77,8 @@ test.describe('Admin watchlist sync', () => {
 
     const link = page.getByTestId('admin-sidebar').getByTestId('admin-nav-automations').first();
     await link.click();
+    await expect(page).toHaveURL(/\/admin\/problem-reports$/);
+    await page.getByTestId('admin-section-tab-watchlist').click();
     await expect(page).toHaveURL(/\/admin\/watchlist$/);
     await expect(page.getByTestId('admin-watchlist-header')).toContainText('Watchlist sync');
     await expect(link).toHaveAttribute('aria-current', 'page');

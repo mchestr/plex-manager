@@ -20,7 +20,7 @@
  * Rewind          Season, Playground, Shares, Settings
  * Discord         Activity, Settings
  * AI              Activity, Cost, Settings
- * Automations     Watchlist sync, Inactive members, Request limits, Queues, Media cleanup
+ * Automations     Problem reports, Watchlist sync, Inactive members, Request limits, Queues, Media cleanup
  * Audit log
  * Settings
  * ```
@@ -48,6 +48,8 @@ export interface NavCounts {
   /** Affiliate applications waiting for a decision. */
   pendingAffiliates: number
   failedJobs: number | null
+  /** Problem reports with the server admin. */
+  reportsToReview: number
   /** Media cleanup items in a deletion or entry batch (TS 12.3 item 3); `null` for a role, which never reviews them. */
   cleanupReview: number | null
 }
@@ -81,6 +83,19 @@ export interface AdminNavItem {
   also?: readonly Route[]
   /** The item's section tabs, in order. The item's `href` is its first child's `href`. */
   children?: readonly AdminNavChild[]
+}
+
+/**
+ * Failed jobs win, because they are the destructive state. Else the count of
+ * what waits for an admin under Automations: the problem reports with them and
+ * the media cleanup items in a batch, a warning while any cleanup item waits
+ * (UX 3.2).
+ */
+function automationsBadge({ failedJobs, reportsToReview, cleanupReview }: NavCounts): AdminNavBadge | null {
+  if (failedJobs) return { text: `${failedJobs} failed`, tone: "destructive" }
+  const toReview = reportsToReview + (cleanupReview ?? 0)
+  if (toReview === 0) return null
+  return cleanupReview ? { text: `${toReview} to review`, tone: "warning" } : { text: `${toReview} to review` }
 }
 
 export const ADMIN_NAV: readonly AdminNavItem[] = [
@@ -176,21 +191,16 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   {
     id: "automations",
     label: "Automations",
-    href: "/admin/watchlist",
+    href: "/admin/problem-reports",
     icon: icons.automations,
-    // Its other tabs sit beside /admin/watchlist, not below it, so `also` lights it on their paths
+    // Its other tabs sit beside /admin/problem-reports, not below it, so `also` lights it on their paths
     match: "prefix",
-    also: ["/admin/inactivity", "/admin/request-limits", "/admin/queues", "/admin/cleanup"],
+    also: ["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues", "/admin/cleanup"],
     // The tab bar follows nav order, so Automations sits after Rewind
     mobile: "tab",
-    // Failed jobs win, because they are the destructive state; else the media cleanup batches that wait (UX 3.2)
-    badge: ({ failedJobs, cleanupReview }) =>
-      failedJobs
-        ? { text: `${failedJobs} failed`, tone: "destructive" }
-        : cleanupReview
-          ? { text: `${cleanupReview} to review`, tone: "warning" }
-          : null,
+    badge: automationsBadge,
     children: [
+      { id: "problem-reports", label: "Problem reports", href: "/admin/problem-reports" },
       { id: "watchlist", label: "Watchlist sync", href: "/admin/watchlist" },
       { id: "inactivity", label: "Inactive members", href: "/admin/inactivity" },
       { id: "request-limits", label: "Request limits", href: "/admin/request-limits" },

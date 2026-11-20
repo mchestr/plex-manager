@@ -72,19 +72,20 @@ async function cleanupReviewCount(): Promise<number> {
 
 /**
  * The admin sidebar's badges: members, affiliate applications waiting for a
- * decision, failed jobs, and the media cleanup items to review. Cached for 30
- * seconds under `admin-nav-counts`, so every admin page render does not count
- * again.
+ * decision, failed jobs, the problem reports with the server admin and the
+ * media cleanup items to review. Cached for 30 seconds under
+ * `admin-nav-counts`, so every admin page render does not count again.
  */
 export const getAdminNavCounts = unstable_cache(
   async (): Promise<NavCounts> => {
-    const [users, pendingAffiliates, failed, cleanupReview] = await Promise.all([
+    const [users, pendingAffiliates, failed, reportsToReview, cleanupReview] = await Promise.all([
       prisma.user.count(),
       prisma.affiliateApplication.count({ where: { status: "PENDING" } }),
       failedJobs(),
+      prisma.problemReport.count({ where: { status: "WITH_ADMIN" } }),
       cleanupReviewCount(),
     ])
-    return { users, pendingAffiliates, failedJobs: failed, cleanupReview }
+    return { users, pendingAffiliates, failedJobs: failed, reportsToReview, cleanupReview }
   },
   [ADMIN_NAV_COUNTS_TAG],
   { tags: [ADMIN_NAV_COUNTS_TAG], revalidate: 30 }

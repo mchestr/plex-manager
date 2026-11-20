@@ -106,6 +106,14 @@ describe('memberLastPlay', () => {
     expect(await memberLastPlay(null, { ratingKey: '555', type: 'movie' })).toBeNull()
     expect(readHistory).not.toHaveBeenCalled()
   })
+
+  it('is null without Tautulli, or when reading it fails', async () => {
+    jest.mocked(getActiveService).mockResolvedValueOnce(null)
+    expect(await memberLastPlay('42', { ratingKey: '555', type: 'movie' })).toBeNull()
+
+    jest.mocked(getActiveService).mockRejectedValueOnce(new Error('connection lost'))
+    expect(await memberLastPlay('42', { ratingKey: '555', type: 'movie' })).toBeNull()
+  })
 })
 
 describe('tautulliUserIdOf', () => {

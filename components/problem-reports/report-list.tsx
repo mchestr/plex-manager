@@ -8,7 +8,11 @@ import { useToast } from "@/components/ui/toast"
 import { useFormat } from "@/lib/format-context"
 import type { ReportRow } from "@/lib/member/problem-reports"
 
-/** Your reports, newest first: each one's status, its latest step, and Cancel while nothing has run. */
+/**
+ * Your reports, newest first: each one's status, its latest step, the server
+ * admin's note once they fixed or closed it (plain text), and Cancel while
+ * nothing has run.
+ */
 export function ReportList({ rows }: { rows: ReportRow[] }) {
   const format = useFormat()
   const { showSuccess } = useToast()
@@ -31,12 +35,18 @@ export function ReportList({ rows }: { rows: ReportRow[] }) {
             <span className="text-label text-muted-foreground" data-testid={`report-row-latest-${row.id}`}>
               {row.latest.words} {format.date(row.latest.at, "day-month-short")}
             </span>
+            {row.note && (
+              <div className="mt-1 flex flex-col gap-0.5 border-l-2 border-border pl-3" data-testid={`report-row-note-${row.id}`}>
+                <span className="text-label text-muted-foreground">Note from the server admin</span>
+                <p className="text-ui whitespace-pre-wrap text-foreground">{row.note}</p>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 sm:flex-col sm:items-end">
             <StatusBadge
               domain="problemReport"
               value={row.status}
-              sub={row.status === "CLOSED" ? "Cancelled" : undefined}
+              sub={row.statusSub ?? undefined}
               data-testid={`report-row-status-${row.id}`}
             />
             {row.canCancel && (

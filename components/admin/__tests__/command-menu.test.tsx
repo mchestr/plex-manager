@@ -170,6 +170,7 @@ describe('CommandMenu', () => {
 
     expect(pageIds(dialog)).toEqual([
       'admin-command-page-automations',
+      'admin-command-page-automations-problem-reports',
       'admin-command-page-automations-watchlist',
       'admin-command-page-automations-inactivity',
       'admin-command-page-automations-request-limits',

@@ -105,6 +105,7 @@ describe("AuditTable", () => {
       "Discord",
       "Announcements",
       "Job queues",
+      "Problem reports",
       "Settings",
       "First-run setup",
       "Admin reads",

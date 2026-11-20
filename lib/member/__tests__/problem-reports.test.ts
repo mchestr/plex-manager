@@ -43,20 +43,58 @@ beforeEach(() => {
 
 describe('getReportPageData', () => {
   it("lists the member's reports and the ones they follow, in words", async () => {
-    const report = { problem: 'wont_start', status: 'WITH_ADMIN', title: 'Heat', year: 1995, showTitle: null, seasonNumber: null, episodeNumber: null, createdAt: AT }
+    const report = { problem: 'wont_start', status: 'WITH_ADMIN', title: 'Heat', year: 1995, showTitle: null, seasonNumber: null, episodeNumber: null, createdAt: AT, memberNote: null }
     prismaMock.problemReport.findMany.mockResolvedValue([
       { ...report, id: 'own', reporterId: 'member-1', events: [] },
       { ...report, id: 'followed', reporterId: 'member-2', events: [{ kind: 'ALSO_REPORTED', data: {}, createdAt: AT }] },
       { ...report, id: 'cancelled', reporterId: 'member-1', status: 'CLOSED', events: [{ kind: 'CLOSED', data: { reason: 'cancelled' }, createdAt: AT }] },
+      {
+        ...report,
+        id: 'cancelled-followed',
+        reporterId: 'member-2',
+        status: 'CLOSED',
+        // The newest step, as the query takes it: the reporter's cancel after this member followed
+        events: [{ kind: 'CLOSED', data: { reason: 'cancelled' }, createdAt: AT }],
+      },
     ] as never)
 
     const { reports } = await getReportPageData('member-1', {})
 
     expect(reports).toEqual([
-      { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: AT.toISOString() }, canCancel: true },
-      { id: 'followed', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: "You're following it", at: AT.toISOString() }, canCancel: false },
-      { id: 'cancelled', title: 'Heat (1995)', problem: "Won't start", status: 'CLOSED', latest: { words: 'You cancelled it', at: AT.toISOString() }, canCancel: false },
+      { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: AT.toISOString() }, canCancel: true, statusSub: null, note: null },
+      { id: 'followed', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: "You're following it", at: AT.toISOString() }, canCancel: false, statusSub: null, note: null },
+      { id: 'cancelled', title: 'Heat (1995)', problem: "Won't start", status: 'CLOSED', latest: { words: 'You cancelled it', at: AT.toISOString() }, canCancel: false, statusSub: 'Cancelled', note: null },
+      {
+        id: 'cancelled-followed',
+        title: 'Heat (1995)',
+        problem: "Won't start",
+        status: 'CLOSED',
+        latest: { words: 'The member who reported it cancelled it', at: AT.toISOString() },
+        canCancel: false,
+        statusSub: 'By the member who reported it',
+        note: null,
+      },
     ])
+  })
+
+  it("shows the server admin's note to the member who reported it, and only to them", async () => {
+    const report = { problem: 'wont_start', title: 'Heat', year: 1995, showTitle: null, seasonNumber: null, episodeNumber: null, createdAt: AT, memberNote: 'Swapped the copy.' }
+    prismaMock.problemReport.findMany.mockResolvedValue([
+      { ...report, id: 'fixed', reporterId: 'member-1', status: 'FIXED', events: [{ kind: 'FIXED', data: { reason: 'admin' }, createdAt: AT }] },
+      { ...report, id: 'closed', reporterId: 'member-1', status: 'CLOSED', events: [{ kind: 'CLOSED', data: { reason: 'admin' }, createdAt: AT }] },
+      { ...report, id: 'followed', reporterId: 'member-2', status: 'FIXED', events: [{ kind: 'FIXED', data: { reason: 'admin' }, createdAt: AT }] },
+    ] as never)
+
+    const { reports } = await getReportPageData('member-1', {})
+
+    expect(reports.map(({ id, latest, statusSub, note }) => ({ id, words: latest.words, statusSub, note }))).toEqual([
+      { id: 'fixed', words: 'The server admin fixed it', statusSub: null, note: 'Swapped the copy.' },
+      { id: 'closed', words: 'The server admin closed it', statusSub: 'By the server admin', note: 'Swapped the copy.' },
+      { id: 'followed', words: 'The server admin fixed it', statusSub: null, note: null },
+    ])
+    expect(prismaMock.problemReport.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ select: expect.objectContaining({ events: expect.objectContaining({ where: { OR: [{ kind: { in: ['CLOSED', 'FIXED'] } }, { kind: 'ALSO_REPORTED', actorUserId: 'member-1' }] } }) }) })
+    )
   })
 
   it('searches only the libraries shared with the member, and only movies, shows and episodes', async () => {

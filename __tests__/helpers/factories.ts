@@ -38,6 +38,7 @@ export function buildUser(overrides: Partial<User> = {}): User {
     lastSeenAt: null,
     lastSeenReadAt: null,
     inactivityExcluded: false,
+    swapsNeedApproval: false,
     inactivityEmailsOff: false,
     createdAt: fixedDate(),
     updatedAt: fixedDate(),

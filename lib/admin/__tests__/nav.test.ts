@@ -77,23 +77,32 @@ describe("ADMIN_NAV", () => {
     expect(new Set(childIds).size).toBe(childIds.length)
   })
 
-  it("badges pending applications, else the member count, on Members, and failed jobs on Automations", () => {
-    const counts = { users: 7, pendingAffiliates: 2, failedJobs: 2, cleanupReview: 0 }
+  it("badges pending applications, else the member count, on Members, and failed jobs, else what waits for review, on Automations", () => {
+    const counts = { users: 7, pendingAffiliates: 2, failedJobs: 2, reportsToReview: 3, cleanupReview: 0 }
     expect(byId("members").badge?.(counts)).toEqual({ text: "2 to review" })
     expect(byId("members").badge?.({ ...counts, pendingAffiliates: 0 })).toEqual({ text: "7" })
     expect(byId("automations").badge?.(counts)).toEqual({ text: "2 failed", tone: "destructive" })
-    expect(byId("automations").badge?.({ ...counts, failedJobs: 0 })).toBeNull()
-    expect(byId("automations").badge?.({ ...counts, failedJobs: null })).toBeNull()
+    expect(byId("automations").badge?.({ ...counts, failedJobs: 0 })).toEqual({ text: "3 to review" })
+    expect(byId("automations").badge?.({ ...counts, failedJobs: null })).toEqual({ text: "3 to review" })
+    expect(byId("automations").badge?.({ ...counts, failedJobs: null, reportsToReview: 0 })).toBeNull()
   })
 
-  it("lets failed jobs win the Automations badge, else names the media cleanup items to review (UX 3.2)", () => {
+  it("opens Automations on Problem reports", () => {
+    expect(byId("automations").href).toBe("/admin/problem-reports")
+    expect(byId("automations").children?.map((child) => child.id)).toEqual(["problem-reports", "watchlist", "inactivity", "request-limits", "queues", "cleanup"])
+  })
+
+  it("lets failed jobs win the Automations badge, else counts the reports and media cleanup items to review (UX 3.2)", () => {
     const automations = byId("automations")
-    expect(automations.badge?.({ users: 7, pendingAffiliates: 0, failedJobs: 3, cleanupReview: 6 })).toEqual({ text: "3 failed", tone: "destructive" })
-    expect(automations.badge?.({ users: 7, pendingAffiliates: 0, failedJobs: 0, cleanupReview: 6 })).toEqual({ text: "6 to review", tone: "warning" })
-    expect(automations.badge?.({ users: 7, pendingAffiliates: 0, failedJobs: null, cleanupReview: 1 })).toEqual({ text: "1 to review", tone: "warning" })
+    const counts = { users: 7, pendingAffiliates: 0, reportsToReview: 0 }
+    expect(automations.badge?.({ ...counts, failedJobs: 3, cleanupReview: 6 })).toEqual({ text: "3 failed", tone: "destructive" })
+    expect(automations.badge?.({ ...counts, failedJobs: 0, cleanupReview: 6 })).toEqual({ text: "6 to review", tone: "warning" })
+    expect(automations.badge?.({ ...counts, failedJobs: null, cleanupReview: 1 })).toEqual({ text: "1 to review", tone: "warning" })
+    // Both wait for an admin under Automations: one count, a warning while a cleanup item waits
+    expect(automations.badge?.({ ...counts, failedJobs: 0, reportsToReview: 2, cleanupReview: 6 })).toEqual({ text: "8 to review", tone: "warning" })
     // A Support session gets null (lib/admin/shell.ts), so it never sees "to review"
-    expect(automations.badge?.({ users: 7, pendingAffiliates: 0, failedJobs: null, cleanupReview: null })).toBeNull()
-    expect(automations.badge?.({ users: 7, pendingAffiliates: 0, failedJobs: 0, cleanupReview: 0 })).toBeNull()
+    expect(automations.badge?.({ ...counts, failedJobs: null, cleanupReview: null })).toBeNull()
+    expect(automations.badge?.({ ...counts, failedJobs: 0, cleanupReview: 0 })).toBeNull()
   })
 })
 
@@ -113,6 +122,8 @@ describe("isActive", () => {
     ["rewind", "/admin/sharesheet", false],
     ["rewind", "/admin/users", false],
     ["discord", "/admin/discord/settings", true],
+    ["automations", "/admin/problem-reports", true],
+    ["automations", "/admin/problem-reports/r1", true],
     ["automations", "/admin/watchlist", true],
     ["automations", "/admin/inactivity", true],
     ["automations", "/admin/request-limits", true],
@@ -337,15 +348,16 @@ describe("Rewind", () => {
 describe("Automations", () => {
   const automations = byId("automations")
 
-  it("is one item with the Watchlist sync, Inactive members, Request limits, Queues and Media cleanup tabs, opening on Watchlist sync", () => {
+  it("is one item with the Problem reports, Watchlist sync, Inactive members, Request limits, Queues and Media cleanup tabs, opening on Problem reports", () => {
     expect(automations).toMatchObject({
       label: "Automations",
-      href: "/admin/watchlist",
+      href: "/admin/problem-reports",
       match: "prefix",
       mobile: "tab",
-      also: ["/admin/inactivity", "/admin/request-limits", "/admin/queues", "/admin/cleanup"],
+      also: ["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues", "/admin/cleanup"],
     })
     expect(automations.children).toEqual([
+      { id: "problem-reports", label: "Problem reports", href: "/admin/problem-reports" },
       { id: "watchlist", label: "Watchlist sync", href: "/admin/watchlist" },
       { id: "inactivity", label: "Inactive members", href: "/admin/inactivity" },
       { id: "request-limits", label: "Request limits", href: "/admin/request-limits" },
@@ -356,6 +368,8 @@ describe("Automations", () => {
   })
 
   it.each([
+    "/admin/problem-reports",
+    "/admin/problem-reports/r1",
     "/admin/watchlist",
     "/admin/inactivity",
     "/admin/request-limits",
@@ -373,7 +387,7 @@ describe("Automations", () => {
   )
 
   it("offers every tab to an admin and none to a role", () => {
-    expect(childrenOf("automations", { isAdmin: true }).map((tab) => tab.id)).toEqual(["watchlist", "inactivity", "request-limits", "queues", "cleanup"])
+    expect(childrenOf("automations", { isAdmin: true }).map((tab) => tab.id)).toEqual(["problem-reports", "watchlist", "inactivity", "request-limits", "queues", "cleanup"])
     expect(childrenOf("automations", { isAdmin: false, role: "support" })).toEqual([])
     expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).not.toContain("automations")
   })
@@ -383,8 +397,8 @@ describe("Automations", () => {
     expect(ids).toContain("automations")
     expect(ids.indexOf("automations")).toBeGreaterThan(ids.indexOf("rewind"))
     const tab = mobileTabs().find((t) => t.id === "automations") as MobileLinkTab
-    expect(tab.href).toBe("/admin/watchlist")
-    for (const pathname of ["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues", "/admin/cleanup"]) {
+    expect(tab.href).toBe("/admin/problem-reports")
+    for (const pathname of ["/admin/problem-reports", "/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues", "/admin/cleanup"]) {
       expect(isTabActive(tab, pathname)).toBe(true)
     }
     expect(isTabActive(tab, "/admin/settings")).toBe(false)

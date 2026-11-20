@@ -2,8 +2,9 @@
  * The admin sidebar's counts: members and PENDING affiliate applications from
  * the database (invites have no badge, so none are counted). The failed-job
  * count asks Redis, and is null when Redis is unset, not ready, slow or failing.
- * The media cleanup items to review count held items and due Review first
- * items while the feature is on and not paused (TS 12.3 item 3).
+ * The problem reports to review are those with the server admin. The media
+ * cleanup items to review count held items and due Review first items while
+ * the feature is on and not paused (TS 12.3 item 3).
  */
 
 import { mockReset } from 'jest-mock-extended'
@@ -28,13 +29,15 @@ beforeEach(() => {
   jest.mocked(readyWithin).mockResolvedValue(true)
   prismaMock.user.count.mockResolvedValue(7)
   prismaMock.affiliateApplication.count.mockResolvedValue(2)
+  prismaMock.problemReport.count.mockResolvedValue(3)
   prismaMock.cleanupSettings.findUnique.mockResolvedValue(null)
   prismaMock.config.findUnique.mockResolvedValue({ timezone: 'America/Chicago' } as never)
   prismaMock.cleanupItem.count.mockResolvedValue(6)
 })
 
-it('counts the members and the pending applications, and no longer the invites', async () => {
-  await expect(getAdminNavCounts()).resolves.toStrictEqual({ users: 7, pendingAffiliates: 2, failedJobs: null, cleanupReview: 0 })
+it('counts the members, the pending applications and the reports with the server admin, and no longer the invites', async () => {
+  await expect(getAdminNavCounts()).resolves.toStrictEqual({ users: 7, pendingAffiliates: 2, failedJobs: null, reportsToReview: 3, cleanupReview: 0 })
+  expect(prismaMock.problemReport.count).toHaveBeenCalledWith({ where: { status: 'WITH_ADMIN' } })
   expect(prismaMock.affiliateApplication.count).toHaveBeenCalledWith({ where: { status: 'PENDING' } })
   expect(prismaMock.invite.count).not.toHaveBeenCalled()
 })

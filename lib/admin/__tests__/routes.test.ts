@@ -15,6 +15,8 @@ import {
   invite,
   movedSettingsHome,
   playgroundFor,
+  problemReport,
+  problemReports,
   publicInviteUrl,
   rewindHistory,
   settingsSection,
@@ -27,6 +29,14 @@ describe("admin routes", () => {
     expect(affiliates()).toBe("/admin/affiliates")
     expect(affiliates({ tab: "applications" })).toBe("/admin/affiliates")
     expect(affiliates({ tab: "history" })).toBe("/admin/affiliates?tab=history")
+  })
+
+  it("builds the Problem reports list, with the default filter left out, and one report", () => {
+    expect(problemReports()).toBe("/admin/problem-reports")
+    expect(problemReports({ status: "needs-you" })).toBe("/admin/problem-reports")
+    expect(problemReports({ status: "closed" })).toBe("/admin/problem-reports?status=closed")
+    expect(problemReport("r1")).toBe("/admin/problem-reports/r1")
+    expect(problemReport("r/1")).toBe("/admin/problem-reports/r%2F1")
   })
 
   it("builds the user pages, with the year on the Rewind link", () => {

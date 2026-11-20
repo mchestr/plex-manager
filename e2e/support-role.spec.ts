@@ -43,6 +43,7 @@ const REFUSED_PATHS = [
   '/admin/rewind/settings',
   '/admin/shares',
   '/admin/announcements',
+  '/admin/problem-reports',
   '/admin/watchlist',
   '/admin/inactivity',
   '/admin/request-limits',
