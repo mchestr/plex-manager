@@ -35,7 +35,7 @@ import { scanPlexFolder } from "@/lib/connections/plex-library-actions"
 import { resolveFile, type ArrConfig, type ResolvedFile } from "@/lib/problem-reports/resolve"
 import { checkAgain, WAIT_MS } from "@/lib/problem-reports/steps/copy-wait"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
-import type { CopyWatch, ProblemReportFixPayload, ReplaceWatch } from "@/lib/queue/types"
+import type { CopyWatch, ProblemReportFixPayload, ReplaceWatch } from "@/lib/problem-reports/fix-payload"
 
 type PlexServer = { url: string; token: string }
 

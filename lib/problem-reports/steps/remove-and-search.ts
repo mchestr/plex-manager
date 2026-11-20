@@ -46,7 +46,7 @@ import type { ArrConfig } from "@/lib/problem-reports/resolve"
 import { checkAgain, checkCopy, fileTarget, searchEnded, searchForFile, WAIT_MS, watchFor } from "@/lib/problem-reports/steps/copy-wait"
 import { finishReplace, readyToReplace } from "@/lib/problem-reports/steps/replace"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
-import type { CopyWatch, ProblemReportFixPayload } from "@/lib/queue/types"
+import type { CopyWatch, ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("PROBLEM_REPORT_REMOVE")

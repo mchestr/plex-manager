@@ -29,7 +29,7 @@ import { listSonarrEpisodes } from "@/lib/connections/sonarr-episodes"
 import { getActiveService } from "@/lib/data/active-service"
 import type { ArrConfig, ResolvedFile } from "@/lib/problem-reports/resolve"
 import type { StepOutcome } from "@/lib/problem-reports/steps/types"
-import type { CopyWatch, ProblemReportFixPayload } from "@/lib/queue/types"
+import type { CopyWatch, ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 
 const MINUTE_MS = 60 * 1000
 const CHECK_MS = 10 * MINUTE_MS
