@@ -48,7 +48,7 @@ import { checkAgain, checkCopy, fileTarget, WAIT_MS, watchFor } from "@/lib/prob
 import { finishReplace, readyToReplace } from "@/lib/problem-reports/steps/replace"
 import { runOf } from "@/lib/problem-reports/steps/run-record"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
-import type { ProblemReportFixPayload } from "@/lib/queue/types"
+import type { ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("PROBLEM_REPORT_SWAP")

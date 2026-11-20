@@ -36,6 +36,7 @@ import "server-only"
 
 import type { ProblemReportStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import type { ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 import { FIX_ACTIONS, type FixAction, type FixTrigger } from "@/lib/problem-reports/fixes"
 import { endLedgerRow } from "@/lib/problem-reports/ledger"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
@@ -49,7 +50,7 @@ import type { FixedDetails, StepOutcome, StepReport } from "@/lib/problem-report
 import { queueAdminAlertFromWorker, queueMemberUpdates } from "@/lib/problem-reports/updates"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { enqueueFromRequest } from "@/lib/queue/request-path"
-import { JOB_TYPES, type ProblemReportFixPayload } from "@/lib/queue/types"
+import { JOB_TYPES } from "@/lib/queue/types"
 import type { ToAdminReason } from "@/lib/validations/problem-reports"
 
 const OPEN_FOR_A_FIX: ProblemReportStatus[] = ["SENT", "WITH_ADMIN"]
@@ -141,16 +142,33 @@ export type StepResult = { next: { at: number; data: ProblemReportFixPayload } }
 
 /** Runs the job's current step; see the module comment. */
 export async function runFixStep(data: ProblemReportFixPayload, now = new Date()): Promise<StepResult> {
-  const row = await prisma.problemReport.findUnique({
-    where: { id: data.reportId },
-    select: { id: true, status: true, runToken: true, action: true, reporterId: true, plexRatingKey: true, titleKey: true },
-  })
-  if (!row || row.status !== "FIXING" || row.runToken !== data.runToken || !isFixAction(row.action)) return { done: true }
-  const report: StepReport = { ...row, action: row.action }
+  const report = await heldRun(data)
+  if (!report) return { done: true }
 
   const stopped = data.step === "start" && !(await getProblemReportSettings()).enabled
   const outcome: StepOutcome = stopped ? { toAdmin: "OFF" } : await STEPS[report.action](report, data, now)
   return finish(report, data, outcome, now)
+}
+
+/**
+ * Hands the report back to the server admin when its job failed for good: a
+ * step threw on the last attempt, so no job holds the run any more, and the
+ * report would stay Fixing. A run that no longer holds the report changes
+ * nothing.
+ */
+export async function giveUpFix(data: ProblemReportFixPayload, now = new Date()): Promise<void> {
+  const report = await heldRun(data)
+  if (report) await finish(report, data, { toAdmin: "ERROR" }, now)
+}
+
+/** The report while this run holds it: Fixing, with the run's token and a fix. */
+async function heldRun(data: ProblemReportFixPayload): Promise<StepReport | null> {
+  const row = await prisma.problemReport.findUnique({
+    where: { id: data.reportId },
+    select: { id: true, status: true, runToken: true, action: true, reporterId: true, plexRatingKey: true, titleKey: true },
+  })
+  if (!row || row.status !== "FIXING" || row.runToken !== data.runToken || !isFixAction(row.action)) return null
+  return { ...row, action: row.action }
 }
 
 async function finish(report: StepReport, data: ProblemReportFixPayload, outcome: StepOutcome, now: Date): Promise<StepResult> {

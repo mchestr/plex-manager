@@ -18,12 +18,12 @@ import "server-only"
 
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { refreshPlexItem } from "@/lib/connections/plex-library-actions"
+import type { ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 import { fixTraits } from "@/lib/problem-reports/fixes"
 import { gateAndRecord } from "@/lib/problem-reports/ledger"
 import { checkMatch } from "@/lib/problem-reports/match"
 import { runOf } from "@/lib/problem-reports/steps/run-record"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
-import type { ProblemReportFixPayload } from "@/lib/queue/types"
 
 export async function runRefresh(report: StepReport, data: ProblemReportFixPayload, now: Date): Promise<StepOutcome> {
   const server = await getActivePlexServerConfig()

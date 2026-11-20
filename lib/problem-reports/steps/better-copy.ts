@@ -38,7 +38,7 @@ import { checkAgain, checkCopy, fileTarget, searchEnded, searchForFile, WAIT_MS,
 import { runOf } from "@/lib/problem-reports/steps/run-record"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import { readUpgrade } from "@/lib/problem-reports/upgrade"
-import type { ProblemReportFixPayload } from "@/lib/queue/types"
+import type { ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 
 type PlexServer = { url: string; token: string }
 

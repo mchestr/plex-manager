@@ -15,7 +15,7 @@ import type { ResolvedFile } from "@/lib/problem-reports/resolve"
 import { checkCopy } from "@/lib/problem-reports/steps/copy-wait"
 import { runRemoveAndSearch } from "@/lib/problem-reports/steps/remove-and-search"
 import { finishReplace, readyToReplace } from "@/lib/problem-reports/steps/replace"
-import type { CopyWatch, ProblemReportFixPayload, ReplaceWatch } from "@/lib/queue/types"
+import type { CopyWatch, ProblemReportFixPayload, ReplaceWatch } from "@/lib/problem-reports/fix-payload"
 
 jest.mock("@/lib/connections/arr-upgrade", () => ({ ...jest.requireActual("@/lib/connections/arr-upgrade"), getArrCommandState: jest.fn() }))
 jest.mock("@/lib/connections/arr-writes", () => ({

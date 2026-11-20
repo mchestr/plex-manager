@@ -30,12 +30,12 @@ import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import type { PlexItemMetadata } from "@/lib/connections/plex"
 import { scanPlexFolder } from "@/lib/connections/plex-library-actions"
 import { searchSonarrEpisodes } from "@/lib/connections/arr-writes"
+import type { ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 import { fixTraits } from "@/lib/problem-reports/fixes"
 import { gateAndRecord } from "@/lib/problem-reports/ledger"
 import { readMissingState } from "@/lib/problem-reports/steps/missing-state"
 import { runOf } from "@/lib/problem-reports/steps/run-record"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
-import type { ProblemReportFixPayload } from "@/lib/queue/types"
 
 const MINUTE_MS = 60 * 1000
 const SEARCH_CHECK_MS = 10 * MINUTE_MS

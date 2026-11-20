@@ -4,8 +4,8 @@
  * @module lib/problem-reports/steps/types
  */
 
+import type { ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 import type { FixAction } from "@/lib/problem-reports/fixes"
-import type { ProblemReportFixPayload } from "@/lib/queue/types"
 import type { ToAdminReason } from "@/lib/validations/problem-reports"
 
 /** The report as a step sees it, held by this run. */

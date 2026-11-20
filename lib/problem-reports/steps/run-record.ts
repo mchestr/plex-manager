@@ -6,7 +6,7 @@
  */
 
 import type { StepReport } from "@/lib/problem-reports/steps/types"
-import type { ProblemReportFixPayload } from "@/lib/queue/types"
+import type { ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 
 export const runOf = (report: StepReport, data: ProblemReportFixPayload) => ({
   reportId: report.id,

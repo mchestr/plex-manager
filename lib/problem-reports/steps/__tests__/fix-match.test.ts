@@ -11,7 +11,7 @@ import { getPlexSectionAgent, matchPlexItem, searchPlexMatches } from "@/lib/con
 import { gateAndRecord, hasRunRecord } from "@/lib/problem-reports/ledger"
 import { checkMatch, type MatchCheck } from "@/lib/problem-reports/match"
 import { runFixMatch } from "@/lib/problem-reports/steps/fix-match"
-import type { MatchWatch, ProblemReportFixPayload } from "@/lib/queue/types"
+import type { MatchWatch, ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 
 jest.mock("@/lib/connections/plex", () => ({ getPlexItemMetadata: jest.fn() }))
 jest.mock("@/lib/connections/plex-config", () => ({ getActivePlexServerConfig: jest.fn() }))
