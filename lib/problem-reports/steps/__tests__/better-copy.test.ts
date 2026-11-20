@@ -14,7 +14,7 @@ import { gateAndRecord } from "@/lib/problem-reports/ledger"
 import { resolveFile, type ResolvedFile } from "@/lib/problem-reports/resolve"
 import { runBetterCopy } from "@/lib/problem-reports/steps/better-copy"
 import { readUpgrade } from "@/lib/problem-reports/upgrade"
-import type { BetterCopyWatch, ProblemReportFixPayload } from "@/lib/queue/types"
+import type { BetterCopyWatch, ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 
 jest.mock("@/lib/connections/arr-upgrade", () => ({ getArrCommandState: jest.fn(), listTitleHistory: jest.fn(), listTitleQueue: jest.fn() }))
 jest.mock("@/lib/connections/plex-config", () => ({ getActivePlexServerConfig: jest.fn() }))

@@ -40,7 +40,7 @@ import { gateAndRecord } from "@/lib/problem-reports/ledger"
 import { resolveFile, type ArrConfig, type ResolvedFile } from "@/lib/problem-reports/resolve"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import { readUpgrade } from "@/lib/problem-reports/upgrade"
-import type { BetterCopyWatch, ProblemReportFixPayload } from "@/lib/queue/types"
+import type { BetterCopyWatch, ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 
 const MINUTE_MS = 60 * 1000
 const CHECK_MS = 10 * MINUTE_MS

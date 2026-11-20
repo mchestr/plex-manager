@@ -31,6 +31,7 @@ import "server-only"
 
 import type { ProblemReportStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import type { ProblemReportFixPayload } from "@/lib/problem-reports/fix-payload"
 import { FIX_ACTIONS, type FixAction, type FixTrigger } from "@/lib/problem-reports/fixes"
 import { endLedgerRow } from "@/lib/problem-reports/ledger"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
@@ -41,7 +42,7 @@ import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import { queueAdminAlertFromWorker, queueMemberUpdates } from "@/lib/problem-reports/updates"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { enqueueFromRequest } from "@/lib/queue/request-path"
-import { JOB_TYPES, type ProblemReportFixPayload } from "@/lib/queue/types"
+import { JOB_TYPES } from "@/lib/queue/types"
 import type { ToAdminReason } from "@/lib/validations/problem-reports"
 
 const OPEN_FOR_A_FIX: ProblemReportStatus[] = ["SENT", "WITH_ADMIN"]
