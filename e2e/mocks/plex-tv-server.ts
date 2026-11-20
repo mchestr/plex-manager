@@ -1,4 +1,3 @@
-import { TEST_USERS } from '../fixtures/auth';
 import { buildCleanupWorld, CLEANUP_PLEX, plexTvUsersXml, sharedServersXml, type CleanupWorld } from '../helpers/cleanup-fixtures';
 import { notFound, startMockServer, text, type MockAnswer, type MockCall, type MockServer } from './request-log';
 
@@ -28,9 +27,16 @@ import { notFound, startMockServer, text, type MockAnswer, type MockCall, type M
  * (`e2e/poster-library-access.spec.ts`) pass the SEC-21 library check with it.
  */
 
+/**
+ * `TEST_USERS.REGULAR.plexUserId` (`e2e/fixtures/auth.ts`), written out: that
+ * module loads Playwright's fixtures, which the Jest tests that start this mock
+ * (`__tests__/e2e-helpers/seed-cleanup.test.ts`) cannot.
+ */
+const REGULAR_PLEX_USER_ID = 'regular-plex-id';
+
 /** Section keys shared with each Plex account on a server other than the cleanup world's. The regular member gets section 1, never section 2. */
 export const MOCK_SHARED_SECTIONS: Readonly<Record<string, readonly string[]>> = {
-  [TEST_USERS.REGULAR.plexUserId]: ['1'],
+  [REGULAR_PLEX_USER_ID]: ['1'],
 };
 
 const MEMBER_SECTIONS = [
