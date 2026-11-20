@@ -21,7 +21,8 @@ jest.mock("@/lib/problem-reports/access", () => ({
   readMemberItem: jest.fn(),
 }))
 jest.mock("@/lib/problem-reports/service", () => ({ reportProblem: jest.fn() }))
-jest.mock("@/lib/problem-reports/evidence", () => ({ memberLastPlay: jest.fn() }))
+jest.mock("@/lib/problem-reports/evidence", () => ({ readEvidence: jest.fn() }))
+jest.mock("@/lib/problem-reports/member-swap", () => ({ memberFixesFor: jest.fn() }))
 jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
 jest.mock("@/lib/problem-reports/settings", () => ({ getProblemReportSettings: jest.fn() }))
 jest.mock("@/lib/discord/services", () => ({ verifyDiscordUser: jest.fn() }))
@@ -36,7 +37,8 @@ import { searchPlexMedia, type PlexItemMetadata } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { getActiveService } from "@/lib/data/active-service"
 import { verifyDiscordUser, type VerifyDiscordUserResult } from "@/lib/discord/services"
-import { memberLastPlay } from "@/lib/problem-reports/evidence"
+import { readEvidence } from "@/lib/problem-reports/evidence"
+import { memberFixesFor } from "@/lib/problem-reports/member-swap"
 import { memberLibraryAccess, readMemberItem } from "@/lib/problem-reports/access"
 import { reportProblem } from "@/lib/problem-reports/service"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
@@ -96,7 +98,8 @@ beforeEach(() => {
   jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: MOVIE, server: SERVER })
   jest.mocked(verifyDiscordUser).mockResolvedValue(LINKED)
   jest.mocked(getActiveService).mockResolvedValue(null)
-  jest.mocked(memberLastPlay).mockResolvedValue(null)
+  jest.mocked(readEvidence).mockResolvedValue({ lastPlay: null, playedToEnd: null })
+  jest.mocked(memberFixesFor).mockResolvedValue({ swap: null, matchFixes: false })
 })
 
 describe("/report title:", () => {
@@ -228,15 +231,32 @@ describe("the steps", () => {
     await handleStep(blurry)
     expect(edited(blurry).content).toBe("Heat \\(1995\\): Blurry or low quality.\nWe'll look for a better copy. If there isn't one, nothing changes.")
     expect(firstControl(edited(blurry))).toMatchObject({ customId: "report:send:555:blurry", label: "Look for a better copy" })
-    expect(memberLastPlay).toHaveBeenCalledWith("42", expect.objectContaining({ ratingKey: "555", type: "movie" }))
+    expect(readEvidence).toHaveBeenCalledWith("member-1", expect.objectContaining({ ratingKey: "555", type: "movie" }))
 
-    jest.mocked(memberLastPlay).mockResolvedValue({ player: "Phone", transcoded: true, at: "2026-11-08T20:00:00.000Z" })
+    jest.mocked(readEvidence).mockResolvedValue({ lastPlay: { player: "Phone", transcoded: true, at: "2026-11-08T20:00:00.000Z" }, playedToEnd: null })
     const converted = component("report:problem:555:picture", { values: ["blurry"] })
     await handleStep(converted)
     expect(edited(converted).content).toBe(
       "Heat \\(1995\\): Blurry or low quality.\nYour Plex app converted this video while you watched, which lowers quality and can cause buffering. Get the best picture: https://plex.example.com/help#playback\nStill blurry with the quality set to Maximum? Send it to the server admin."
     )
     expect(firstControl(edited(converted))).toMatchObject({ customId: "report:send:555:blurry", label: "Send to the server admin" })
+  })
+
+  it("confirms a member's swap with what it spends, and its button says the member chose it", async () => {
+    jest.mocked(getActiveService).mockImplementation((async (kind: string) => (kind === "radarr" ? { id: "radarr-1" } : null)) as never)
+    jest.mocked(memberFixesFor).mockResolvedValue({ swap: { ok: true, left: 2, of: 3, nextBack: "Nov 13" }, matchFixes: true })
+    const stuck = component("report:problem:555:picture", { values: ["stuck_subtitles"] })
+    await handleStep(stuck)
+
+    expect(edited(stuck).content).toBe(
+      "Heat \\(1995\\): Subtitles are stuck on and won't turn off.\nWe'll find a different copy and swap it in. The one you have keeps playing until the new one is ready, which can take a few minutes to a day. Uses 1 of your 3 swaps.\n2 of 3 swaps left. One comes back Nov 13."
+    )
+    expect(firstControl(edited(stuck))).toMatchObject({ customId: "report:swap:555:stuck_subtitles", label: "Swap the copy" })
+
+    const swap = component("report:swap:555:stuck_subtitles")
+    jest.mocked(reportProblem).mockResolvedValue({ ok: true, outcome: "fixing", reportId: "report-1", action: "SWAP" })
+    await handleStep(swap)
+    expect(reportProblem).toHaveBeenCalledWith({ userId: "member-1", ratingKey: "555", problem: "stuck_subtitles", note: null, toAdmin: false, swap: true })
   })
 
   it("hands Something else to the web, which takes the note", async () => {
@@ -263,7 +283,7 @@ describe("the steps", () => {
 
     await handleStep(send)
 
-    expect(reportProblem).toHaveBeenCalledWith({ userId: "member-1", ratingKey: "555", problem: "no_sound", note: null, toAdmin: false })
+    expect(reportProblem).toHaveBeenCalledWith({ userId: "member-1", ratingKey: "555", problem: "no_sound", note: null, toAdmin: false, swap: false })
     expect(edited(send)).toEqual({ content: "Sent to the server admin. Follow it on the web: https://plex.example.com/report", components: [] })
   })
 
@@ -304,7 +324,7 @@ describe("the steps", () => {
 
     await handleStep(anyway)
 
-    expect(reportProblem).toHaveBeenCalledWith({ userId: "member-1", ratingKey: "555", problem: "blurry", note: null, toAdmin: true })
+    expect(reportProblem).toHaveBeenCalledWith({ userId: "member-1", ratingKey: "555", problem: "blurry", note: null, toAdmin: true, swap: false })
     expect(edited(anyway)).toEqual({ content: "Sent to the server admin. Follow it on the web: https://plex.example.com/report", components: [] })
   })
 

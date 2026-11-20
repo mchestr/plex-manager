@@ -9,14 +9,16 @@ import { getServerSession } from 'next-auth'
 import { notFound } from 'next/navigation'
 
 import ReportPage from '@/app/(app)/report/page'
-import { getReportPageData, listMemberReports } from '@/lib/member/problem-reports'
+import { getReportPageData } from '@/lib/member/problem-reports'
+import { listMemberReports } from '@/lib/member/your-reports'
 import { getProblemReportSettings } from '@/lib/problem-reports/settings'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))
 jest.mock('@/lib/problem-reports/settings', () => ({ getProblemReportSettings: jest.fn() }))
-jest.mock('@/lib/member/problem-reports', () => ({ getReportPageData: jest.fn(), listMemberReports: jest.fn() }))
+jest.mock('@/lib/member/problem-reports', () => ({ getReportPageData: jest.fn() }))
+jest.mock('@/lib/member/your-reports', () => ({ listMemberReports: jest.fn() }))
 jest.mock('@/actions/problem-reports', () => ({ reportProblem: jest.fn(), followProblemReport: jest.fn(), cancelProblemReport: jest.fn() }))
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: jest.fn(), showError: jest.fn() }) }))
 jest.mock('next/form', () => ({ __esModule: true, default: ({ children, ...props }: { children: React.ReactNode }) => <form {...props}>{children}</form> }))
@@ -52,7 +54,7 @@ describe('ReportPage', () => {
   it('keeps Your reports, and nothing to report from, while problem reports are off', async () => {
     jest.mocked(getProblemReportSettings).mockResolvedValue({ enabled: false })
     jest.mocked(listMemberReports).mockResolvedValue([
-      { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: '2026-11-09T15:00:00.000Z' }, canCancel: true, canAsk: false, statusSub: null, note: null },
+      { id: 'own', title: 'Heat (1995)', problem: "Won't start", status: 'WITH_ADMIN', latest: { words: 'You sent it', at: '2026-11-09T15:00:00.000Z' }, canCancel: true, canAsk: false, askPlays: false, statusSub: null, note: null },
     ])
 
     render(await ReportPage({ searchParams: params({ q: 'heat', item: '555' }) }))

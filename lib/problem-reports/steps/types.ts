@@ -29,11 +29,13 @@ export interface FixedDetails {
 
 /**
  * Wait until `at` with these payload changes, the report is fixed, it goes
- * back to the server admin, or a better copy wasn't found (which closes a
- * member's run, `lib/problem-reports/run.ts`).
+ * back to the server admin, a better copy wasn't found (which closes a
+ * member's run, `lib/problem-reports/run.ts`), or a dry run found the release
+ * a swap would grab.
  */
 export type StepOutcome =
   | { next: { at: number; data: Partial<ProblemReportFixPayload> } }
   | { fixed: true; details?: FixedDetails }
   | { toAdmin: ToAdminReason }
   | { noBetterCopy: true }
+  | { wouldSwap: { release: string } }

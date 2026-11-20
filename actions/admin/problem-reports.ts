@@ -23,7 +23,8 @@ import { principalSession } from "@/lib/mcp/principal"
 import { prisma } from "@/lib/prisma"
 import { fixesFor, type FixAction } from "@/lib/problem-reports/fixes"
 import { startFix } from "@/lib/problem-reports/run"
-import { getProblemReportSettings, PROBLEM_REPORT_SETTINGS_ID } from "@/lib/problem-reports/settings"
+import { servicesWithoutRecycleBin } from "@/lib/problem-reports/recycle-bins"
+import { getProblemReportSettings, getSwapSettings, PROBLEM_REPORT_SETTINGS_ID } from "@/lib/problem-reports/settings"
 import { reportableTypeOf } from "@/lib/problem-reports/taxonomy"
 import { queueMemberUpdates } from "@/lib/problem-reports/updates"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
@@ -150,23 +151,32 @@ export const resumeProblemFixes = adminAction({
 })
 
 /**
- * Turns problem reports on or off. Off hides `/report` from members with no
- * reports at once; members keep seeing and cancelling the reports they made
- * or follow, and the server admin keeps every report.
+ * Turns problem reports on or off, and sets members' swaps: Off, Dry run or
+ * On, with swaps per member in any 7 days, the days before a title is
+ * swapped again, and the server's swaps a day. Off hides `/report` from
+ * members with no reports at once; members keep seeing and cancelling the
+ * reports they made or follow, and the server admin keeps every report. On
+ * needs a recycle bin in each of Radarr and Sonarr that is set up, so a bad
+ * swap can be undone. Changing the mode stops runs claimed before it, so no
+ * backlog runs. A field left out keeps its saved value.
  */
 export const updateProblemReportSettings = adminAction({
   input: problemReportSettingsSchema,
   fallbackError: "Could not save the problem report settings",
-  handler: async ({ enabled }, { userId }) => {
-    const before = await getProblemReportSettings()
-    await prisma.problemReportSettings.upsert({
-      where: { id: PROBLEM_REPORT_SETTINGS_ID },
-      create: { id: PROBLEM_REPORT_SETTINGS_ID, enabled, updatedBy: userId },
-      update: { enabled, updatedBy: userId },
-    })
-    if (before.enabled !== enabled) {
-      logAuditEvent(AuditEventType.PROBLEM_REPORT_SETTINGS_CHANGED, userId, { changedFields: ["enabled"], before, after: { enabled } })
+  handler: async (input, { userId }) => {
+    const [switched, swaps] = await Promise.all([getProblemReportSettings(), getSwapSettings()])
+    const before = { enabled: switched.enabled, automatic: swaps.automatic, weeklySwaps: swaps.weeklySwaps, titleCooldownDays: swaps.titleCooldownDays, dailySwapCap: swaps.dailySwapCap }
+    const after = { ...before, ...Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)) }
+    const modeChanged = after.automatic !== before.automatic
+    if (modeChanged && after.automatic === "ON") {
+      const missing = await servicesWithoutRecycleBin()
+      if (missing.length > 0) return fail("VALIDATION", `Set a recycle bin in ${missing.join(" and ")} first, so a bad swap can be undone`)
     }
+    const data = { ...after, updatedBy: userId, ...(modeChanged ? { automaticSince: new Date() } : {}) }
+    await prisma.problemReportSettings.upsert({ where: { id: PROBLEM_REPORT_SETTINGS_ID }, create: { id: PROBLEM_REPORT_SETTINGS_ID, ...data }, update: data })
+    const changedFields = (Object.keys(before) as (keyof typeof before)[]).filter((key) => before[key] !== after[key])
+    // Only a change is written to the audit log
+    if (changedFields.length > 0) logAuditEvent(AuditEventType.PROBLEM_REPORT_SETTINGS_CHANGED, userId, { changedFields, before, after })
     revalidatePath(problemReports())
     for (const path of MEMBER_PAGES) revalidatePath(path)
     return ok(null)

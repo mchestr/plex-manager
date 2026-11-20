@@ -9,9 +9,9 @@
  * | `BETTER_COPY`      | Radarr's or Sonarr's search with the file in place, which | No; an upgrade   |
  * |                    | grabs only an upgrade the quality profile wants           | replaces it      |
  * | `SWAP`             | another release of the same quality or better, grabbed    | The old copy, once |
- * |                    | from an interactive search (admins only)                  | the new one imports |
+ * |                    | from an interactive search (members' within limits)      | the new one imports |
  * | `FIX_MATCH`        | Plex matches the movie or show to the title Radarr or     | No; it matches   |
- * |                    | Sonarr has for its file (admins only)                     | back when wrong  |
+ * |                    | Sonarr has for its file                                   | back when wrong  |
  * | `REFRESH`          | Plex reads the item's details again (a member's run       | No               |
  * |                    | checks the match first)                                   |                  |
  * | `REMOVE_AND_SEARCH`| deletes the file, then searches (admins only, a confirm)  | Yes, at once     |
@@ -40,8 +40,14 @@ import { PROBLEMS, type ProblemCode, type ReportableType } from "@/lib/problem-r
 /** A fix a report can run. */
 export type FixAction = "SWAP" | "BETTER_COPY" | "LOOK_FOR_MISSING" | "FIX_MATCH" | "REFRESH" | "REMOVE_AND_SEARCH"
 
-/** The fixes a member's report can start on its own: none replaces the file or changes Plex's match. */
-export type MemberFixAction = Exclude<FixAction, "SWAP" | "FIX_MATCH" | "REMOVE_AND_SEARCH">
+/** The fixes a member's report can start on its own: every one but Remove the file and search, which only an admin runs. */
+export type MemberFixAction = Exclude<FixAction, "REMOVE_AND_SEARCH">
+
+/** The fixes that bring in another copy, after which the member who reported it is asked whether it plays (`./ask-admin.ts`). */
+export const ASKS_PLAYS: readonly FixAction[] = ["SWAP", "REMOVE_AND_SEARCH"]
+
+/** How long after another copy came in its member can say whether it plays. */
+export const PLAYS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 
 /** Every fix, for `z.enum`. */
 export const FIX_ACTIONS = ["SWAP", "BETTER_COPY", "LOOK_FOR_MISSING", "FIX_MATCH", "REFRESH", "REMOVE_AND_SEARCH"] as const satisfies readonly FixAction[]

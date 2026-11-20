@@ -6,6 +6,7 @@ import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures/auth';
 import { signInAs } from './fixtures/session';
 import { createE2EPrismaClient } from './helpers/prisma';
+import { clearReportLimits } from './helpers/rate-limits';
 import { WAIT_TIMEOUTS, waitForStablePage } from './helpers/test-utils';
 import { MOCK_HISTORY_MEMBER } from './mocks/tautulli-server';
 
@@ -91,6 +92,7 @@ test.describe('Problem reports', () => {
   test.beforeAll(async () => {
     stub = await startStubPlex();
     await clearReports();
+    await clearReportLimits();
     await withDb(async (prisma) => {
       originalUrl = (await prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true } }))?.url ?? null;
       await prisma.plexServer.updateMany({ where: { isActive: true }, data: { url: `http://127.0.0.1:${(stub.address() as AddressInfo).port}` } });

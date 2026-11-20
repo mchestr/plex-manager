@@ -81,14 +81,21 @@ const button = (customId: string, label: string) =>
 
 /**
  * The confirm: the problem, the web's playback tip when the member's Plex app
- * converted their last play, what happens next and the web's button
- * (`consequence`).
+ * converted their last play, what happens next, the allowance or why it goes
+ * to the server admin, and the web's button (`consequence`). A swap's button
+ * says the member chose it.
  */
-export function confirmProblem(title: string, problem: ProblemCode, ratingKey: string, next: { line: string; button: string; tip: boolean }): StepMessage {
+export function confirmProblem(
+  title: string,
+  problem: ProblemCode,
+  ratingKey: string,
+  next: { line: string; button: string; note: string | null; swap: boolean; tip: boolean }
+): StepMessage {
   const tip = next.tip ? `\nYour Plex app converted this video while you watched, which lowers quality and can cause buffering. Get the best picture: ${getBaseUrl()}/help#playback` : ""
+  const note = next.note ? `\n${next.note}` : ""
   return {
-    content: `${plainDiscordText(title, TITLE_MAX)}: ${problemLabel(problem)}.${tip}\n${next.line}`,
-    components: [button(reportIds.send(ratingKey, problem), next.button)],
+    content: `${plainDiscordText(title, TITLE_MAX)}: ${problemLabel(problem)}.${tip}\n${next.line}${note}`,
+    components: [button((next.swap ? reportIds.swap : reportIds.send)(ratingKey, problem), next.button)],
   }
 }
 
@@ -97,6 +104,8 @@ const FIXING: Record<MemberFixAction, string> = {
   BETTER_COPY: "We'll look for a better copy now. The one you have keeps playing, and if there isn't a better one, nothing changes.",
   LOOK_FOR_MISSING: "We'll look for the missing episodes now. Nothing is removed.",
   REFRESH: "We'll check the details and ask Plex to read them again.",
+  SWAP: "We'll find a different copy and swap it in. The one you have keeps playing until the new one is ready.",
+  FIX_MATCH: "We'll fix the title and poster in Plex. The file stays the same.",
 }
 
 /** A show's problem is with an episode, which the member picks on the web. */

@@ -29,7 +29,7 @@ const DAY = 24 * 60 * MINUTE
 const SERVER = { url: "http://plex.local:32400", token: "owner-token" }
 const RADARR = { name: "Radarr", url: "http://radarr.local:7878", apiKey: "radarr-key" }
 const REPORT = { id: "report-1", runToken: 3, action: "SWAP" as const, reporterId: "member-1", plexRatingKey: "555", titleKey: "plex://movie/heat" }
-const START: ProblemReportFixPayload = { reportId: "report-1", runToken: 3, step: "start", trigger: "web", actorUserId: "admin-1" }
+const START: ProblemReportFixPayload = { reportId: "report-1", runToken: 3, step: "start", trigger: "automatic", actorUserId: "member-1" }
 const FILE = {
   id: 77,
   relativePath: "Heat (1995).mkv",
@@ -82,6 +82,17 @@ describe("readyToReplace", () => {
       outcome: { next: { data: { deadline: NOW.getTime() + MINUTE } } },
     })
     await expect(readyToReplace(SERVER, REPORT, { ...START, deadline: NOW.getTime(), seenFileId: 77 }, NOW)).resolves.toEqual({ outcome: { toAdmin: "BUSY" } })
+  })
+
+  it("waits only out the 15 minutes an admin's tap holds, then hands the report back", async () => {
+    jest.mocked(isPlexItemPlaying).mockResolvedValue(true)
+    const tap: ProblemReportFixPayload = { ...START, trigger: "web", actorUserId: "admin-1", claimedAt: NOW.getTime() - MINUTE }
+
+    await expect(readyToReplace(SERVER, REPORT, tap, NOW)).resolves.toEqual({
+      outcome: { next: { at: NOW.getTime() + 10 * MINUTE, data: { deadline: NOW.getTime() + 14 * MINUTE, seenFileId: 77 } } },
+    })
+    await expect(readyToReplace(SERVER, REPORT, { ...tap, deadline: NOW.getTime(), seenFileId: 77 }, NOW)).resolves.toEqual({ outcome: { toAdmin: "APPROVAL_EXPIRED" } })
+    await expect(readyToReplace(SERVER, REPORT, { ...tap, claimedAt: undefined }, NOW)).resolves.toEqual({ outcome: { toAdmin: "APPROVAL_EXPIRED" } })
   })
 
   it("waits while Plex can't say whether it plays, or Radarr is downloading a copy", async () => {

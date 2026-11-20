@@ -76,10 +76,11 @@ describe("memberUpdateText", () => {
     expect(memberUpdateText({ ...heat, action: "REFRESH" }, BASE)).toBe(`Plex has read the details of Heat \\(1995\\) again.${link}`)
   })
 
-  it("says a swap or a removal brought in another copy", () => {
+  it("says a swap or a removal brought in another copy, and asks the member who reported it whether it plays", () => {
     const heat = { ...update, title: "Heat (1995)" }
-    expect(memberUpdateText({ ...heat, action: "SWAP" }, BASE)).toBe(`A different copy of Heat \\(1995\\) is on the server now.${link}`)
-    expect(memberUpdateText({ ...heat, action: "REMOVE_AND_SEARCH" }, BASE)).toBe(`A new copy of Heat \\(1995\\) is on the server now.${link}`)
+    expect(memberUpdateText({ ...heat, action: "SWAP" }, BASE)).toBe(`A different copy of Heat \\(1995\\) is on the server now. Does it play? Tell us on your reports.${link}`)
+    expect(memberUpdateText({ ...heat, action: "REMOVE_AND_SEARCH" }, BASE)).toBe(`A new copy of Heat \\(1995\\) is on the server now. Does it play? Tell us on your reports.${link}`)
+    expect(memberUpdateText({ ...heat, own: false, action: "SWAP" }, BASE)).toBe(`A different copy of Heat \\(1995\\) is on the server now.${link}`)
   })
 
   it("says the server admin fixed or closed it, and mentions a note only to the member who reported it", () => {

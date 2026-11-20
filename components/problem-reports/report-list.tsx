@@ -3,12 +3,13 @@
 import { useTransition } from "react"
 
 import { askServerAdmin, cancelProblemReport } from "@/actions/problem-reports"
+import { ReportPlays } from "@/components/problem-reports/report-plays"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { useToast } from "@/components/ui/toast"
 import { useFormat } from "@/lib/format-context"
-import type { ReportRow } from "@/lib/member/problem-reports"
+import type { ReportRow } from "@/lib/member/your-reports"
 
 /** "Ask the server admin", on the member's report that found no better copy. */
 function AskAdmin({ reportId }: { reportId: string }) {
@@ -30,8 +31,8 @@ function AskAdmin({ reportId }: { reportId: string }) {
 /**
  * Your reports, newest first: each one's status, its latest step, the server
  * admin's note once they fixed or closed it (plain text), Cancel while
- * nothing has run, and Ask the server admin when Look for a better copy
- * found none.
+ * nothing has run, Ask the server admin when Look for a better copy found
+ * none, and Does it play now? for a week after a swap brought in a new copy.
  */
 export function ReportList({ rows }: { rows: ReportRow[] }) {
   const format = useFormat()
@@ -70,6 +71,7 @@ export function ReportList({ rows }: { rows: ReportRow[] }) {
               data-testid={`report-row-status-${row.id}`}
             />
             {row.canAsk && <AskAdmin reportId={row.id} />}
+            {row.askPlays && <ReportPlays reportId={row.id} title={row.title} />}
             {row.canCancel && (
               <ConfirmDialog
                 trigger={

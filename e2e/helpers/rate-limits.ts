@@ -53,6 +53,15 @@ export async function clearRateLimits(redisUrl: string, names: readonly (keyof t
 }
 
 /**
+ * Starts a member's problem report limits fresh, the hour's and the day's.
+ * Every problem report spec reports as the same member, so without this the
+ * later specs in a run find the hour's reports spent and their sends refused.
+ */
+export async function clearReportLimits(): Promise<void> {
+  if (process.env.REDIS_URL) await clearRateLimits(process.env.REDIS_URL, ['problem-report:create', 'problem-report:create:day'])
+}
+
+/**
  * Whether Redis at `redisUrl` answers a ping within two seconds. Rewind has
  * no fallback without Redis (FR-50), so global setup stops the run when it
  * does not: no baseline is ever taken of the unavailable panel.

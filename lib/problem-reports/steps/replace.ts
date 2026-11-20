@@ -9,8 +9,9 @@
  * guid, to find the title again if it comes back as a new item. While the
  * title is playing (`/status/sessions`) or Radarr or Sonarr is downloading a
  * copy of it, the run checks again every 10 minutes, and gives up after a
- * day (`BUSY`). When the file changed meanwhile, the copy that was reported
- * is gone, and the report is fixed.
+ * day (`BUSY`). An admin's tap holds only 15 minutes (`lib/problem-reports/recheck.ts`), so
+ * their run gives up then (`APPROVAL_EXPIRED`). When the file changed
+ * meanwhile, the copy that was reported is gone, and the report is fixed.
  *
  * ## The end
  *
@@ -32,6 +33,7 @@ import { failArrGrab } from "@/lib/connections/arr-writes"
 import { getPlexItemMetadata } from "@/lib/connections/plex"
 import { findPlexItemByGuid, isPlexItemPlaying } from "@/lib/connections/plex-file-state"
 import { scanPlexFolder } from "@/lib/connections/plex-library-actions"
+import { APPROVAL_MS } from "@/lib/problem-reports/recheck"
 import { resolveFile, type ArrConfig, type ResolvedFile } from "@/lib/problem-reports/resolve"
 import { checkAgain, WAIT_MS } from "@/lib/problem-reports/steps/copy-wait"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
@@ -62,8 +64,10 @@ export async function readyToReplace(
   if (!resolved.plex.guid) return { outcome: { toAdmin: "NO_IDS" } }
   if (data.seenFileId !== undefined && data.seenFileId !== resolved.file.id) return { outcome: { fixed: true } }
   if (await isBusy(server, resolved)) {
-    const deadline = data.deadline ?? now.getTime() + WAIT_MS
-    return { outcome: now.getTime() >= deadline ? { toAdmin: "BUSY" } : checkAgain(now, { deadline, seenFileId: resolved.file.id }) }
+    const tapped = data.trigger !== "automatic"
+    const deadline = data.deadline ?? (tapped ? (data.claimedAt ?? 0) + APPROVAL_MS : now.getTime() + WAIT_MS)
+    if (now.getTime() >= deadline) return { outcome: { toAdmin: tapped ? "APPROVAL_EXPIRED" : "BUSY" } }
+    return { outcome: checkAgain(now, { deadline, seenFileId: resolved.file.id }) }
   }
   return { resolved, guid: resolved.plex.guid }
 }

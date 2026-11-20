@@ -1,9 +1,10 @@
 /**
  * What `/report` shows a member: what they are watching now and watched
  * recently (`./problem-report-titles`), a title search filtered to the
- * libraries shared with them, their reports (and the ones they follow), and
- * the title whose sheet is open, with their last play of it. Every title is
- * checked against the member's libraries on the server (SEC-21).
+ * libraries shared with them, their reports and the ones they follow
+ * (`./your-reports`), and the title whose sheet is open, with their last
+ * play of it. Every title is checked against the member's libraries on the
+ * server (SEC-21).
  *
  * @module lib/member/problem-reports
  */
@@ -14,41 +15,24 @@ import { getPlexShowEpisodes } from "@/lib/connections/plex"
 import { getActivePlexServerConfig, type PlexServerConfig } from "@/lib/connections/plex-config"
 import { getActiveService } from "@/lib/data/active-service"
 import type { ProblemReportStatus } from "@/lib/generated/prisma/client"
+import { memberStatuses } from "@/lib/member/dry-runs"
 import { recentlyWatched, watchingNow, type TitleResult } from "@/lib/member/problem-report-titles"
-import { latestWords } from "@/lib/member/report-latest"
+import { listMemberReports, type ReportRow } from "@/lib/member/your-reports"
 import { prisma } from "@/lib/prisma"
 import { memberLibraryAccess, readMemberItem, type LibraryAccess } from "@/lib/problem-reports/access"
-import { memberLastPlay, type LastPlay } from "@/lib/problem-reports/evidence"
-import { FIX_ACTIONS, FIX_WORDS } from "@/lib/problem-reports/fixes"
+import { readEvidence, type LastPlay } from "@/lib/problem-reports/evidence"
+import { memberFixesFor } from "@/lib/problem-reports/member-swap"
+import type { SwapOffer } from "@/lib/problem-reports/member-swap-words"
 import { searchMemberTitles } from "@/lib/problem-reports/search"
 import { problemLabel, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { reportTitle, titleKeyOf } from "@/lib/problem-reports/title"
-import { closedEventDataSchema } from "@/lib/validations/problem-reports"
+import { getFormat } from "@/lib/settings/app-settings"
 
-const REPORT_LIMIT = 50
 const RESULT_LIMIT = 20
 const MIN_QUERY = 2
-const CANCELLABLE: ReadonlySet<ProblemReportStatus> = new Set(["SENT", "WITH_ADMIN"])
 
 const UNAVAILABLE = "We can't reach the server right now. Try again in a few minutes."
 const NOT_IN_LIBRARIES = "We couldn't find that title in your libraries."
-
-/** One of the member's reports, or one they follow. */
-export interface ReportRow {
-  id: string
-  title: string
-  problem: string
-  status: ProblemReportStatus
-  /** The latest event in words, and when: "You sent it", "You cancelled it", "The server admin fixed it". */
-  latest: { words: string; at: string }
-  canCancel: boolean
-  /** "Ask the server admin": the member's own report, closed because Look for a better copy found none. */
-  canAsk: boolean
-  /** The status badge's second line: why a closed report closed. */
-  statusSub: string | null
-  /** The server admin's note, for the member who reported it once it is fixed or closed; plain text. */
-  note: string | null
-}
 
 /** The title whose sheet is open. */
 export interface SelectedTitle {
@@ -61,8 +45,14 @@ export interface SelectedTitle {
   openReport: { id: string; problem: string; status: ProblemReportStatus; since: string; yours: boolean } | null
   /** The member's last play of it, which names the player the sheet asks about. */
   lastPlay: LastPlay | null
+  /** It played to the end for anyone since its file was added; `null` when Tautulli couldn't say. */
+  playedToEnd: boolean | null
   /** Which fixers are set up, for what the send button says (`consequence`). */
   fixers: { radarr: boolean; sonarr: boolean }
+  /** Members' swaps as the gate decides them for this title now, while they're On (`memberFixesFor`). */
+  swap: SwapOffer | null
+  /** A different title playing is fixed on its own. */
+  matchFixes: boolean
 }
 
 export interface ReportPageData {
@@ -75,61 +65,29 @@ export interface ReportPageData {
   selected: SelectedTitle | { error: string } | null
 }
 
-/** The member's reports and the ones they follow, newest first: what the list on `/report` and its switched-off view show. */
-export async function listMemberReports(userId: string): Promise<ReportRow[]> {
-  const rows = await prisma.problemReport.findMany({
-    where: { OR: [{ reporterId: userId }, { events: { some: { kind: "ALSO_REPORTED", actorUserId: userId } } }] },
-    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-    take: REPORT_LIMIT,
-    select: {
-      id: true, reporterId: true, problem: true, status: true, title: true, year: true, showTitle: true, seasonNumber: true,
-      episodeNumber: true, createdAt: true, memberNote: true, action: true,
-      events: {
-        where: { OR: [{ kind: { in: ["CLOSED", "FIXED", "REOPENED"] } }, { kind: "ALSO_REPORTED", actorUserId: userId }] },
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        select: { kind: true, data: true, createdAt: true },
-      },
-    },
-  })
-  return rows.map((row) => {
-    const own = row.reporterId === userId
-    const event = row.events[0]
-    const { words, statusSub } = latestWords(event, own)
-    const fixing = row.status === "FIXING" ? FIX_ACTIONS.find((action) => action === row.action) : undefined
-    return {
-      id: row.id,
-      title: reportTitle(row),
-      problem: problemLabel(row.problem),
-      status: row.status,
-      latest: { words, at: (event?.createdAt ?? row.createdAt).toISOString() },
-      canCancel: own && CANCELLABLE.has(row.status),
-      canAsk: own && row.status === "CLOSED" && event?.kind === "CLOSED" && closedEventDataSchema.safeParse(event.data).data?.reason === "no_better_copy",
-      statusSub: fixing ? FIX_WORDS[fixing].running : statusSub,
-      // Written for the member who reported it; followers see the status only
-      note: own ? row.memberNote : null,
-    }
-  })
-}
-
 async function searchTitles(server: PlexServerConfig | null, access: LibraryAccess | null, query: string): Promise<NonNullable<ReportPageData["search"]>> {
   const results = server && access ? await searchMemberTitles(server, access, query, RESULT_LIMIT) : null
   return results ? { results, error: null } : { results: [], error: UNAVAILABLE }
 }
 
-async function selectTitle(userId: string, plexUserId: string | null, ratingKey: string): Promise<NonNullable<ReportPageData["selected"]>> {
+async function selectTitle(userId: string, ratingKey: string): Promise<NonNullable<ReportPageData["selected"]>> {
   const member = await readMemberItem(userId, ratingKey)
   if (!member.ok) return { error: member.reason === "UNAVAILABLE" ? UNAVAILABLE : NOT_IN_LIBRARIES }
   const { item, server } = member
-  const [episodes, open, lastPlay, sonarr, radarr] = await Promise.all([
+  const [episodes, open, evidence, sonarr, radarr] = await Promise.all([
     item.type === "show" ? getPlexShowEpisodes(server, item.ratingKey) : null,
     prisma.problemReport.findUnique({
       where: { activeKey: titleKeyOf(item) },
       select: { id: true, reporterId: true, problem: true, status: true, updatedAt: true, events: { where: { kind: "ALSO_REPORTED", actorUserId: userId }, select: { id: true }, take: 1 } },
     }),
-    memberLastPlay(plexUserId, item),
+    readEvidence(userId, item),
     getActiveService("sonarr"),
     getActiveService("radarr"),
+  ])
+  const f = await getFormat()
+  const [fixes, statuses] = await Promise.all([
+    memberFixesFor({ userId, item, server, lastPlay: evidence.lastPlay }, (day) => f.date(day, "day-month-short"), new Date()),
+    memberStatuses(open ? [open] : []),
   ])
   return {
     ratingKey: item.ratingKey,
@@ -139,10 +97,12 @@ async function selectTitle(userId: string, plexUserId: string | null, ratingKey:
       ? episodes.episodes.map((episode) => ({ ratingKey: episode.ratingKey, label: `S${episode.seasonNumber}E${episode.episodeNumber}: ${episode.title}` }))
       : null,
     openReport: open
-      ? { id: open.id, problem: problemLabel(open.problem), status: open.status, since: open.updatedAt.toISOString(), yours: open.reporterId === userId || open.events.length > 0 }
+      ? { id: open.id, problem: problemLabel(open.problem), status: statuses.get(open.id) ?? open.status, since: open.updatedAt.toISOString(), yours: open.reporterId === userId || open.events.length > 0 }
       : null,
-    lastPlay,
+    lastPlay: evidence.lastPlay,
+    playedToEnd: evidence.playedToEnd,
     fixers: { radarr: radarr !== null, sonarr: sonarr !== null },
+    ...fixes,
   }
 }
 
@@ -166,7 +126,7 @@ export async function getReportPageData(userId: string, params: { q?: string; it
     server && access ? watchingNow(server, member, access) : null,
     access ? recentlyWatched(plexUserId, access) : null,
     query ? searchTitles(server, access, query) : null,
-    params.item ? selectTitle(userId, plexUserId, params.item) : null,
+    params.item ? selectTitle(userId, params.item) : null,
   ])
   return { reports, watching, recent, search, selected }
 }

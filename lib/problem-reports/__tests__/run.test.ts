@@ -59,7 +59,23 @@ describe("startFix", () => {
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
       data: { reportId: "report-1", kind: "FIX_STARTED", actorUserId: "member-1", data: { action: "LOOK_FOR_MISSING", trigger: "automatic" } },
     })
-    expect(enqueueFromRequest).toHaveBeenCalledWith(JOB_TYPES.PROBLEM_REPORT_FIX, { reportId: "report-1", runToken: 3, step: "start", trigger: "automatic", actorUserId: "member-1" })
+    expect(enqueueFromRequest).toHaveBeenCalledWith(JOB_TYPES.PROBLEM_REPORT_FIX, {
+      reportId: "report-1",
+      runToken: 3,
+      step: "start",
+      trigger: "automatic",
+      actorUserId: "member-1",
+      claimedAt: expect.any(Number),
+    })
+  })
+
+  it("marks a member's swap in Dry run on its first step and on the timeline", async () => {
+    await startFix({ reportId: "report-1", action: "SWAP", trigger: "automatic", actorUserId: "member-1", dryRun: true })
+
+    expect(enqueueFromRequest).toHaveBeenCalledWith(JOB_TYPES.PROBLEM_REPORT_FIX, expect.objectContaining({ step: "start", dryRun: true }))
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
+      data: { reportId: "report-1", kind: "FIX_STARTED", actorUserId: "member-1", data: { action: "SWAP", trigger: "automatic", dryRun: true } },
+    })
   })
 
   it("refuses a report that is closed or already fixing, so a double tap runs once", async () => {
@@ -96,12 +112,32 @@ describe("runFixStep", () => {
     expect(queueMemberUpdates).not.toHaveBeenCalled()
   })
 
-  it("hands the report back before its next step when problem reports are off", async () => {
+  it("hands the report back at its first step when problem reports are off", async () => {
     mockEnabled.mockReturnValue(false)
 
     await expect(runFixStep(DATA, NOW)).resolves.toEqual({ done: true })
     expect(runLookForMissing).not.toHaveBeenCalled()
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({ data: { reportId: "report-1", kind: "TO_ADMIN", data: { reason: "OFF", action: "LOOK_FOR_MISSING" } } })
+    expect(queueAdminAlertFromWorker).toHaveBeenCalledWith("report-1")
+  })
+
+  it("keeps a run past its first step going when problem reports are off, so a removal still searches and a swap still watches", async () => {
+    mockEnabled.mockReturnValue(false)
+    jest.mocked(runLookForMissing).mockResolvedValue({ next: { at: 123, data: {} } })
+
+    await expect(runFixStep({ ...DATA, step: "wait" }, NOW)).resolves.toEqual({ next: { at: 123, data: { ...DATA, step: "wait" } } })
+    expect(runLookForMissing).toHaveBeenCalled()
+  })
+
+  it("hands a dry run's swap to the server admin with the release it would grab, and ends its row as a dry run", async () => {
+    prismaMock.problemReport.findUnique.mockResolvedValue({ ...ROW, action: "SWAP" } as never)
+    jest.mocked(runSwap).mockResolvedValue({ wouldSwap: { release: "Heat.1995.1080p.BluRay-GOOD" } })
+
+    await expect(runFixStep({ ...DATA, dryRun: true }, NOW)).resolves.toEqual({ done: true })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
+      data: { reportId: "report-1", kind: "TO_ADMIN", data: { reason: "DRY_RUN", action: "SWAP", release: "Heat.1995.1080p.BluRay-GOOD" } },
+    })
+    expect(prismaMock.problemFixLedger.updateMany).toHaveBeenCalledWith({ where: { id: "report-1:3", endedAt: null }, data: { outcome: "DRY_RUN", endedAt: NOW } })
     expect(queueAdminAlertFromWorker).toHaveBeenCalledWith("report-1")
   })
 

@@ -9,13 +9,14 @@
 
 import type { ProblemReportFilter } from "@/lib/admin/routes"
 import type { ProblemReportStatus } from "@/lib/generated/prisma/client"
-import { TO_ADMIN_WORDS, TRIGGER_WORDS } from "@/lib/admin/problem-reports/fix-words"
+import { TO_ADMIN_WORDS, TRIGGER_WORDS, wouldSwapWords } from "@/lib/admin/problem-reports/fix-words"
 import { FIX_WORDS, type FixAction } from "@/lib/problem-reports/fixes"
 import { problemLabel } from "@/lib/problem-reports/taxonomy"
 import {
   closedEventDataSchema,
   fixedEventDataSchema,
   fixStartedDataSchema,
+  reopenedEventDataSchema,
   reportEventDataSchema,
   toAdminDataSchema,
   type DeviceAnswer,
@@ -121,15 +122,24 @@ export function timelineStep(event: { id: string; kind: string; data: unknown; c
       return { ...base, ...memberStep(event.kind, event.data) }
     case "FIXED":
       return { ...base, words: fixedWords(event.data) }
-    case "REOPENED":
-      return { ...base, words: "Asked the server admin to take a look" }
+    case "REOPENED": {
+      const broken = reopenedEventDataSchema.safeParse(event.data)
+      return broken.success ? { ...base, words: "Said it's still broken after the new copy came in", note: broken.data.note } : { ...base, words: "Asked the server admin to take a look" }
+    }
+    case "PLAYS":
+      return { ...base, words: "Said the new copy plays" }
     case "FIX_STARTED": {
       const started = fixStartedDataSchema.safeParse(event.data)
-      return { ...base, words: started.success ? `${FIX_WORDS[started.data.action].started}${TRIGGER_WORDS[started.data.trigger]}` : "Started a fix" }
+      if (!started.success) return { ...base, words: "Started a fix" }
+      const { action, trigger, dryRun } = started.data
+      const words = dryRun ? `Started a dry run of ${FIX_WORDS[action].running.toLowerCase()}` : FIX_WORDS[action].started
+      return { ...base, words: `${words}${TRIGGER_WORDS[trigger]}` }
     }
     case "TO_ADMIN": {
       const handed = toAdminDataSchema.safeParse(event.data)
-      return { ...base, words: handed.success ? TO_ADMIN_WORDS[handed.data.reason] : "Sent to the server admin" }
+      if (!handed.success) return { ...base, words: "Sent to the server admin" }
+      const { reason, release } = handed.data
+      return { ...base, words: reason === "DRY_RUN" && release ? wouldSwapWords(release) : TO_ADMIN_WORDS[reason] }
     }
     case "CLOSED": {
       const closed = closedEventDataSchema.safeParse(event.data)

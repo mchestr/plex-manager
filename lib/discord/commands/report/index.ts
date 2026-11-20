@@ -37,7 +37,8 @@ import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { getActiveService } from "@/lib/data/active-service"
 import { memberLibraryAccess, readMemberItem } from "@/lib/problem-reports/access"
 import { consequence } from "@/lib/problem-reports/consequence"
-import { memberLastPlay } from "@/lib/problem-reports/evidence"
+import { readEvidence } from "@/lib/problem-reports/evidence"
+import { memberFixesFor } from "@/lib/problem-reports/member-swap"
 import { refusalCopy, REFUSALS } from "@/lib/problem-reports/refusals"
 import { searchMemberTitles } from "@/lib/problem-reports/search"
 import { reportProblem } from "@/lib/problem-reports/service"
@@ -77,7 +78,7 @@ async function readTitle(edit: Edit, userId: string, ratingKey: string) {
     await edit(words(refusalCopy(member.reason)))
     return null
   }
-  return { title: reportTitle(member.item), type: member.item.type as ReportableType, item: member.item }
+  return { title: reportTitle(member.item), type: member.item.type as ReportableType, item: member.item, server: member.server }
 }
 
 /** After a title is chosen: a show goes to the web for its episode, anything else to the kind step. */
@@ -149,20 +150,27 @@ async function onProblem(edit: Edit, member: Member, ratingKey: string, kind: Pr
   if (needsNote(code)) return void (await edit(writeNoteOnWeb(ratingKey)))
   const read = await readTitle(edit, member.id, ratingKey)
   if (!read) return
-  // What the web's sheet reads for its words: the member's last play of this title, and the services set up
-  const [lastPlay, radarr, sonarr] = await Promise.all([memberLastPlay(member.plexUserId, read.item), getActiveService("radarr"), getActiveService("sonarr")])
-  const transcoded = lastPlay?.transcoded === true
-  const next = consequence(code, { type: read.type, transcoded, radarr: Boolean(radarr), sonarr: Boolean(sonarr) })
-  await edit(confirmProblem(read.title, code, ratingKey, { ...next, tip: transcoded && showsTranscodeTip(code) }))
+  // What the web's sheet reads for its words: the evidence for this title, the services set up and members' fixes.
+  // Discord asks nothing about the player, so a playback problem is the server admin's here.
+  const [evidence, radarr, sonarr] = await Promise.all([readEvidence(member.id, read.item), getActiveService("radarr"), getActiveService("sonarr")])
+  const fixes = await memberFixesFor({ userId: member.id, item: read.item, server: read.server, lastPlay: evidence.lastPlay }, await dayInWords(), new Date())
+  const transcoded = evidence.lastPlay?.transcoded === true
+  const next = consequence(code, { type: read.type, transcoded, radarr: Boolean(radarr), sonarr: Boolean(sonarr), playedToEnd: evidence.playedToEnd, ...fixes })
+  await edit(confirmProblem(read.title, code, ratingKey, { ...next, swap: next.action === "SWAP", tip: transcoded && showsTranscodeTip(code) }))
 }
 
-/** Sends the report; `toAdmin` after an answer the member didn't accept. */
-async function onSend(edit: Edit, userId: string, ratingKey: string, problem: ProblemCode, toAdmin: boolean): Promise<void> {
-  const result = await reportProblem({ userId, ratingKey, problem, note: null, toAdmin })
+/** "Nov 10": Discord has no zone of the member's, so a date is the server's. */
+async function dayInWords(): Promise<(day: Date) => string> {
+  const format = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: await serverZone() })
+  return (day) => format.format(day)
+}
+
+/** Sends the report: `swap` from Swap the copy, `toAdmin` after an answer the member didn't accept. */
+async function onSend(edit: Edit, userId: string, ratingKey: string, problem: ProblemCode, choice: { toAdmin: boolean; swap: boolean }): Promise<void> {
+  const result = await reportProblem({ userId, ratingKey, problem, note: null, ...choice })
   if (!result.ok) return void (await edit(words(refusalCopy(result.refusal, result.retryAfterSec))))
-  // Discord has no zone of the member's, so a date is the server's
-  const day = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: await serverZone() })
-  await edit(sent(result, (iso) => day.format(new Date(iso)), { ratingKey, problem }))
+  const day = await dayInWords()
+  await edit(sent(result, (iso) => day(new Date(iso)), { ratingKey, problem }))
 }
 
 /** Routes a `/report` component to its step. */
@@ -184,8 +192,9 @@ async function handleStep(interaction: MessageComponentInteraction): Promise<voi
     case "problem":
       return onStep(interaction, (edit, member) => onProblem(edit, member, step.ratingKey, step.kind, chosen(interaction)))
     case "send":
+    case "swap":
     case "admin":
-      return onStep(interaction, (edit, member) => onSend(edit, member.id, step.ratingKey, step.problem, step.step === "admin"))
+      return onStep(interaction, (edit, member) => onSend(edit, member.id, step.ratingKey, step.problem, { toAdmin: step.step === "admin", swap: step.step === "swap" }))
   }
 }
 

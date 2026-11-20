@@ -78,19 +78,6 @@ async function lastPlay(config: { url: string; apiKey: string }, tautulliUserId:
   return play ? { player: play.player ?? null, transcoded: play.transcoded, at: play.playedAt.toISOString() } : null
 }
 
-/** The member's last play of a title (of a show, its newest episode's), or `null`. */
-export async function memberLastPlay(plexUserId: string | null, title: Title): Promise<LastPlay | null> {
-  const tautulliUserId = tautulliUserIdOf(plexUserId)
-  if (tautulliUserId === null) return null
-  try {
-    const config = await activeTautulli()
-    return config ? await lastPlay(config, tautulliUserId, title) : null
-  } catch (error) {
-    logger.error("Could not read the member's last play", error, { ratingKey: title.ratingKey })
-    return null
-  }
-}
-
 /** The evidence a report records. `addedAt` limits "played to the end" to the title's current file. */
 export async function readEvidence(userId: string, title: Title): Promise<Evidence> {
   try {
